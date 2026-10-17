@@ -51,6 +51,13 @@ def main():
     for name in ('data', 'backups', 'exports'):
         (folder / name).mkdir(exist_ok=True, mode=0o700)
     root = tk.Tk()
+    if report:
+        def callback_error(kind, value, tb):
+            import traceback
+            report.write_text(json.dumps({'ready': False, 'error': ''.join(traceback.format_exception(kind, value, tb))}))
+            root.destroy()
+        root.report_callback_exception = callback_error
+        root.after(30000, lambda: (report.write_text(json.dumps({'ready': False, 'error': 'GUI startup timed out'})), root.destroy()))
     root.title('Proofpage')
     root.geometry('540x360')
     root.minsize(480, 340)

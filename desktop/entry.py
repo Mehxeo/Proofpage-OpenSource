@@ -13,7 +13,18 @@ if sys.stdout is None or sys.stderr is None:
     sys.stdout = handle
     sys.stderr = handle
 
-from proofpage.launcher import main
-
 if __name__ == '__main__':
-    main()
+    try:
+        from proofpage.launcher import main
+        main()
+    except Exception:
+        import traceback
+        detail = traceback.format_exc()
+        print(detail, file=sys.stderr)
+        if len(sys.argv) == 3 and sys.argv[1] == '--smoke-test':
+            import json
+            Path(sys.argv[2]).write_text(json.dumps({'ready': False, 'error': detail}))
+        else:
+            from tkinter import messagebox
+            messagebox.showerror('Proofpage could not start', 'Please see Proofpage/launcher.log in your user folder for details.')
+        raise SystemExit(1)
