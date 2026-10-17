@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .processes import check_process
+
 import csv
 import hashlib
 import http.client
@@ -207,7 +209,7 @@ class Store:
                 try:
                     if not run['pid']:
                         raise ProcessLookupError()
-                    os.kill(run['pid'], 0)
+                    check_process(run['pid'])
                 except ProcessLookupError:
                     db.execute("UPDATE runs SET state='interrupted',finished_at=?,detail='Process stopped before completion; recheck explicitly.' WHERE id=?", (now(), run['id']))
         from .schema import migrate

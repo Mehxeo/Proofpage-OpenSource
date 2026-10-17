@@ -1,6 +1,7 @@
 import base64
 import json
 import secrets
+import socketserver
 import threading
 import time
 import urllib.parse
@@ -14,6 +15,14 @@ from .watch import create_watch, scan_watch
 from . import training, crawl, models, agent
 
 STATIC = Path(__file__).resolve().parent / 'static'
+
+
+class LocalHTTPServer(ThreadingHTTPServer):
+    def server_bind(self):
+        # HTTPServer otherwise performs reverse DNS, which can stall offline Macs.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name = 'localhost'
+        self.server_port = self.server_address[1]
 
 
 def serve(store=None, port=8765, open_browser=False, on_ready=None):
@@ -57,7 +66,7 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 if path in ('/', '/app.js', '/workbench.js', '/style.css'):
                     name = 'index.html' if path == '/' else path[1:]
                     types = {'index.html': 'text/html', 'app.js': 'text/javascript', 'workbench.js': 'text/javascript', 'style.css': 'text/css'}
-                    return self.send(200, (STATIC / name).read_text(), types[name])
+                    return self.send(200, (STATIC / name).read_text(encoding='utf-8'), types[name])
                 if path == '/api/session':
                     return self.send(200, {'token': token})
                 if self.headers.get('Authorization') != 'Bearer ' + token:
@@ -113,7 +122,7 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                         if key.startswith('watch:'):
                             last_watch[identifier] = time.time()
 
-    server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    server = LocalHTTPServer(('127.0.0.1', port), Handler)
     port = server.server_address[1]
     if on_ready is not None:
         on_ready(server)

@@ -1,4 +1,6 @@
 """Durable bounded crawl queue, advanced one page at a time without sleeping workers."""
+from .processes import check_process
+
 import json
 import os
 import posixpath
@@ -105,7 +107,7 @@ def step_job(store, job_id):
             return {'id': job_id, 'state': job['state']}
         if job['state'] == 'running' and job['lease_until'] > timestamp:
             try:
-                os.kill(job['owner'], 0)
+                check_process(job['owner'])
                 return {'id': job_id, 'state': 'running'}
             except (ProcessLookupError, TypeError):
                 pass

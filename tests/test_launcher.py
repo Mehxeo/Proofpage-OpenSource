@@ -15,3 +15,17 @@ class LauncherTests(unittest.TestCase):
                 first.close()
             second = WorkspaceLock(Path(directory))
             second.close()
+
+    def test_liveness_does_not_terminate_process(self):
+        import subprocess
+        import sys
+        from proofpage.processes import check_process
+        child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'])
+        try:
+            check_process(child.pid)
+            self.assertIsNone(child.poll())
+        finally:
+            child.terminate()
+            child.wait(timeout=5)
+        with self.assertRaises(ProcessLookupError):
+            check_process(child.pid)
