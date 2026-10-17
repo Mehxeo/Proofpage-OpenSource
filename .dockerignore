@@ -1,0 +1,10 @@
+*
+!pyproject.toml
+!README.md
+!LICENSE
+!proofpage/
+!proofpage/**
+proofpage/__pycache__/
+**/*.pyc
+
+!requirements-hosted.lock

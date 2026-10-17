@@ -1,0 +1,37 @@
+services:
+  proofpage:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - proofpage_data:/data
+    expose:
+      - "8000"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 2g
+    cpus: 2
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      PROOFPAGE_DOMAIN: ${PROOFPAGE_DOMAIN:?Set PROOFPAGE_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      proofpage:
+        condition: service_healthy
+volumes:
+  proofpage_data:
+  caddy_data:
+  caddy_config:

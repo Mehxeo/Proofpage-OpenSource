@@ -1,0 +1,60 @@
+[
+  {
+    "id": "c1",
+    "title": "Synthetic fixture \u2014 preserved conversation branches",
+    "create_time": 1234567890,
+    "current_node": "b",
+    "mapping": {
+      "root": {
+        "parent": null,
+        "children": [
+          "a",
+          "b"
+        ],
+        "message": {
+          "id": "m1",
+          "author": {
+            "role": "user"
+          },
+          "content": {
+            "parts": [
+              "Question"
+            ]
+          }
+        }
+      },
+      "a": {
+        "parent": "root",
+        "children": [],
+        "message": {
+          "id": "m2",
+          "author": {
+            "role": "assistant"
+          },
+          "content": {
+            "parts": [
+              "First answer"
+            ]
+          }
+        }
+      },
+      "b": {
+        "parent": "root",
+        "children": [],
+        "message": {
+          "id": "m3",
+          "author": {
+            "role": "tool",
+            "name": "browser"
+          },
+          "content": {
+            "parts": [
+              "Observed tool output"
+            ]
+          },
+          "recipient": "all"
+        }
+      }
+    }
+  }
+]

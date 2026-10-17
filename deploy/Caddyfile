@@ -1,0 +1,11 @@
+{$PROOFPAGE_DOMAIN} {
+    encode zstd gzip
+    request_body {
+        max_size 16MB
+    }
+    reverse_proxy proofpage:8000 {
+        transport http {
+            response_header_timeout 120s
+        }
+    }
+}

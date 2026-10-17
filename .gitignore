@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+.proofpage/
+*.egg-info/
+dist/
+build/
+.env
+.env.*
+!.env.example
+.proofpage-hosted/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+.proofpage-hosted*/

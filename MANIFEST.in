@@ -1,0 +1,14 @@
+include .gitignore .dockerignore LICENSE README.md CONTRIBUTING.md SECURITY.md Dockerfile compose.yaml .env.example requirements-hosted.lock
+recursive-include proofpage/static *
+recursive-include deploy *
+recursive-include docs *.md *.png
+recursive-include examples *.py
+recursive-include tests *.py *.json
+recursive-include .github/workflows *.yml
+prune .proofpage
+prune .proofpage-hosted
+prune .proofpage-hosted-preview
+prune .venv
+global-exclude *.pyc __pycache__ .DS_Store
+
+recursive-include scripts *.py
