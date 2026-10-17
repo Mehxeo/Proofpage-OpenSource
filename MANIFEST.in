@@ -13,3 +13,4 @@ global-exclude *.pyc __pycache__ .DS_Store
 
 recursive-include scripts *.py
 recursive-include docs/assets *.svg
+recursive-include desktop *.py *.png *.txt

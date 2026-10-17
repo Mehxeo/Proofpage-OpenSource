@@ -1,0 +1,20 @@
+PROOFPAGE — Your sources. Your evidence.
+
+Windows: Extract the entire ZIP, then double-click Proofpage.exe.
+macOS: Extract the ZIP, drag Proofpage.app to Applications, then open it.
+Linux: Extract the archive, then open the Proofpage executable in a graphical desktop.
+
+Python is included. No terminal, account, or subscription is needed.
+Your workspace opens in your default browser. Keep the small Proofpage window open.
+Use Open workspace to return to it, or Show data folder to find your saved files.
+Close the Proofpage window to stop the server. Active captures may need time to finish.
+
+Your data is saved in the Proofpage folder inside your user folder, separately from
+this application. Keep all extracted application files together on Windows/Linux.
+To upgrade, close the app and replace its application files; keep your data folder.
+
+This is an unsigned preview. Your operating system may display an unknown-publisher
+warning or block launch. Developer signing and Apple notarization are not yet configured.
+Do not disable your system's security protections.
+
+Documentation: https://github.com/Mehxeo/Proofpage-OpenSource

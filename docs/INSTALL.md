@@ -1,5 +1,7 @@
 # Installing and maintaining Proofpage
 
+For the no-Python desktop app, download the platform archive, extract it, and open Proofpage. Updates replace application files while preserving `~/Proofpage/data`. The desktop previews are unsigned. The instructions below are for the optional Python/CLI installation.
+
 Follow the [quick start](../README.md#install-and-run) for a new installation. The local ZIP bundles a wheel and `scripts/install.py`. Python 3.11+ with SQLite FTS5 and venv is required. Download checksums from the same release and verify the ZIP with `shasum -a 256` (macOS), `sha256sum` (Linux), or `Get-FileHash -Algorithm SHA256` (PowerShell).
 
 ## Upgrade without overwriting your evidence
@@ -35,7 +37,7 @@ py -3 scripts/install.py --directory "$HOME\Proofpage-New"
 Create and activate a Python virtual environment, then install the wheel from this repository's release:
 
 ```sh
-python -m pip install /path/to/proofpage-0.1.1-py3-none-any.whl
+python -m pip install /path/to/proofpage-0.1.2-py3-none-any.whl
 proofpage doctor
 proofpage serve --open
 ```
@@ -50,4 +52,4 @@ Without `--home` or `PROOFPAGE_HOME`, the CLI uses `~/.proofpage`. The guided in
 - No browser: open the URL printed in the terminal manually.
 - Collection blocked: inspect the recorded result. Robots rules, inaccessible pages, cooldowns, and unsupported content are reported rather than bypassed.
 
-The bundle has no signed native executable. Windows launchers are provided; native Windows UI behavior must still be verified on Windows. CI tests Python and containers on Linux.
+CLI installation requires Python. Separate desktop archives bundle Python and a graphical launcher. CI launches the packaged GUI and checks its local API on macOS, Windows, and Linux; this does not verify Gatekeeper or SmartScreen acceptance on an end-user computer.

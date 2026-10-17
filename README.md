@@ -1,7 +1,7 @@
 <p align="center"><img src="docs/assets/banner.svg" alt="Proofpage — Evidence for your next model" width="100%"></p>
 
 <p align="center">
-<a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.1">Download</a> ·
+<a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.2">Download</a> ·
 <a href="#install-and-run">Install & run</a> ·
 <a href="docs/CLI.md">CLI guide</a> ·
 <a href="docs/TRAINING_AND_AGENTS.md">Training & agents</a> ·
@@ -10,7 +10,7 @@
 
 Proofpage turns public web pages and your own exported files into **traceable evidence for AI**. Collect material, inspect the original source, review training examples, and export datasets—or let an existing AI assistant search your evidence through MCP.
 
-**Free to run on your own computer. MIT licensed. No account, subscription, or model API key required for core features.** Works with Python 3.11+ on macOS, Windows, and Linux. This is an early release; signed desktop installers are not available yet.
+**Free to run on your own computer. MIT licensed. No account, subscription, or model API key required for core features.** Desktop downloads include Python: no Python installation or terminal is needed. This is an early, unsigned release; publisher signing and Apple notarization are not configured yet.
 
 ![Proofpage training workspace](docs/training-workbench.png)
 
@@ -28,45 +28,46 @@ Proofpage **prepares data; it does not train a model**. Collection respects robo
 
 ## Install and run
 
-### 1. Install Python
+### Download, extract, open
 
-Install [Python 3.11 or newer](https://www.python.org/downloads/). On Windows, enable **Add Python to PATH** if offered. On Linux, your distribution may also require its `python3-venv` package.
+Choose your computer from the [v0.1.2 downloads](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.2):
 
-### 2. Download Proofpage
+| Computer | Download | Open it |
+| --- | --- | --- |
+| Mac with Apple silicon (M1 or newer) | **Proofpage-0.1.2-darwin-arm64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
+| Mac with Intel processor | **Proofpage-0.1.2-darwin-x86_64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
+| Windows 10/11, 64-bit Intel/AMD | **Proofpage-0.1.2-windows-x86_64.zip** | Extract the entire ZIP, then double-click **Proofpage.exe** |
+| Linux, 64-bit Intel/AMD desktop | **Proofpage-0.1.2-linux-x86_64.tar.gz** | Extract with your archive manager, then open the **Proofpage** executable |
 
-Download **proofpage-0.1.1-local.zip** from the [v0.1.1 release](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.1) and extract it. Open a terminal in the extracted folder. This bundle contains the installer and the Python wheel; you do not need Git.
+The small Proofpage window opens your workspace in your default browser. Click **Open workspace** to return to it or **Show data folder** to find your files. Keep the app open while you work; closing its window stops the local server. Active captures may take a little time to finish.
 
-**macOS / Linux**
+**No terminal. No Python setup. No account.** Keep all extracted files together on Windows and Linux. The app chooses an available local port automatically. Linux requires a graphical desktop and system libraries compatible with Ubuntu 22.04 or newer; not every distribution has been tested. On Mac, use About This Mac to find your processor type.
+
+**Unsigned preview:** Windows or macOS may warn about an unknown publisher or block opening the app. The downloads are not yet publisher-signed or Apple-notarized. Do not disable system security protections. Signing remains necessary before we can promise a frictionless public launch.
+
+### Your files stay separate from the app
+
+```text
+Your user folder / Proofpage/
+├── data/       Your private evidence and settings
+├── backups/    A place to save database backups
+└── exports/    A place to save dataset downloads
+```
+
+Backups and exports are saved where you choose. Updating or replacing the application does not delete this data folder. The desktop app reuses the `data/` folder created by the earlier guided installer. CLI workspaces at other paths are separate.
+
+<details>
+<summary><strong>Python installation and CLI setup (optional)</strong></summary>
+
+For developers and terminal users, download **proofpage-0.1.2-local.zip** instead. This source-oriented bundle requires Python 3.11+. Extract it and run:
 
 ```sh
 python3 scripts/install.py
 ```
 
-**Windows PowerShell**
+On Windows use `py -3 scripts/install.py`. It creates an isolated runtime and CLI launchers under `~/Proofpage`. If that folder already exists, choose a new location with `--directory`. [Full setup instructions →](docs/INSTALL.md)
 
-```powershell
-py -3 scripts/install.py
-```
-
-The installer creates a dedicated **Proofpage folder inside your user folder**, with an isolated runtime and launchers. It does not change your system Python. To choose a different folder, add `--directory "/path/to/Proofpage"`. Use a new folder; existing installations are never overwritten.
-
-### 3. Open your workspace
-
-Open **Start Proofpage.command** (macOS), **Start Proofpage.cmd** (Windows), or run `~/Proofpage/'Start Proofpage.command'` in a Linux terminal. On macOS you can also run the same terminal command if Finder does not open the launcher.
-
-Your browser opens at **http://127.0.0.1:8765**. Keep the launcher's terminal open while using Proofpage; press **Ctrl+C** there to stop it. If the browser does not open automatically, visit that address manually.
-
-```text
-Proofpage/
-├── Start Proofpage…   Launch the browser workspace
-├── proofpage…         Use the command-line interface
-├── data/              Your private evidence and settings
-├── backups/           A place to save database backups
-├── exports/           A place to save dataset downloads
-└── runtime/           Isolated Python environment
-```
-
-Backups and exports are saved where you choose; these folders are provided for organization. Keep the installed folder in place because Python environments use absolute paths.
+</details>
 
 ## Your first five minutes
 
@@ -80,7 +81,7 @@ For archives, choose **Import files**, create an account-specific profile, previ
 
 ## Prefer the terminal?
 
-The same installation includes a CLI. On macOS/Linux:
+The optional Python installation includes a CLI. Desktop downloads focus on the browser workspace. After following the optional CLI setup above, on macOS/Linux:
 
 ```sh
 ~/Proofpage/proofpage --help
@@ -116,10 +117,10 @@ On Windows, use `py -3` and `.venv\Scripts\python.exe` / `.venv\Scripts\proofpag
 
 ## Help, upgrades, and your data
 
-- **Port already in use:** stop the existing server, or run `proofpage serve --port 8766 --open` using your installed launcher.
+- **Desktop app:** it chooses a free port. If it says Proofpage is already running, use the existing Proofpage window.
 - **Python or SQLite error:** run `proofpage doctor`. Python must include SQLite FTS5. Install a supported Python distribution if it does not.
-- **Upgrade:** make a backup, stop the old server, install the new release into a different folder, and restore the backup into a new workspace. See the [installation guide](docs/INSTALL.md) for exact commands.
-- **Uninstall:** stop Proofpage, save any evidence or backups you want to keep, then remove its installation folder. Removing `data/` deletes that workspace's evidence.
+- **Upgrade desktop:** close Proofpage, replace the application with the new download, and reopen it. Keep your `Proofpage/data` folder. For CLI upgrades and backups, see the [installation guide](docs/INSTALL.md).
+- **Uninstall desktop:** close Proofpage and remove its application files. Your data remains in your user folder. Remove that data folder only if you want to delete the evidence too.
 - **Questions or bugs:** [open an issue](https://github.com/Mehxeo/Proofpage-OpenSource/issues). For sensitive reports, follow [Security](SECURITY.md).
 
 ## Open source
