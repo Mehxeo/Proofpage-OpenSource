@@ -1,58 +1,82 @@
 import argparse
 import json
+import os
+import sqlite3
+import sys
+from pathlib import Path
 
 from .core import Store, import_file, preview
 
 
 def main():
     parser = argparse.ArgumentParser(description='Proofpage local evidence workspace')
-    parser.add_argument('--home', help='Local data directory')
-    sub = parser.add_subparsers(dest='command', required=True)
-    server = sub.add_parser('serve')
+    parser.add_argument('--version', action='version', version='Proofpage 0.1.1')
+    parser.add_argument('--home', help='Local data directory (default: PROOFPAGE_HOME or ~/.proofpage)')
+    sub = parser.add_subparsers(dest='command')
+    sub.add_parser('doctor', help='Check Python, SQLite search, and the workspace path')
+    server = sub.add_parser('serve', help='Open the local browser workspace')
     server.add_argument('--port', type=int, default=8765)
-    collect = sub.add_parser('collect')
+    server.add_argument('--open', action='store_true', help='Open the workspace in your default browser')
+    collect = sub.add_parser('collect', help='Capture a public web page')
     collect.add_argument('url')
-    search = sub.add_parser('search')
+    search = sub.add_parser('search', help='Search saved evidence; returns JSON')
     search.add_argument('query')
-    imp = sub.add_parser('import')
+    imp = sub.add_parser('import', help='Preview an archive or import selected entries')
     imp.add_argument('path')
     imp.add_argument('--select', action='append', help='Exact entry name from preview; repeat for multiple entries')
     imp.add_argument('--profile', help='Account-specific import profile ID')
-    profile = sub.add_parser('profile')
+    profile = sub.add_parser('profile', help='Create an archive import profile')
     profile.add_argument('name')
     profile.add_argument('--provider', required=True)
     profile.add_argument('--account', required=True)
     profile.add_argument('--adapter', default='auto')
-    watch = sub.add_parser('watch')
+    watch = sub.add_parser('watch', help='Watch a folder for supplied exports')
     watch.add_argument('directory')
     watch.add_argument('--profile', required=True)
     watch.add_argument('--category', action='append', required=True)
-    scan = sub.add_parser('scan')
+    scan = sub.add_parser('scan', help='Scan a watched folder once')
     scan.add_argument('watch_id')
-    back = sub.add_parser('backup')
+    back = sub.add_parser('backup', help='Create a consistent database backup')
     back.add_argument('destination')
-    restoration = sub.add_parser('restore')
+    restoration = sub.add_parser('restore', help='Restore a backup into a new workspace')
     restoration.add_argument('backup_path')
     restoration.add_argument('directory')
-    validator = sub.add_parser('validate-dataset')
+    validator = sub.add_parser('validate-dataset', help='Validate an exported corpus')
     validator.add_argument('path')
     validator.add_argument('--sha256')
-    hosted = sub.add_parser('hosted')
+    hosted = sub.add_parser('hosted', help='Run the optional hosted edition')
     hosted.add_argument('--port', type=int, default=8000)
     hosted.add_argument('--bind', default='127.0.0.1')
-    invite = sub.add_parser('invite')
+    invite = sub.add_parser('invite', help='Create a hosted account invitation')
     invite.add_argument('email')
-    sub.add_parser('remote-mcp')
-    sub.add_parser('mcp')
-    sub.add_parser('desktop')
+    sub.add_parser('remote-mcp', help='Connect an agent to a hosted workspace')
+    sub.add_parser('mcp', help='Run the local MCP server over stdio')
+    sub.add_parser('desktop', help='Open the optional Tk desktop interface')
     args = parser.parse_args()
+    if args.command is None:
+        parser.print_help()
+        return
+    if args.command == 'doctor':
+        with sqlite3.connect(':memory:') as db:
+            try:
+                db.execute('CREATE VIRTUAL TABLE check_search USING fts5(text)')
+                fts = True
+            except sqlite3.OperationalError:
+                fts = False
+        directory = Path(args.home or os.environ.get('PROOFPAGE_HOME', '~/.proofpage')).expanduser().resolve()
+        print(json.dumps({'python': sys.version.split()[0], 'sqlite': sqlite3.sqlite_version,
+                          'fts5': fts, 'workspace': str(directory),
+                          'workspace_exists': directory.exists(),
+                          'ready': sys.version_info >= (3, 11) and fts}, indent=2))
+        if not fts or sys.version_info < (3, 11):
+            raise SystemExit(1)
+        return
     if args.command == 'hosted':
         import uvicorn
         from .hosted import create_app
         uvicorn.run(create_app(root=args.home), host=args.bind, port=args.port, proxy_headers=False, access_log=False)
         return
     if args.command == 'invite':
-        import os
         from .accounts import Accounts
         print(Accounts(args.home or os.environ.get('PROOFPAGE_HOSTED_HOME','~/.proofpage-hosted')).invite(args.email))
         return
@@ -76,7 +100,7 @@ def main():
         return
     if args.command == 'serve':
         from .server import serve
-        serve(store, args.port)
+        serve(store, args.port, open_browser=args.open)
         return
     if args.command == 'mcp':
         from .mcp import run
@@ -100,7 +124,6 @@ def main():
     elif args.command == 'search':
         result = store.search(args.query)
     else:
-        from pathlib import Path
         path = Path(args.path)
         with path.open('rb') as handle:
             data = handle.read(8 * 1024 * 1024 + 1)

@@ -1,104 +1,129 @@
-# Proofpage
+<p align="center"><img src="docs/assets/banner.svg" alt="Proofpage — Evidence for your next model" width="100%"></p>
 
-[Source](https://github.com/Mehxeo/Proofpage-OpenSource) · [Releases](https://github.com/Mehxeo/Proofpage-OpenSource/releases) · [CI](https://github.com/Mehxeo/Proofpage-OpenSource/actions)
+<p align="center">
+<a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.1">Download</a> ·
+<a href="#install-and-run">Install & run</a> ·
+<a href="docs/CLI.md">CLI guide</a> ·
+<a href="docs/TRAINING_AND_AGENTS.md">Training & agents</a> ·
+<a href="CONTRIBUTING.md">Contribute</a>
+</p>
 
-Collect public web evidence and supplied archives, prepare reviewed training datasets, and give existing AI assistants cited evidence through MCP.
+Proofpage turns public web pages and your own exported files into **traceable evidence for AI**. Collect material, inspect the original source, review training examples, and export datasets—or let an existing AI assistant search your evidence through MCP.
 
-Proofpage is MIT-licensed open-source software. Run it on your computer without an account, or operate the included hosted edition with isolated accounts and Stripe subscriptions. See [hosting and billing setup](docs/HOSTING.md).
+**Free to run on your own computer. MIT licensed. No account, subscription, or model API key required for core features.** Works with Python 3.11+ on macOS, Windows, and Linux. This is an early release; signed desktop installers are not available yet.
 
-The local training-and-agent MVP is implemented. Start with the browser workspace, then follow the [training and agent guide](docs/TRAINING_AND_AGENTS.md). See [verified scope and limits](docs/IMPLEMENTATION_STATUS.md) before deploying or relying on a collection result.
+![Proofpage training workspace](docs/training-workbench.png)
 
-## Run
+## What you can do
 
-Clone `https://github.com/Mehxeo/Proofpage-OpenSource.git` and enter the checkout, or install the wheel from Releases with `python3 -m pip install /path/to/proofpage-0.1.0-py3-none-any.whl`. Verify downloaded artifacts against the release’s `SHA256SUMS`.
+| Your goal | Proofpage gives you |
+| --- | --- |
+| Collect useful web content | Public page capture, bounded crawling, refresh schedules, and original evidence |
+| Bring your own data | ZIP, CSV, JSON, JSONL, Markdown, text, and HTML imports; conversation-aware adapters |
+| Prepare training data | Reviewed SFT examples, preference pairs, corrections, evaluations, grouped splits, and frozen exports |
+| Give your existing AI sources | MCP tools, cited search results, exact quotes, revision IDs, and capture timestamps |
+| Stay in control | Local SQLite storage, permission reviews, backups, and portable exports |
 
-Python 3.11 or newer, with SQLite FTS5 enabled. No third-party runtime dependencies for the local browser application.
+Proofpage **prepares data; it does not train a model**. Collection respects robots rules and does not bypass logins or access controls. Optional model-assisted drafting sends selected content only when you request it and still requires review. See [capabilities and limits](docs/IMPLEMENTATION_STATUS.md).
 
-```sh
-python3 -m proofpage --home .proofpage serve
-```
+## Install and run
 
-Open http://127.0.0.1:8765. Data stays in the selected directory. Use one server per data directory. Schedules run while the server is open.
+### 1. Install Python
 
-For the native desktop client, run `python3 -m proofpage --home .proofpage desktop`. It requires Python's Tkinter module and provides collection, import selection, search, evidence inspection, review, and corpus export. The browser interface additionally exposes schedule controls, activity history, and frozen dataset history. Signed desktop installers are not yet available.
+Install [Python 3.11 or newer](https://www.python.org/downloads/). On Windows, enable **Add Python to PATH** if offered. On Linux, your distribution may also require its `python3-venv` package.
 
-1. Add a public page under Sources and click Collect.
-2. Search the Library, then open a record to inspect text, raw evidence, timestamps, coverage, and hashes.
-3. Create an account-specific import profile, then import a file or ZIP, preview its entries, and select categories explicitly.
-4. Review record revisions and confirm dataset permission. Freeze a clean corpus under Datasets.
-5. Export JSONL. Revoking permission blocks future managed exports containing that revision; it cannot recall copies already downloaded.
+### 2. Download Proofpage
 
-## CLI
+Download **proofpage-0.1.1-local.zip** from the [v0.1.1 release](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.1) and extract it. Open a terminal in the extracted folder. This bundle contains the installer and the Python wheel; you do not need Git.
 
-```sh
-python3 -m proofpage --home .proofpage collect https://example.com
-python3 -m proofpage --home .proofpage search documentation
-python3 -m proofpage --home .proofpage profile "Personal LinkedIn" --provider LinkedIn --account personal --adapter linkedin
-python3 -m proofpage --home .proofpage import export.zip
-python3 -m proofpage --home .proofpage import export.zip --select Messages.csv --profile PROFILE_ID
-```
-
-The first import command previews categories; the second imports only selected entries. Use the ID returned by `profile` for `PROFILE_ID`. Reuse a profile for successive archives from the same account, even when the ZIP filename changes. Different accounts use different profiles. Stable supplied IDs create revisions when records change; rows without IDs are deduplicated by content and become separate records when changed. Markdown, text, and HTML documents use their category filename as stable identity.
-
-Adapters are tested with synthetic fixtures: ChatGPT-style mappings preserve nodes, parents, children, roles, tool metadata, and the selected node; Claude-style `chat_messages` preserve supplied roles, content, and attachment references; LinkedIn message CSVs preserve human participants. These are local export adapters, not live account connections. Actual provider variations may require additional fixtures. A saved mapping can name source fields for text, ID, title, role, and timestamp without relabeling human speakers as AI assistants.
-
-## Automatic archive ingestion
-
-In Sources, choose **Watch an export folder**, an existing profile, the local folder, and exact category filenames. Existing files and future arrivals are eligible. The server polls only that folder, waits for files to settle, and records outcomes persistently. It excludes symlinks and subfolders, bounds file counts and sizes, and isolates failed files. It never requests exports from the provider. Pause/resume and file outcomes are available in Sources. A file already in progress can finish after pause.
+**macOS / Linux**
 
 ```sh
-python3 -m proofpage --home .proofpage watch /absolute/path/to/exports --profile PROFILE_ID --category Messages.csv --category Connections.csv
-python3 -m proofpage --home .proofpage scan WATCH_ID
+python3 scripts/install.py
 ```
 
-`serve` drives continuous watches and schedules. `scan` performs one scan; a new file settles on a subsequent scan at least two seconds later. Failed files are retried after their size or modification time changes. Missing configured ZIP categories are reported. The native client imports using the same profiles; continuous watching is provided by the server.
+**Windows PowerShell**
 
-## Backups and corpus validation
+```powershell
+py -3 scripts/install.py
+```
+
+The installer creates a dedicated **Proofpage folder inside your user folder**, with an isolated runtime and launchers. It does not change your system Python. To choose a different folder, add `--directory "/path/to/Proofpage"`. Use a new folder; existing installations are never overwritten.
+
+### 3. Open your workspace
+
+Open **Start Proofpage.command** (macOS), **Start Proofpage.cmd** (Windows), or run `~/Proofpage/'Start Proofpage.command'` in a Linux terminal. On macOS you can also run the same terminal command if Finder does not open the launcher.
+
+Your browser opens at **http://127.0.0.1:8765**. Keep the launcher's terminal open while using Proofpage; press **Ctrl+C** there to stop it. If the browser does not open automatically, visit that address manually.
+
+```text
+Proofpage/
+├── Start Proofpage…   Launch the browser workspace
+├── proofpage…         Use the command-line interface
+├── data/              Your private evidence and settings
+├── backups/           A place to save database backups
+├── exports/           A place to save dataset downloads
+└── runtime/           Isolated Python environment
+```
+
+Backups and exports are saved where you choose; these folders are provided for organization. Keep the installed folder in place because Python environments use absolute paths.
+
+## Your first five minutes
+
+1. Click **Add source**, enter a public page URL, then click **Collect** in Sources.
+2. Open the record in **Library** to inspect its text, original evidence, and capture details.
+3. Use **Training** to create draft examples, review source permissions, and approve suitable examples.
+4. Freeze and export a training bundle. Use **Datasets** for the separate reviewed text-corpus workflow.
+5. Open **Agent access** to connect an AI assistant to your local evidence.
+
+For archives, choose **Import files**, create an account-specific profile, preview the file, and select what to keep. [Read the full workflow guide →](docs/TRAINING_AND_AGENTS.md)
+
+## Prefer the terminal?
+
+The same installation includes a CLI. On macOS/Linux:
 
 ```sh
-python3 -m proofpage --home .proofpage backup /absolute/path/to/new-backup.sqlite3
-python3 -m proofpage restore /absolute/path/to/new-backup.sqlite3 /absolute/path/to/new-workspace
-python3 -m proofpage validate-dataset /absolute/path/to/corpus.jsonl --sha256 FROZEN_HASH
+~/Proofpage/proofpage --help
+~/Proofpage/proofpage doctor
+~/Proofpage/proofpage collect https://example.com
+~/Proofpage/proofpage search "example"
+~/Proofpage/proofpage serve --open
+~/Proofpage/proofpage backup ~/Proofpage/backups/evidence.sqlite3
 ```
 
-Backups use SQLite's consistent backup API and verify integrity. Existing files and workspaces are never overwritten. Restores pause schedules and folder watches. Backups contain local evidence and should be handled as private data. The reference loader in `proofpage/datasets.py` checks required fields, checksums, exact duplicates, and source-grouped split consistency; it does not train a model.
+On Windows PowerShell, use `& "$HOME\Proofpage\proofpage.cmd"` followed by the same arguments. Collection and search return JSON for scripts. `doctor` checks Python and SQLite FTS5 support and shows the workspace path. [All CLI workflows →](docs/CLI.md)
 
-## Agent access
-
-Launch the stdio server from this checkout:
+<details>
+<summary><strong>Install from source or use an existing Python environment</strong></summary>
 
 ```sh
-python3 -m proofpage --home .proofpage mcp
+git clone https://github.com/Mehxeo/Proofpage-OpenSource.git
+cd Proofpage-OpenSource
+python3 scripts/install.py
 ```
 
-Example client configuration (replace paths with your checkout and Python interpreter):
-
-```json
-{
-  "mcpServers": {
-    "proofpage": {
-      "command": "python3",
-      "args": ["-m", "proofpage", "--home", "/absolute/path/to/data", "mcp"],
-      "cwd": "/absolute/path/to/Proofpage OpenSource"
-    }
-  }
-}
-```
-
-Eighteen tools expose source access, configured collection, run status, cited context, freshness, bounded crawling, extraction submissions, draft examples, and revision history. Returned source material is untrusted data, never agent instructions. MCP can collect only an existing source. Initialization and newline-delimited stdio follow the [MCP lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle) and [transport specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports).
-
-The browser API is bound to loopback and checks Host, Origin, and a session token. Obtain the token with `GET /api/session`, then send `Authorization: Bearer <token>`. Routes are implemented in `proofpage/server.py`; this is a local application, not an internet-facing service.
-
-## Verification
+For development, create a virtual environment instead:
 
 ```sh
-python3 -m unittest discover -s tests -v
-python3 -m compileall -q proofpage
-node --check proofpage/static/app.js
+python3 -m venv .venv
+.venv/bin/python -m pip install -e .
+.venv/bin/proofpage --home .proofpage serve --open
 ```
 
-The tests use isolated temporary databases and deterministic responses. Live website behavior must be verified separately. Hosted model compatibility is tested with a local HTTP fixture, not a paid provider. Restricted/authenticated collection and actual model training jobs are outside this release. Optional offline rendering has a Chromium smoke check.
+On Windows, use `py -3` and `.venv\Scripts\python.exe` / `.venv\Scripts\proofpage.exe`. Installing from source may download build tools. The local release bundle installs its wheel without third-party runtime dependencies. Do not assume an unrelated package on PyPI is this project; use this repository's releases.
 
-## Open source and hosted service
+</details>
 
-The [MIT license](LICENSE) covers both editions. See [Contributing](CONTRIBUTING.md), [Security](SECURITY.md), and [self-hosting/paid-service setup](docs/HOSTING.md). Hosted mode adds invitation-based accounts, recovery, scoped agent keys, usage limits, customer billing, and portable workspace downloads. No price or live payment configuration is assumed.
+## Help, upgrades, and your data
+
+- **Port already in use:** stop the existing server, or run `proofpage serve --port 8766 --open` using your installed launcher.
+- **Python or SQLite error:** run `proofpage doctor`. Python must include SQLite FTS5. Install a supported Python distribution if it does not.
+- **Upgrade:** make a backup, stop the old server, install the new release into a different folder, and restore the backup into a new workspace. See the [installation guide](docs/INSTALL.md) for exact commands.
+- **Uninstall:** stop Proofpage, save any evidence or backups you want to keep, then remove its installation folder. Removing `data/` deletes that workspace's evidence.
+- **Questions or bugs:** [open an issue](https://github.com/Mehxeo/Proofpage-OpenSource/issues). For sensitive reports, follow [Security](SECURITY.md).
+
+## Open source
+
+[MIT license](LICENSE) · [Contributing](CONTRIBUTING.md) · [Implementation status](docs/IMPLEMENTATION_STATUS.md) · [CI checks](https://github.com/Mehxeo/Proofpage-OpenSource/actions)
+
+The repository also includes an optional [self-hosted edition](docs/HOSTING.md) with isolated accounts and billing integration. A managed paid service is **not live**. Local use remains free and independent of hosted accounts.

@@ -16,7 +16,7 @@ from . import training, crawl, models, agent
 STATIC = Path(__file__).resolve().parent / 'static'
 
 
-def serve(store=None, port=8765):
+def serve(store=None, port=8765, open_browser=False):
     store = store or Store()
     token = secrets.token_urlsafe(32)
 
@@ -114,6 +114,9 @@ def serve(store=None, port=8765):
                             last_watch[identifier] = time.time()
 
     server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    if open_browser:
+        import webbrowser
+        webbrowser.open(f'http://127.0.0.1:{server.server_address[1]}')
     threading.Thread(target=scheduler, daemon=True).start()
     print(f'Proofpage is running at http://127.0.0.1:{port}', flush=True)
     try:
