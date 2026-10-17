@@ -146,11 +146,8 @@ def fetch(url, allowed=None):
             sock = socket.create_connection((addresses[0][4][0], port), timeout=20)
             if parsed.scheme == 'https':
                 try:
-                    context = ssl.create_default_context()
-                    # Python.org macOS installs may lack their own CA bundle.
-                    # Use the operating system's CA bundle while retaining verification.
-                    if not ssl.get_default_verify_paths().cafile and Path('/etc/ssl/cert.pem').is_file():
-                        context.load_verify_locations('/etc/ssl/cert.pem')
+                    from .tls import context as tls_context
+                    context = tls_context()
                     sock = context.wrap_socket(sock, server_hostname=parsed.hostname)
                 except Exception:
                     sock.close()

@@ -1,4 +1,5 @@
 """Optional explicitly configured OpenAI-compatible endpoint, including local Ollama."""
+from .tls import context as tls_context
 import json
 import os
 import urllib.error
@@ -42,7 +43,7 @@ def complete_json(messages):
     url = config['url'] + '/chat/completions'
     request = urllib.request.Request(url, data=json.dumps(request_body).encode(), headers=headers)
     try:
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), urllib.request.HTTPSHandler(context=tls_context()), NoRedirect())
         with opener.open(request, timeout=45) as response:
             body = response.read(2*1024*1024+1)
         if len(body) > 2*1024*1024:

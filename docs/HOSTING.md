@@ -43,7 +43,7 @@ The [FastAPI container guidance](https://fastapi.tiangolo.com/deployment/docker/
 
 Caddy forwards requests but the app deliberately does not trust arbitrary forwarded identity headers. Auth IP limits therefore aggregate behind the proxy, with additional per-email limits. If operating at higher traffic, add a trusted edge rate limiter and an explicitly configured trusted proxy policy before expanding registration. Registration is invitation-only.
 
-The Dockerfile/Compose configuration is supplied; local validation could not run a container because the current machine's Docker daemon was unavailable. CI includes a Linux image build. CI has not run on a public repository yet.
+The Dockerfile/Compose configuration is supplied. Public GitHub CI has built and run the actual image on Linux, verifying non-root/read-only startup, invitation login, and session/data persistence after restart. Local Docker was unavailable; the container verification ran on GitHub's Linux runner. See the repository's Actions tab for the tested commit.
 
 ## Configure subscriptions
 

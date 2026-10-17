@@ -1,5 +1,7 @@
 # Proofpage
 
+[Source](https://github.com/Mehxeo/Proofpage-OpenSource) · [Releases](https://github.com/Mehxeo/Proofpage-OpenSource/releases) · [CI](https://github.com/Mehxeo/Proofpage-OpenSource/actions)
+
 Collect public web evidence and supplied archives, prepare reviewed training datasets, and give existing AI assistants cited evidence through MCP.
 
 Proofpage is MIT-licensed open-source software. Run it on your computer without an account, or operate the included hosted edition with isolated accounts and Stripe subscriptions. See [hosting and billing setup](docs/HOSTING.md).
@@ -7,6 +9,8 @@ Proofpage is MIT-licensed open-source software. Run it on your computer without 
 The local training-and-agent MVP is implemented. Start with the browser workspace, then follow the [training and agent guide](docs/TRAINING_AND_AGENTS.md). See [verified scope and limits](docs/IMPLEMENTATION_STATUS.md) before deploying or relying on a collection result.
 
 ## Run
+
+Clone `https://github.com/Mehxeo/Proofpage-OpenSource.git` and enter the checkout, or install the wheel from Releases with `python3 -m pip install /path/to/proofpage-0.1.0-py3-none-any.whl`. Verify downloaded artifacts against the release’s `SHA256SUMS`.
 
 Python 3.11 or newer, with SQLite FTS5 enabled. No third-party runtime dependencies for the local browser application.
 

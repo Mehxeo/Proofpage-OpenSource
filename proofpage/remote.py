@@ -1,4 +1,5 @@
 """Stdio-to-hosted bridge; credentials remain in environment, never tool arguments."""
+from .tls import context as tls_context
 import json
 import os
 import sys
@@ -15,7 +16,7 @@ def run():
         raise ValueError('PROOFPAGE_REMOTE_URL must be an HTTPS origin.')
     key=os.environ.get('PROOFPAGE_AGENT_KEY','')
     if not key.startswith('pp_'):raise ValueError('Set PROOFPAGE_AGENT_KEY to a hosted agent key.')
-    opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
+    opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),urllib.request.HTTPSHandler(context=tls_context()),NoRedirect())
     for line in sys.stdin:
         mid=None
         try:
