@@ -1,6 +1,6 @@
 # Implementation status
 
-This development branch extends the published v0.1.3 release with the Archival Ink redesign, Rights Radar, Time Machine, Proof Receipts and Claim Check. The existing v0.1.3 Mac downloads remain signed/notarized but do not include these new features. Hosted service launch and billing activation remain deferred.
+Version 0.2.0 includes the Archival Ink redesign, Rights Radar, Time Machine, Proof Receipts and Claim Check. Hosted service launch and billing activation remain deferred.
 
 ## Implemented
 
@@ -21,7 +21,7 @@ This development branch extends the published v0.1.3 release with the Archival I
 - A live example.com quote check in the browser matched a real passage, rejected an invented passage, and opened the captured revision and signed receipt. No paid model request was made.
 - Desktop light and 375px mobile dark layouts were inspected; the mobile page had no horizontal document overflow. No browser console errors were observed in the tested flow.
 - Python compilation, JavaScript syntax and wheel contents are checked. Packaged macOS startup and MCP smoke tests passed locally; CI runs native desktop checks on Mac ARM/Intel, Windows and Linux.
-- ReplayWeb.page interoperability remains unverified: its file chooser did not open in the automated in-app browser. WACZ layout/digests and the offline verifier are tested, but that does not substitute for independent replay.
+- ReplayWeb.page 2.5.3 successfully loaded and replayed a WACZ exported from a live example.com capture, using the official self-hosted viewer. This verifies the tested static-page archive; it is not a claim of complete replay for uncaptured assets. [Evidence and reproduction](REPLAY_COMPATIBILITY.md).
 
 ## Limits
 

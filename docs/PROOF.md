@@ -25,4 +25,4 @@ Off by default. Configure a trusted RFC 3161 timestamp authority and/or OpenTime
 
 ## WACZ
 
-Use a source card's WACZ export or `proofpage export-wacz SOURCE_ID --output site.wacz`. It includes WARC records, indexes, page metadata and receipt sidecars. Assets absent from capture cannot be replayed; this is not a full browser session recording. Reconstructed legacy records are labeled. Ed25519 sidecars are not WACZ-Auth signatures. ReplayWeb.page interoperability is separately tracked in the implementation status.
+Use a source card's WACZ export or `proofpage export-wacz SOURCE_ID --output site.wacz`. It includes WARC records, indexes, page metadata and receipt sidecars. Assets absent from capture cannot be replayed; this is not a full browser session recording. Reconstructed legacy records are labeled. Ed25519 sidecars are not WACZ-Auth signatures. ReplayWeb.page 2.5.3 replay was verified for a live example.com capture. [Verification record](REPLAY_COMPATIBILITY.md).

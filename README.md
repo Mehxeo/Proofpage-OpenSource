@@ -1,7 +1,7 @@
 <p align="center"><img src="docs/assets/banner.svg" alt="Proofpage — Capture, inspect, verify" width="100%"></p>
 
 <p align="center">
-<a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.3">Download</a> ·
+<a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.2.0">Download</a> ·
 <a href="#install-and-run">Install & run</a> ·
 <a href="docs/CLI.md">CLI guide</a> ·
 <a href="docs/TRAINING_AND_AGENTS.md">Training & agents</a> ·
@@ -16,7 +16,7 @@ Proofpage turns public web pages and your own exported files into **traceable ev
 
 ![Proofpage evidence workspace](docs/archival-library-light.png)
 
-> The redesign and four evidence features below are available from this branch/source checkout. The signed v0.1.3 desktop downloads predate them; do not expect these screens in that older release.
+> **New in v0.2.0:** Rights Radar, Timeline, signed Proof Receipts, and Claim Check are included in the desktop downloads.
 
 ## What you can do
 
@@ -34,7 +34,7 @@ Proofpage turns public web pages and your own exported files into **traceable ev
 
 Proofpage **prepares data; it does not train a model**. Collection respects robots rules and does not bypass logins or access controls. Optional model-assisted drafting sends selected content only when you request it and still requires review. See [capabilities and limits](docs/IMPLEMENTATION_STATUS.md).
 
-## Run this development version
+## Run from source
 
 With Python 3.11+ installed, clone this repository and run:
 
@@ -43,20 +43,20 @@ python3 -m pip install -e .
 python3 -m proofpage --home ~/Proofpage-preview/data serve --open
 ```
 
-Use a separate preview workspace or back up your database before trying development builds. The native download workflow below is for the last published release.
+Back up your workspace before updating. For the easiest setup, use the native downloads below.
 
 ## Install and run
 
 ### Download, extract, open
 
-Choose your computer from the [v0.1.3 downloads](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.3):
+Choose your computer from the [v0.2.0 downloads](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.2.0):
 
 | Computer | Download | Open it |
 | --- | --- | --- |
-| Mac with Apple silicon (M1 or newer) | **Proofpage-0.1.3-darwin-arm64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
-| Mac with Intel processor | **Proofpage-0.1.3-darwin-x86_64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
-| Windows 10/11, 64-bit Intel/AMD | **Proofpage-0.1.3-windows-x86_64.zip** | Extract the entire ZIP, then double-click **Proofpage.exe** |
-| Linux, 64-bit Intel/AMD desktop | **Proofpage-0.1.3-linux-x86_64.tar.gz** | Extract with your archive manager, then open the **Proofpage** executable |
+| Mac with Apple silicon (M1 or newer) | **Proofpage-0.2.0-darwin-arm64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
+| Mac with Intel processor | **Proofpage-0.2.0-darwin-x86_64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
+| Windows 10/11, 64-bit Intel/AMD | **Proofpage-0.2.0-windows-x86_64.zip** | Extract the entire ZIP, then double-click **Proofpage.exe** |
+| Linux, 64-bit Intel/AMD desktop | **Proofpage-0.2.0-linux-x86_64.tar.gz** | Extract with your archive manager, then open the **Proofpage** executable |
 
 The small Proofpage window opens your workspace in your default browser. Click **Open workspace** to return to it or **Show data folder** to find your files. Keep the app open while you work; closing its window stops the local server. Active captures may take a little time to finish.
 
@@ -78,7 +78,7 @@ Backups and exports are saved where you choose. Updating or replacing the applic
 <details>
 <summary><strong>Python installation and CLI setup (optional)</strong></summary>
 
-For developers and terminal users, download **proofpage-0.1.3-local.zip** instead. This source-oriented bundle requires Python 3.11+. Extract it and run:
+For developers and terminal users, download **proofpage-0.2.0-local.zip** instead. This source-oriented bundle requires Python 3.11+. Extract it and run:
 
 ```sh
 python3 scripts/install.py

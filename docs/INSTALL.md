@@ -1,6 +1,6 @@
 # Installing and maintaining Proofpage
 
-For the no-Python desktop app, download the platform archive, extract it, and open Proofpage. Updates replace application files while preserving `~/Proofpage/data`. The v0.1.3 Mac downloads are signed and notarized; Windows signing remains pending. The instructions below are for the optional Python/CLI installation.
+For the no-Python desktop app, download the platform archive, extract it, and open Proofpage. Updates replace application files while preserving `~/Proofpage/data`. The v0.2.0 Mac downloads are signed and notarized; Windows signing remains pending. The instructions below are for the optional Python/CLI installation.
 
 Follow the [quick start](../README.md#install-and-run) for a new installation. The local ZIP bundles a wheel and `scripts/install.py`. Python 3.11+ with SQLite FTS5 and venv is required. Download checksums from the same release and verify the ZIP with `shasum -a 256` (macOS), `sha256sum` (Linux), or `Get-FileHash -Algorithm SHA256` (PowerShell).
 
@@ -37,7 +37,7 @@ py -3 scripts/install.py --directory "$HOME\Proofpage-New"
 Create and activate a Python virtual environment, then install the wheel from this repository's release:
 
 ```sh
-python -m pip install /path/to/proofpage-0.1.3-py3-none-any.whl
+python -m pip install /path/to/proofpage-0.2.0-py3-none-any.whl
 proofpage doctor
 proofpage serve --open
 ```

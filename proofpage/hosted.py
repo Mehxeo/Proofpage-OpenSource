@@ -318,7 +318,7 @@ def create_app(root=None, origin=None, development=False, scheduler=True, billin
         def dispatch():
             mid=payload.get('id');method=payload.get('method')
             if method=='initialize':
-                response={'protocolVersion':'2025-06-18','capabilities':{'tools':{}},'serverInfo':{'name':'proofpage-hosted','version':'0.1.0'}}
+                response={'protocolVersion':'2025-06-18','capabilities':{'tools':{}},'serverInfo':{'name':'proofpage-hosted','version':'0.2.0'}}
             elif method=='tools/list':
                 response={'tools':[{'name':name,'description':desc,'inputSchema':{'type':'object','properties':{k:mcp.field_schema(v) for k,v in fields.items()},'required':list(fields),'additionalProperties':False}} for name,(desc,fields) in mcp.TOOLS.items() if principal['scope']=='collect' or name in READ_TOOLS]}
             elif method=='tools/call':
