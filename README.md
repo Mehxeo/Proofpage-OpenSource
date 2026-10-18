@@ -1,6 +1,7 @@
 <p align="center"><img src="docs/assets/banner.svg" alt="Proofpage — Capture, inspect, verify" width="100%"></p>
 
 <p align="center">
+<a href="https://proofpage.app">Website</a> ·
 <a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.2.0">Download</a> ·
 <a href="#install-and-run">Install & run</a> ·
 <a href="docs/CLI.md">CLI guide</a> ·
