@@ -1,39 +1,32 @@
-# Proofpage implementation status
+# Implementation status
 
-Updated October 17, 2026. The focused local MVP covers collection → evidence → reviewed training bundles, plus tool access for existing AI assistants. The originally referenced full specification/80-point acceptance document was not supplied; this is not a claim that every broader milestone or provider integration is complete.
-
-## Open-source and hosted edition
-
-Both editions now carry the MIT license, with contribution/security documentation, an initialized local Git repository, CI, source and wheel distributions, and Docker Compose/TLS deployment files. Hosted mode adds per-account SQLite isolation, invitation signup, scrypt passwords, recovery codes, secure sessions/CSRF checks, expiring scoped agent keys, transactional quotas, shared destination budgets, scheduled collection, portable database downloads, and audit events. Stripe Checkout, Customer Portal, signed/idempotent webhooks, and authoritative subscription reconciliation are implemented behind configuration. No price is invented and no live account is charged.
-
-Current full suite: **57 tests pass**, including account isolation, key scopes/revocation, recovery, request boundaries, storage exhaustion, scheduler quotas, portable restore, real Stripe SDK signature parsing, checkout retry idempotency, and out-of-order/canceled billing state. Browser sign-in and hosted account controls were checked with a labeled synthetic account. The source repository is public at https://github.com/Mehxeo/Proofpage-OpenSource. GitHub CI verified the Linux container, invitation login, and persistence after restart. The final release also checks verified TLS for Python.org macOS installations. No hosted application deployment, live Stripe configuration, or real sandbox settlement is claimed. See [hosting instructions](HOSTING.md).
+This development branch extends the published v0.1.3 release with the Archival Ink redesign, Rights Radar, Time Machine, Proof Receipts and Claim Check. The existing v0.1.3 Mac downloads remain signed/notarized but do not include these new features. Hosted service launch and billing activation remain deferred.
 
 ## Implemented
 
-- Public HTML/plain-text collection, bounded same-origin/path crawling, feed/sitemap discovery, durable page checkpoints, cancellation, schedules, truthful access outcomes, robots rules, public-address pinning, shared cooldowns and daily budgets.
-- Optional isolated offline Chromium rendering of captured inline JavaScript. Network-dependent resources are blocked and reported. Original HTML is preserved.
-- Supplied archives, account-specific profiles, selective ZIP imports, preserved ChatGPT branches/roles and Claude/LinkedIn structures, saved field mappings, settled-file folder watches, receipts, and pause/restart recovery.
-- Immutable source revisions, original evidence, capture/source timestamps, SQLite lexical search, cited context chunks, and explicit source freshness checks.
-- Browser training workbench: SFT, preference pairs, corrections, evaluations, and observed tool traces; actual conversation branch selection; explicit human-message role mapping; exact source quotes; immutable draft revisions; review and revocation.
-- Heuristic credential/PII screening and draft redaction. Credentials block approval until redacted; warnings require acknowledgment. Original evidence is not changed.
-- Frozen, reproducible ZIP bundles with trainer JSONL, source manifests, exact deduplication, near-duplicate/source-group partitions, checksums, and standalone validation. Source or example revocation blocks future exports.
-- Optional local/hosted OpenAI-compatible model drafting and schema-defined extraction. Transmission requires an explicit action; model output remains unreviewed. No model is downloaded automatically.
-- Eighteen stdio MCP tools for source access, collection, retrieval, freshness, crawl management, extraction, and draft submission. No approval/export tools. Observed tool events can be preserved without inventing reasoning.
-- Local HTTP session/origin/host protection, CLI, basic native Tk client, additive migrations, backup/restore with automation paused, and installable Python wheel. New training/agent workbench features are in the browser UI.
+- Public HTML/plain-text capture, bounded crawling, scheduling, supplied archive imports, preserved conversations, original responses and immutable revisions.
+- A responsive light/dark evidence workspace, keyboard command palette, deep links, evidence drawer, onboarding, training review, dataset exports and copied MCP setup.
+- Rights observations with source evidence, conservative export gates, drift notifications, dataset cards and draft reporting aids. Unknown signals do not mean permission. [Rights guide](RIGHTS.md).
+- Timeline and revision comparisons, including changed numbers, broken links and publisher-rights changes. Optional model summaries require an explicit send.
+- Signed, hash-chained capture receipts, optional digest anchoring, per-revision offline proof bundles and WACZ exports. [Proof guide](PROOF.md).
+- Quote extraction and editable citation pairing; offline or explicitly authorized collection; exact/close/historical matching; durable progress, cooldowns, cancellation, annotated reports and Markdown/JSON/HTML exports. Optional model review remains unreviewed. [Claim Check](VERIFY.md).
+- 27 MCP tools. Agents can search evidence and manage checks, but cannot approve training data or bypass review/export gates.
+- Python-included desktop packaging and a bundled MCP helper. Smoke tests cover native startup, HTTP, quote-check routes, bundled verifier source, MCP tools and shutdown.
+- Local access protections and optional hosted account isolation/scoped keys/quotas. Hosted anchoring remains disabled. Restoring backups pauses schedules, watches, crawls, quote checks and timestamp anchoring.
 
-## Verification
+## Verification for this branch
 
-- The original 41 local workflow tests cover: prior collection/import/watch/archive/backup checks plus training grounding, review gates, redaction, immutable edits, warning acknowledgment, duplicate/source grouping, bundle reproducibility/tamper detection, revocation, exact context offsets, observed traces, extraction schema/quotes, local model HTTP round trip, crawl scope/restart/cancellation, and render-failure reporting.
-- HTTP integration exercises import → draft → permission → approval → freeze → ZIP download → revoke → denied export, alongside existing corpus/session protection checks.
-- A real stdio MCP subprocess performs initialization and tool calls. `examples/agent_client.py` provides an executable cited-context client.
-- Chromium smoke check executes inline JavaScript and confirms an attempted network request is blocked. Optional dependencies were installed in `.venv` on this Mac.
-- Browser UI verification selects a synthetic source conversation branch, inspects its user/assistant-only draft, explicitly approves it, and freezes a bundle. Synthetic data is labeled. Earlier live collection verified example.com and folder import receipts.
-- Python compilation, both JavaScript syntax checks, and wheel packaging pass. This is local macOS verification, not a signed or cross-platform release.
+- 108 local tests pass, including Unicode quote offsets, citation extraction, drift, blocked/unreachable outcomes, report escaping, explicit model review, durable jobs, cancellation, cooldowns and safe restore, plus the earlier rights/history/receipt/hosted/training checks.
+- Receipt tests include RFC 8032 vectors and independent OpenSSL signature/timestamp interoperability. Cryptographic review is not claimed.
+- A live example.com quote check in the browser matched a real passage, rejected an invented passage, and opened the captured revision and signed receipt. No paid model request was made.
+- Desktop light and 375px mobile dark layouts were inspected; the mobile page had no horizontal document overflow. No browser console errors were observed in the tested flow.
+- Python compilation, JavaScript syntax and wheel contents are checked. Packaged macOS startup and MCP smoke tests passed locally; CI runs native desktop checks on Mac ARM/Intel, Windows and Linux.
+- ReplayWeb.page interoperability remains unverified: its file chooser did not open in the automated in-app browser. WACZ layout/digests and the offline verifier are tested, but that does not substitute for independent replay.
 
-## Practical limits
+## Limits
 
-No authenticated/OAuth source collector, LinkedIn website collector, CAPTCHA bypass, signed installer, live public deployment, or GPU training service is included. Import adapters have synthetic fixture coverage, not universal provider-export compatibility. Dynamic sites requiring external JavaScript/API requests remain incomplete. Crawl limits and unresolved pages are reported rather than hidden. Wall classification and privacy screening are heuristic.
+Receipts attest this workspace's observation, not server non-repudiation, truth or a signer's real-world identity. Tail truncation requires a previously trusted head or external anchor to detect. The pure-Python signer is not constant-time. Keep backups private because they contain the signing key. No WACZ-Auth signatures or dataset-wide proof bundle; OpenTimestamps proofs need external upgrade/verification.
 
-SFT/preference/correction bundles use trainer-friendly shapes; observed traces and evaluation rows need the receiving trainer/evaluator's adapter. Independent dataset exports do not share a global split registry; check overlap before combining them. Model suggestions and matched quotes still require factual review. Hosted/local LLM behavior was tested through a protocol fixture, not a real inference model. No paid model calls or actual model-training runs were performed.
+Quote matching is lexical and bounded, and citation pairing is heuristic. Model-generated reviews cannot establish truth. Reports describe the evidence searched, with capture dates and explicit unavailable states. See [matching limits](VERIFY.md#limits-and-privacy).
 
-Source permission is user-confirmed, not independently adjudicated. Revocation cannot recall downloaded copies. Original archives may contain private data. Watches and crawl scheduling run only while the server is running; an in-flight action may finish after pause/cancel. Restore cancels queued crawls and pauses schedules/watches. See [workflow and setup](TRAINING_AND_AGENTS.md).
+No authenticated source collector, CAPTCHA bypass, universal dynamic-site renderer, GPU training, live hosted service or Windows publisher signing is included. Rights observations and reporting aids do not certify legal compliance. Imported archives can contain private data; revocation cannot recall exports already shared.

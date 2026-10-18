@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/assets/banner.svg" alt="Proofpage — Evidence for your next model" width="100%"></p>
+<p align="center"><img src="docs/assets/banner.svg" alt="Proofpage — Capture, inspect, verify" width="100%"></p>
 
 <p align="center">
 <a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.3">Download</a> ·
@@ -8,16 +8,24 @@
 <a href="CONTRIBUTING.md">Contribute</a>
 </p>
 
+**Capture it. Keep the evidence. Check the quote.**
+
 Proofpage turns public web pages and your own exported files into **traceable evidence for AI**. Collect material, inspect the original source, review training examples, and export datasets—or let an existing AI assistant search your evidence through MCP.
 
 **Free to run on your own computer. MIT licensed. No account, subscription, or model API key required for core features.** Desktop downloads include Python: no Python installation or terminal is needed. This is an early release. The Mac downloads are Developer ID signed and Apple-notarized; Windows signing is still pending.
 
-![Proofpage training workspace](docs/training-workbench.png)
+![Proofpage evidence workspace](docs/archival-library-light.png)
+
+> The redesign and four evidence features below are available from this branch/source checkout. The signed v0.1.3 desktop downloads predate them; do not expect these screens in that older release.
 
 ## What you can do
 
 | Your goal | Proofpage gives you |
 | --- | --- |
+| Check an AI answer | [Claim Check](docs/VERIFY.md): preview citations, compare quotes, see drift and export a report |
+| Track publisher signals | [Rights Radar](docs/RIGHTS.md): recorded evidence, conservative verdicts and export gates |
+| Follow page changes | Timeline, immutable revisions and word/number comparisons |
+| Share verifiable evidence | [Proof Receipts](docs/PROOF.md), offline bundles and WACZ archives |
 | Collect useful web content | Public page capture, bounded crawling, refresh schedules, and original evidence |
 | Bring your own data | ZIP, CSV, JSON, JSONL, Markdown, text, and HTML imports; conversation-aware adapters |
 | Prepare training data | Reviewed SFT examples, preference pairs, corrections, evaluations, grouped splits, and frozen exports |
@@ -25,6 +33,17 @@ Proofpage turns public web pages and your own exported files into **traceable ev
 | Stay in control | Local SQLite storage, permission reviews, backups, and portable exports |
 
 Proofpage **prepares data; it does not train a model**. Collection respects robots rules and does not bypass logins or access controls. Optional model-assisted drafting sends selected content only when you request it and still requires review. See [capabilities and limits](docs/IMPLEMENTATION_STATUS.md).
+
+## Run this development version
+
+With Python 3.11+ installed, clone this repository and run:
+
+```sh
+python3 -m pip install -e .
+python3 -m proofpage --home ~/Proofpage-preview/data serve --open
+```
+
+Use a separate preview workspace or back up your database before trying development builds. The native download workflow below is for the last published release.
 
 ## Install and run
 
@@ -73,7 +92,7 @@ On Windows use `py -3 scripts/install.py`. It creates an isolated runtime and CL
 
 1. Click **Add source**, enter a public page URL, then click **Collect** in Sources.
 2. Open the record in **Library** to inspect its text, original evidence, and capture details.
-3. Use **Training** to create draft examples, review source permissions, and approve suitable examples.
+3. Open **Verify** to check a quoted answer against captured evidence, or use **Training** to create draft examples, review source permissions, and approve suitable examples.
 4. Freeze and export a training bundle. Use **Datasets** for the separate reviewed text-corpus workflow.
 5. Open **Agent access** to connect an AI assistant to your local evidence.
 

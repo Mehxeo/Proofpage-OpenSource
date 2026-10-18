@@ -74,3 +74,7 @@ The tests use isolated temporary databases and deterministic responses. Live web
 ## Open source and hosted service
 
 The [MIT license](../LICENSE) covers both editions. See [Contributing](../CONTRIBUTING.md), [Security](../SECURITY.md), and [self-hosting/paid-service setup](HOSTING.md). Hosted mode adds invitation-based accounts, recovery, scoped agent keys, usage limits, customer billing, and portable workspace downloads. No price or live payment configuration is assumed.
+
+## Evidence features (development branch)
+
+See [Claim Check](VERIFY.md#cli-and-agents) for quote checking, [Proof](PROOF.md) for `verify`, `proof-bundle`, `export-wacz`, `receipts` and `anchor`, and [Rights Radar](RIGHTS.md) for `rights`. These commands extend the original CLI without replacing `verify` (offline cryptographic verification) with quote matching.

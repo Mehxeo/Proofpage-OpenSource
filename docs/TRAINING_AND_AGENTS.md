@@ -71,3 +71,9 @@ In the local workspace, open **Agent access → Copy setup prompt**, then paste 
 Desktop downloads include a separate console MCP helper, so the assistant does not need a system Python installation. Keep the app's support files together and recopy settings after moving the app. The assistant must support local stdio MCP and be permitted to configure integrations; a prompt cannot add support to clients that lack it. It should preserve existing configuration and verify the connection with `proofpage_list_sources`. A normal web-chat model may only be able to explain the setup.
 
 The prompt contains local filesystem paths, but no API keys or session token. Hosted users should create scoped keys in Account and configure them through the client's secure credential settings, never paste secrets into a prompt.
+
+## Evidence tools (development branch)
+
+Rights, history and receipts: `proofpage_get_rights`, `proofpage_diff_revisions`, `proofpage_list_changes_since`, `proofpage_get_receipt`.
+
+Quote checks: `proofpage_check_answer`, `proofpage_verify_quotes`, `proofpage_get_quote_check`, `proofpage_step_quote_check`, `proofpage_cancel_quote_check`. [Schemas and consent](VERIFY.md). Mechanical matches and model-written reviews never approve training data.
