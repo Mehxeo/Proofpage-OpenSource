@@ -5,7 +5,9 @@ import re
 import ssl
 import urllib.request
 
-CURRENT = '0.4.0'
+from . import __version__
+
+CURRENT = __version__
 RELEASES = 'https://github.com/Mehxeo/Proofpage-OpenSource/releases'
 API = 'https://api.github.com/repos/Mehxeo/Proofpage-OpenSource/releases/latest'
 

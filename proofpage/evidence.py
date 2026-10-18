@@ -1,4 +1,5 @@
 """Portable, pinned evidence inputs. Replay is deliberately network-free."""
+from . import __version__
 import base64
 import hashlib
 import json
@@ -107,7 +108,7 @@ def record(store, revision_ids, dependencies=None, name='Evidence run'):
                             'original': {'representation': representation, 'base64': base64.b64encode(original).decode('ascii'), 'sha256': sha(original)},
                             'capture': capture_info})
     manifest = {'schema': SCHEMA, 'name': name, 'created_at': now(), 'records': records,
-                'dependencies': json.loads(json.dumps(dependencies or [])), 'producer': 'Proofpage 0.5.0 evidence/v1',
+                'dependencies': json.loads(json.dumps(dependencies or [])), 'producer': 'Proofpage ' + __version__ + ' evidence/v1',
                 'scope': 'Pinned external inputs; not model-output determinism or publisher authentication.'}
     manifest['sha256'] = sha(canonical(manifest))
     if len(canonical(manifest)) > MAX_BYTES:

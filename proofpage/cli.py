@@ -1,4 +1,5 @@
 import argparse
+from . import __version__
 import json
 import os
 import sqlite3
@@ -10,7 +11,7 @@ from .core import Store, import_file, preview
 
 def main():
     parser = argparse.ArgumentParser(description='Proofpage local evidence workspace')
-    parser.add_argument('--version', action='version', version='Proofpage 0.4.0')
+    parser.add_argument('--version', action='version', version='Proofpage ' + __version__)
     parser.add_argument('--home', help='Local data directory (default: PROOFPAGE_HOME or ~/.proofpage)')
     sub = parser.add_subparsers(dest='command')
     sub.add_parser('doctor', help='Check Python, SQLite search, and the workspace path')

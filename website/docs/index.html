@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Proofpage documentation</title><meta name="description" content="Install Proofpage, capture pages, check quotes, review rights, export evidence, and connect your AI assistant."><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/docs/docs.css"><script src="/docs/docs.js" defer></script></head><body><header><a class="brand" href="/">Proofpage / Docs</a><nav><a href="/#download">Download</a><a href="https://github.com/Mehxeo/Proofpage-OpenSource">GitHub ↗</a></nav></header><div class="docs-layout"><aside><label for="docs-search">Find in docs</label><input id="docs-search" type="search" placeholder="Search topics…"><nav aria-label="Documentation"><a href="#start">Start here</a><a href="#browser-capture">Signed-in pages</a><a href="#media">Images, PDFs & automation</a><a href="#verify">Check quotes</a><a href="#rights">Review rights</a><a href="#proof">Receipts & archives</a><a href="#agents">AI assistants & training</a><a href="#cli">Command line</a></nav><p>Made by Utsav Das.</p></aside><main><h1>Get something useful done.</h1><p>Start with a page. Keep its evidence. Check a quote or prepare a reviewed dataset.</p><p id="search-status" role="status"></p><article id="start" data-doc><h2>Start with one page</h2>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Proofpage documentation</title><meta name="description" content="Install Proofpage, capture pages, check quotes, review rights, export evidence, and connect your AI assistant."><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/docs/docs.css"><script src="/docs/docs.js" defer></script></head><body><header><a class="brand" href="/">Proofpage / Docs</a><nav><a href="/#download">Download</a><a href="https://github.com/Mehxeo/Proofpage-OpenSource">GitHub ↗</a></nav></header><div class="docs-layout"><aside><label for="docs-search">Find in docs</label><input id="docs-search" type="search" placeholder="Search topics…"><nav aria-label="Documentation"><a href="#start">Start here</a><a href="#browser-capture">Signed-in pages</a><a href="#media">Images, PDFs & automation</a><a href="#verify">Check quotes</a><a href="#rights">Review rights</a><a href="#proof">Receipts & archives</a><a href="#agents">AI assistants & training</a><a href="#business">Business context</a><a href="#connectors">Google Docs & remote MCP</a><a href="#developers">Developer SDKs & replay</a><a href="#cli">Command line</a></nav><p>Made by Utsav Das.</p></aside><main><h1>Get something useful done.</h1><p>Start with a page. Keep its evidence. Check a quote or prepare a reviewed dataset.</p><p id="search-status" role="status"></p><article id="start" data-doc><h2>Start with one page</h2>
 <h3>Download and open</h3>
 <p><a href="/#download">Download Proofpage</a> for your computer. Extract the archive and open the app. On Mac, drag Proofpage.app into Applications. On Windows, keep the extracted support files beside Proofpage.exe. The desktop app includes Python; you do not need to install Python or use a terminal.</p>
 <p>The desktop download opens your workspace in a native Tauri window. Keep it open for scheduled collection. Source/CLI installations still use your browser. Your evidence is stored separately from the application in your user folder under Proofpage/data.</p>
@@ -176,7 +176,327 @@ python3 -m proofpage --home .proofpage serve</code></pre>
 <p>Sources now offers <strong>Set schedule</strong> / <strong>Edit schedule</strong>, with 15-minute, hourly, six-hour and daily choices plus pause. The first scheduled check starts after that interval; use Collect for an immediate capture. Keep the app/server open, and inspect Activity and Timeline for actual results and delays.</p>
 <h3>Personal preferences and personal training data</h3>
 <p>Settings → Appearance offers Follow system, Light and Dark. The choice is saved in this browser, follows system changes when selected, and syncs across tabs on the same origin. The library also remembers grid/list layout. Browser preferences are not synced between devices or different app ports; clearing browser storage resets them. When browser storage is unavailable, the theme applies for this visit and the app explains that it could not save it.</p>
-<p>For personal-model datasets, create separate import profiles for each provider/account. Human-message examples require the actual sender as the target participant and explicit confirmation of context and role mapping. API clients must supply JSON booleans <code>true</code>, not strings or numbers, for <code>context_confirmed</code> and <code>roles_approved</code>. These decisions persist with the example; permission/privacy review and approval are still required before freezing a dataset. Appearance preferences do not personalize model weights, and Proofpage exports training data rather than running fine-tuning itself.</p></article><article id="cli" data-doc><h2>CLI and workflows</h2>
+<p>For personal-model datasets, create separate import profiles for each provider/account. Human-message examples require the actual sender as the target participant and explicit confirmation of context and role mapping. API clients must supply JSON booleans <code>true</code>, not strings or numbers, for <code>context_confirmed</code> and <code>roles_approved</code>. These decisions persist with the example; permission/privacy review and approval are still required before freezing a dataset. Appearance preferences do not personalize model weights, and Proofpage exports training data rather than running fine-tuning itself.</p></article><article id="business" data-doc><h2>Portable business context</h2>
+<p>Available in 0.5.0. MIT licensed, local-first, no account, paid service or model API</p>
+<p>key required. This feature prepares user-reviewed context; it does not modify</p>
+<p>ChatGPT/Claude account memory or train model weights.</p>
+<h3>Setup</h3>
+<p>1. Import selected files using <strong>Import files</strong>. For Google Docs, use the optional <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/CONNECTORS.md">selected-document sync connector</a>,</p>
+<p>   or export to text/PDF and import manually.</p>
+<p>2. Open <strong>Business context</strong> and create a profile.</p>
+<p>3. Select evidence and classify it as Our business, Customer material, Reference</p>
+<p>   material, or Writing example. The picker uses the current library search</p>
+<p>   results; search the library first to narrow a large collection.</p>
+<p>4. Suggest passages. These are deterministic verbatim passages, not AI-generated</p>
+<p>   summaries or inferred preferences. Review conflicting statements yourself.</p>
+<p>5. Edit, approve or exclude each suggestion. Approval requires permission and</p>
+<p>   review acknowledgments. Detected credential-like content blocks approval.</p>
+<p>6. Download the ZIP and inspect it before sharing with an assistant provider.</p>
+<p>The ZIP contains BUSINESS.md, INSTRUCTIONS.md, context.json and README.md.</p>
+<p>Only approved text and its supporting quotations are included. Original files</p>
+<p>and unrelated profile drafts are excluded. Customer/reference content is labeled</p>
+<p>separately; it must not be interpreted as your business&#x27;s products or policies.</p>
+<p>Writing examples remain examples, not inferred style instructions.</p>
+<p>For bookmarks, export HTML from your browser, preview it in Business context,</p>
+<p>and explicitly select entries. Only public-style HTTP(S) URLs without embedded</p>
+<p>credentials are accepted; javascript/file URLs are ignored. No page is fetched.</p>
+<p>Bookmark records cannot be attached as business evidence. Add a desired URL in</p>
+<p>Sources, collect it explicitly, then attach its captured revision.</p>
+<p>If a selected source changes, approved context based on the old revision blocks</p>
+<p>export/retrieval. Exclude the old passages, attach the current revision and review</p>
+<p>new suggestions. Changing a source&#x27;s role resets its approvals. A context pack</p>
+<p>already uploaded elsewhere cannot be remotely revoked by Proofpage.</p>
+<h3>Developer interfaces</h3>
+<pre><code>from proofpage.sdk import Proofpage
+p = Proofpage(home=&#x27;./workspace&#x27;)
+profile = p.create_business(&#x27;Acme&#x27;)
+p.attach_business_source(profile[&#x27;id&#x27;], &#x27;REVISION_ID&#x27;, &#x27;business&#x27;)
+draft = p.draft_business(profile[&#x27;id&#x27;])
+# Present draft[&#x27;facts&#x27;] to the person reviewing them before calling approval.
+fact = draft[&#x27;facts&#x27;][0]
+p.review_business_fact(fact[&#x27;id&#x27;], fact[&#x27;text&#x27;], &#x27;approved&#x27;,
+                       permission=True, acknowledge=True)
+context = p.business_context(profile[&#x27;id&#x27;])
+pack_bytes = p.export_business(profile[&#x27;id&#x27;])</code></pre>
+<p>Approval flags are explicit assertions by the caller; do not set them on behalf</p>
+<p>of a user who has not reviewed the material. MCP intentionally exposes only</p>
+<p>profile listing and approved-context retrieval, not approval methods.</p>
+<pre><code>proofpage --home ./workspace business create --name Acme
+proofpage --home ./workspace business attach --id PROFILE --revision REVISION --role business
+proofpage --home ./workspace business draft --id PROFILE
+proofpage --home ./workspace business get --id PROFILE
+proofpage --home ./workspace business review --id FACT --text &#x27;Reviewed business statement&#x27; --decision approved --permission --acknowledge
+proofpage --home ./workspace business export --id PROFILE --path context.zip
+proofpage --home ./workspace business bookmarks-preview --path bookmarks.html
+proofpage --home ./workspace business bookmarks-import --path bookmarks.html --select 0 --select 2</code></pre>
+<p>Exports refuse to overwrite files. Errors return JSON and exit code 2. The Python</p>
+<p><code>proofpage.business</code> module also exposes bookmark preview/import for integrations.</p>
+<p>The authenticated workspace API provides <code>/api/business</code>, <code>/api/business/:id</code>,</p>
+<p><code>/api/business/:id/export</code>, and POST operations <code>business-create</code>, <code>business-attach</code>,</p>
+<p><code>business-draft</code>, <code>business-review</code>, <code>business-training-draft</code>,</p>
+<p><code>business-bookmark-preview</code>, and <code>business-bookmark-import</code>. Use the existing</p>
+<p>workspace authentication; these are not public unauthenticated endpoints.</p>
+<p>MCP: <code>proofpage_business_profiles</code> and <code>proofpage_business_context(profile_id)</code>.</p>
+<p>An assistant can retrieve approved current context without receiving arbitrary</p>
+<p>local filesystem access. The text remains untrusted context, not system policy.</p>
+<h3>Training</h3>
+<p>An approved business fact can create an SFT draft using a question you supply.</p>
+<p>Use <strong>Draft training example</strong>, or <code>p.business_training_draft(fact_id, question)</code>.</p>
+<p>The result remains unapproved in Training. Existing rights, role-mapping, review,</p>
+<p>and dataset export gates still apply. Customer/reference/writing sources cannot</p>
+<p>use this shortcut; create and review any appropriate training examples separately.</p>
+<p>Context approval does not establish permission to train a model.</p>
+<h3>Limits</h3>
+<p>Bookmark preview accepts 2 MiB and returns at most 500 distinct entries. Drafting</p>
+<p>examines the first 12,000 text characters per source and up to 12 sentence-like</p>
+<p>passages, each 15–1,500 characters. It is not exhaustive extraction, a conflict</p>
+<p>resolver, a full PII detector, or an automatic description of your business.</p>
+<p>Selected file/folder import and watches remain the existing explicit workflows;</p>
+<p>there is no silent disk scan. No OAuth connector or destination-account setup</p>
+<p>is performed by this feature. Review all quotes, including ones accompanying</p>
+<p>edited statements, before sharing.</p>
+<h3>Connector update</h3>
+<p>The source edition now includes an optional selected-document Google Docs sync</p>
+<p>connector and OAuth-protected self-hostable remote MCP. See <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/CONNECTORS.md">connector setup</a>.</p>
+<p>The earlier manual-export workflow remains available without OAuth setup. These</p>
+<p>connectors require external account configuration and are not activated in the</p>
+<p>published desktop downloads.</p></article><article id="connectors" data-doc><h2>Google Docs, remote MCP, and client skills</h2>
+<p>Available in 0.5.0, MIT licensed. Remote HTTP dependencies are optional; local core features</p>
+<p>remain dependency-free. A working local test is not proof that a third-party</p>
+<p>account or public deployment is connected.</p>
+<h3>Google Docs</h3>
+<p>The 0.5.0 desktop downloads include the Google OAuth library and OS-vault support.</p>
+<p>For a source install, use <code>python -m pip install -e &#x27;.[google]&#x27;</code>.</p>
+<p>In your Google Cloud project enable the Google Docs API, configure the OAuth</p>
+<p>consent screen/test users, and create an OAuth client of type <strong>Desktop app</strong>.</p>
+<p>Download its JSON outside the repository and set <code>PROOFPAGE_GOOGLE_CLIENT_FILE</code></p>
+<p>to its absolute path when starting Proofpage. Alternatively, place it at</p>
+<p><code>~/.config/proofpage/google-oauth.json</code> for automatic discovery. Never commit this file or paste</p>
+<p>credentials into prompts. Public distribution may require Google&#x27;s verification.</p>
+<p>In Business context, click Connect Google Docs. Complete authorization in the</p>
+<p>system browser. The connector uses authorization code + PKCE with a loopback</p>
+<p>callback, via Google&#x27;s OAuth library. The requested <code>documents.readonly</code> scope</p>
+<p>can read the account&#x27;s Docs; the application only fetches IDs you explicitly</p>
+<p>select. This is not per-file OAuth permission or a Drive-wide crawler.</p>
+<p>Paste a document URL, choose Manual/Hourly/Six-hourly/Daily, save the selection,</p>
+<p>confirm owner permission for local personal-context snapshots, and click Sync. The content appears in the library for profile attachment and</p>
+<p>review. Tables and nested tabs are read. Extracted text excludes images, comments,</p>
+<p>headers/footers and suggested edits; original returned API JSON is preserved.</p>
+<p>Up to 8 MiB is accepted. Failed/empty responses preserve previous evidence.</p>
+<p>Automatic schedules require the app/server to remain open. Changed revisions</p>
+<p>invalidate approved business context rather than silently altering it.</p>
+<p>Google API snapshots are for personal context in this release; the Training</p>
+<p>workflow rejects them. Google Workspace data cannot be used to train shared or</p>
+<p>general-purpose models. Only retain snapshots with express owner permission.</p>
+<p>See <a href="https://developers.google.com/workspace/workspace-api-user-data-developer-policy">Google Workspace data policy</a></p>
+<p>and <a href="https://developers.google.com/terms#section_5_content">Google API content terms</a>.</p>
+<p>Tokens are stored only in an OS vault: macOS Keychain, Windows Credential Locker,</p>
+<p>or Linux Secret Service. The connector fails closed when those backends are</p>
+<p>unavailable; no plaintext fallback. Credentials are scoped to the workspace path</p>
+<p>and are excluded from database backups. Moving a workspace requires reconnecting.</p>
+<p>Disconnect removes local credentials and pauses schedules; previously imported</p>
+<p>evidence stays. Revoke the account grant in Google permissions separately.</p>
+<p>CLI equivalents:</p>
+<pre><code>proofpage --home ./workspace google-docs status
+proofpage --home ./workspace google-docs connect
+proofpage --home ./workspace google-docs select --document DOC_ID --interval 3600 --owner-permission
+proofpage --home ./workspace google-docs sync --document DOC_ID
+proofpage --home ./workspace google-docs disconnect</code></pre>
+<p>Google auth is local-only. Hosted workspace routes cannot trigger desktop consent</p>
+<p>or access the host&#x27;s OS vault. The shared Proofpage OAuth project is currently in</p>
+<p>Testing, available only to its configured test accounts. Other users must configure</p>
+<p>their own Google Desktop OAuth client; public verification is not complete.</p>
+<h3>Remote MCP for web assistants</h3>
+<p>Install <code>python -m pip install -e &#x27;.[mcp-http]&#x27;</code>. Configure an OAuth authorization</p>
+<p>server that supports the intended client&#x27;s discovery/registration flow, PKCE,</p>
+<p>and JWT access tokens with the resource URL as audience. Your provider must</p>
+<p>issue the <code>proofpage:read</code> scope and a stable subject for your account.</p>
+<p>No authorization provider, public host or client registration is provisioned</p>
+<p>by this repository. This service is the OAuth <strong>resource server</strong>, not a login</p>
+<p>provider. Using a generic OIDC provider without compatible client registration</p>
+<p>is insufficient for some web assistants.</p>
+<pre><code>export PROOFPAGE_MCP_URL=https://mcp.your-domain.example/mcp
+export PROOFPAGE_MCP_ISSUER=https://your-issuer.example/
+export PROOFPAGE_MCP_JWKS_URL=https://your-issuer.example/.well-known/jwks.json
+export PROOFPAGE_MCP_SUBJECT=YOUR_ACCOUNT_SUBJECT
+proofpage --home /path/to/dedicated-workspace mcp-http --port 8910</code></pre>
+<p>These are deployment identifiers, not tokens. Run an HTTPS reverse proxy in front</p>
+<p>of <code>127.0.0.1:8910</code>, preserving the public Host and paths including</p>
+<p><code>/.well-known/oauth-protected-resource/mcp</code>. Configure request limits and avoid</p>
+<p>logging Authorization headers. Do not expose the desktop UI port as a substitute.</p>
+<p>Use a dedicated workspace containing only material you intend to share.</p>
+<p>The official MCP SDK handles Streamable HTTP, initialization, tools, resource</p>
+<p>metadata, and authentication challenges. Tokens require RS256/ES256 signatures</p>
+<p>from the configured JWKS, exact issuer, matching resource audience, expiry,</p>
+<p><code>proofpage:read</code>, and the exact configured subject. Missing/wrong tokens fail.</p>
+<p>Only five read tools are exposed: business profile listing, approved business</p>
+<p>context, bounded evidence search, recorded-context replay, and run listing.</p>
+<p>No collection, approval, filesystem paths, credential changes or training writes.</p>
+<p>This is a single-owner workspace server, not a multi-tenant team service.</p>
+<p>Add the <strong>public</strong> URL in a web assistant&#x27;s supported custom connector flow and</p>
+<p>complete its OAuth consent. Feature availability and admin restrictions vary by</p>
+<p>client/account. Verify by listing profiles and retrieving a known approved</p>
+<p>profile; never report success based on configuration alone. This supplies context</p>
+<p>to conversations/tools, not automatic account memory or weight personalization.</p>
+<p>The existing <code>/agent</code> hosted bridge remains separate and uses Proofpage agent</p>
+<p>keys; it is not a substitute for this OAuth connector.</p>
+<h3>Skills that install without clobbering work</h3>
+<pre><code>proofpage install-skill --project /path/to/project --client codex
+proofpage install-skill --project /path/to/project --client claude</code></pre>
+<p>The installer writes <code>.agents/skills/proofpage/SKILL.md</code> or</p>
+<p><code>.claude/skills/proofpage/SKILL.md</code>, recognizes an identical existing installation,</p>
+<p>and refuses to overwrite custom content. A skill provides workflow guidance;</p>
+<p>it does not establish MCP connectivity. Use Agent access&#x27;s configuration and</p>
+<p>Test MCP connection separately. The shipped skill names only existing tools.</p>
+<h3>Verification and boundaries</h3>
+<p>Automated tests exercise the real stdio server through the official MCP client:</p>
+<p>initialize, discovery, record/replay, approved context, drift and invalid arguments.</p>
+<p>HTTP tests exercise the official SDK with signed fixture JWTs: missing/expired/</p>
+<p>wrong-subject/wrong-audience/wrong-scope tokens, allowed reads, absent write tools,</p>
+<p>and cross-origin denial. Google fixtures cover multi-tab/table extraction,</p>
+<p>selection, deduplication, revision drift and failed refresh preservation.</p>
+<p>Live Google account consent and ChatGPT/Claude connector installation still</p>
+<p>require a configured OAuth project, public deployment, and user consent. Tests</p>
+<p>with fixture tokens do not verify your provider&#x27;s registration or consent flow.</p>
+<p>Primary references:</p>
+<p>- https://developers.google.com/identity/protocols/oauth2/native-app</p>
+<p>- https://developers.google.com/workspace/docs/api/reference/rest/v1/documents/get</p>
+<p>- https://github.com/modelcontextprotocol/python-sdk</p>
+<p>- https://help.openai.com/en/articles/12584461-developer-mode-and-full-mcp-connectors-in-chatgpt</p>
+<p>- https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp</p></article><article id="developers" data-doc><h2>Reproducible evidence for developers</h2>
+<p>Source implementation (not yet included in a published desktop release). Install</p>
+<p>this checkout with <code>python -m pip install -e .</code>. Python 3.11+ is required.</p>
+<h3>Record and replay</h3>
+<pre><code>from proofpage.sdk import Proofpage
+
+client = Proofpage(home=&#x27;./evidence-workspace&#x27;)
+captured = client.capture(&#x27;https://example.com&#x27;)  # explicit network operation
+if captured[&#x27;collection&#x27;][&#x27;state&#x27;] != &#x27;available&#x27;:
+    raise RuntimeError(captured[&#x27;collection&#x27;])
+manifest = client.record(captured[&#x27;revision_ids&#x27;], name=&#x27;research-answer-1&#x27;)
+pin = client.write(manifest, &#x27;inputs.json&#x27;)  # refuses to overwrite
+saved = Proofpage.replay(&#x27;inputs.json&#x27;, expected_sha256=pin)  # no workspace/network
+text_for_model = saved[&#x27;records&#x27;][0][&#x27;text&#x27;]</code></pre>
+<p>Replay supplies the exact recorded text and stored original representations. It</p>
+<p>is not browser interaction replay or a promise of identical model answers.</p>
+<p>HTTP originals are labeled exact or reconstructed; supplied revision raw data</p>
+<p>is explicitly labeled <code>stored_raw_utf8</code>. OCR/extractor metadata is preserved</p>
+<p>as stored; older records may lack extractor versions. There is no automatic</p>
+<p>interception of model or browser calls. Record the revisions actually used.</p>
+<h3>Trace outputs to exact quotations</h3>
+<p>Pass <code>dependencies</code> to <code>client.record</code>:</p>
+<pre><code>revision = captured[&#x27;revision_ids&#x27;][0]
+# Offsets are Python Unicode character indices, not UTF-16 offsets.
+dependencies = [{
+    &#x27;output_id&#x27;: &#x27;answer-1&#x27;, &#x27;revision_id&#x27;: revision,
+    &#x27;start&#x27;: 0, &#x27;end&#x27;: 7, &#x27;quote&#x27;: text_for_model[:7]
+}]
+manifest = client.record([revision], dependencies=dependencies)
+report = client.check(manifest)</code></pre>
+<p>Quotes must exactly match a nonempty slice. Compare returns changed/missing</p>
+<p>records, lexical differences, affected output IDs, and whether each quote still</p>
+<p>occurs in the current text. It checks the <strong>local workspace</strong>, not the live web.</p>
+<p><code>client.refresh(manifest)</code> explicitly fetches original public targets through</p>
+<p>normal collection restrictions/budgets, then compares. Blocked/deferred results</p>
+<p>are reported; old evidence is not silently treated as a successful refresh.</p>
+<p>A changed source marks an output for review; it does not prove the output false.</p>
+<h3>CLI and CI</h3>
+<pre><code>proofpage --home ./evidence-workspace evidence record inputs.json --revision REVISION_ID
+proofpage evidence replay inputs.json --sha256 TRUSTED_MANIFEST_SHA256
+proofpage --home ./evidence-workspace evidence check inputs.json --sha256 TRUSTED_MANIFEST_SHA256
+proofpage --home ./evidence-workspace evidence refresh inputs.json</code></pre>
+<p>Use <code>--dependencies dependencies.json</code> when recording. Commands return JSON.</p>
+<p>Exit codes: 0 successful; 1 drift/missing evidence or unsuccessful refresh;</p>
+<p>2 malformed inputs, failed checksum, or file errors. Replay does not create a</p>
+<p>workspace. Check requires the original workspace (or its backup) for current</p>
+<p>revision comparison. A fresh workspace reports missing evidence.</p>
+<p>The reusable composite action lives at <code>.github/actions/evidence-check</code>:</p>
+<pre><code>- uses: actions/checkout@v4
+- uses: actions/setup-python@v5
+  with:
+    python-version: &#x27;3.13&#x27;
+- run: python -m pip install -e .
+- uses: ./.github/actions/evidence-check
+  with:
+    manifest: fixtures/inputs.json
+    sha256: YOUR_REVIEWED_MANIFEST_HASH
+    # home: restored-workspace  # optional current-revision comparison</code></pre>
+<p>This example runs inside a checkout containing Proofpage. External projects</p>
+<p>should check out a reviewed Proofpage commit separately, install that path, and</p>
+<p>reference its action directory. Pin the commit; do not install an unrelated</p>
+<p>same-name registry package. Upload <code>proofpage-evidence-report.json</code> with</p>
+<p><code>if: always()</code> if you need drift reports as CI artifacts. Offline-only mode</p>
+<p>validates integrity; it does not claim freshness. No automatic network refresh.</p>
+<p>Keep the trusted checksum in reviewed configuration separate from untrusted</p>
+<p>manifest updates. Hashes establish integrity relative to a trusted pin, not</p>
+<p>publisher identity. Manifests contain source content and may contain sensitive</p>
+<p>material; review before committing them to a public repository.</p>
+<h3>Node and TypeScript</h3>
+<p>The local SDK is in <code>sdk/typescript</code> (not published to npm):</p>
+<pre><code>import { Proofpage } from &#x27;./sdk/typescript/index.js&#x27;;
+const client = new Proofpage({ python: &#x27;/path/to/venv/bin/python&#x27;, home: &#x27;./evidence-workspace&#x27; });
+const saved = await client.record(&#x27;inputs.json&#x27;, { revisions: [&#x27;REVISION_ID&#x27;] });
+const replay = await client.replay(&#x27;inputs.json&#x27;, { sha256: saved.sha256 });
+const report = await client.check(&#x27;inputs.json&#x27;);
+if (!report.ok) process.exitCode = 1;</code></pre>
+<p>This SDK launches the local CLI without a shell and includes TypeScript types,</p>
+<p>a 30-second default timeout and AbortSignal cancellation. Set <code>timeoutMs</code> higher</p>
+<p>for explicit refreshes. Drift resolves to a report; malformed inputs reject.</p>
+<p>The Python engine must be installed. This is not a hosted HTTP SDK, and no</p>
+<p>automatic retries are performed for mutations.</p>
+<h3>Current boundaries</h3>
+<p>Manifests are capped at 64 MiB, include base64 originals, and are not encrypted</p>
+<p>or signed. Existing separately signed proof bundles remain available. Dependency</p>
+<p>tracking is explicit, per manifest; dependencies are recorded through explicit SDK/MCP retrieval, not arbitrary model interception.</p>
+<p>There is no shared team service, PDF-region UI, or new training exporter in this increment.</p>
+<p>See DEVELOPER_PLAN.md for the roadmap and customer-validation milestones.</p>
+<h3>Try the regression demo</h3>
+<p>Run <code>python examples/evidence_regression.py</code> from this checkout after installing</p>
+<p>it. The offline fixture changes a price, identifies the affected answer, and</p>
+<p>asserts that replay still supplies the original price. It uses a temporary</p>
+<p>workspace and leaves your library untouched. This example also runs in CI.</p>
+<h3>Persistent agent runs and reverse dependencies</h3>
+<p>Everything here is MIT licensed and runs locally. No subscription or vendor API</p>
+<p>key is needed. The additive database migration preserves existing workspaces.</p>
+<pre><code>client = Proofpage(home=&#x27;./evidence-workspace&#x27;)
+retrieval = client.record_context(&#x27;pricing&#x27;, output_id=&#x27;answer-42&#x27;, name=&#x27;Pricing research&#x27;)
+if retrieval[&#x27;recording&#x27;]:
+    run_id = retrieval[&#x27;recording&#x27;][&#x27;run_id&#x27;]
+    pinned = client.replay_context(run_id)
+    comparison = client.check_run(run_id)
+    client.export_run(run_id, &#x27;answer-42-inputs.json&#x27;)</code></pre>
+<p>The dependency means the excerpt was supplied to an output, not that a model</p>
+<p>actually used it. Saved runs are immutable. Recording again creates another</p>
+<p>run, even with the same output ID. <code>client.affected_outputs(item_id)</code> finds</p>
+<p>recorded output dependencies whose source revisions differ from the current</p>
+<p>library. Missing records are included. Checks do not perform network requests.</p>
+<p>In the app: Agent access → enter a query and an Output ID → Retrieve context.</p>
+<p>Use Recorded agent inputs → Load saved runs → Replay / Check / Export.</p>
+<p>CLI:</p>
+<pre><code>proofpage --home ./evidence-workspace evidence-run record-context --query pricing --output-id answer-42
+proofpage --home ./evidence-workspace evidence-run list
+proofpage --home ./evidence-workspace evidence-run replay RUN_ID
+proofpage --home ./evidence-workspace evidence-run check RUN_ID
+proofpage --home ./evidence-workspace evidence-run affected ITEM_ID
+proofpage --home ./evidence-workspace evidence-run export RUN_ID --output inputs.json</code></pre>
+<p>Node exposes <code>recordContext</code>, <code>listRuns</code>, <code>replayRun</code>, <code>checkRun</code>,</p>
+<p><code>affectedOutputs</code>, and <code>exportRun</code>. MCP exposes <code>proofpage_record_context</code>,</p>
+<p><code>proofpage_replay_context</code>, <code>proofpage_check_evidence_run</code>,</p>
+<p><code>proofpage_list_evidence_runs</code>, and <code>proofpage_affected_outputs</code>.</p>
+<p>MCP returns bounded recorded excerpts; exporting large originals remains an</p>
+<p>explicit app/CLI/SDK action. No filesystem paths are accepted by these MCP tools.</p>
+<h3>Bring your own collector</h3>
+<p>Use `client.import_capture(url, text=extracted_text, original=original_bytes,</p>
+<p>content_type=&#x27;text/html&#x27;, collector=&#x27;your-collector/version&#x27;)` to record output</p>
+<p>from Playwright, Firecrawl, or your own collector. This method does not call</p>
+<p>those services or fetch the URL. Supply the bytes your collector actually</p>
+<p>returned. For Playwright&#x27;s rendered HTML, encode <code>await page.content()</code> as</p>
+<p>UTF-8; do not describe it as the original HTTP response. For a provider&#x27;s</p>
+<p>Markdown output, use <code>text/markdown</code> and the returned Markdown bytes.</p>
+<p>Imports are explicitly caller-supplied, cannot obtain HTTP receipts retroactively,</p>
+<p>and preserve collector metadata. Capture policies and permissions remain the</p>
+<p>caller&#x27;s responsibility. The same revision can feed <code>record</code>, training review,</p>
+<p>or context retrieval. Each text/original is limited to 8 MiB.</p></article><article id="cli" data-doc><h2>CLI and workflows</h2>
 <h3>CLI</h3>
 <pre><code>python3 -m proofpage --home .proofpage collect https://example.com
 python3 -m proofpage --home .proofpage search documentation

@@ -11,6 +11,7 @@ class UpdateTests(unittest.TestCase):
 
     @patch('proofpage.updates.platform.machine', return_value='arm64')
     @patch('proofpage.updates.platform.system', return_value='Darwin')
+    @patch('proofpage.updates.CURRENT', '0.4.0')
     def test_platform_download_and_numeric_version(self, *_):
         self.assertTrue(updates.release_info(self.release('v0.4.10'))['available'])
         self.assertIsNotNone(updates.release_info(self.release())['download'])

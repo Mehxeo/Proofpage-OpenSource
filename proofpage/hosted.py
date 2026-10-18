@@ -1,4 +1,5 @@
 """Single-node hosted edition. One process owns a private persistent data volume."""
+from . import __version__
 import asyncio
 import json
 import os
@@ -318,7 +319,7 @@ def create_app(root=None, origin=None, development=False, scheduler=True, billin
         def dispatch():
             mid=payload.get('id');method=payload.get('method')
             if method=='initialize':
-                response={'protocolVersion':'2025-06-18','capabilities':{'tools':{}},'serverInfo':{'name':'proofpage-hosted','version':'0.4.0'}}
+                response={'protocolVersion':'2025-06-18','capabilities':{'tools':{}},'serverInfo':{'name':'proofpage-hosted','version':__version__}}
             elif method=='tools/list':
                 response={'tools':[{'name':name,'description':desc,'inputSchema':{'type':'object','properties':{k:mcp.field_schema(v) for k,v in fields.items()},'required':list(fields),'additionalProperties':False}} for name,(desc,fields) in mcp.TOOLS.items() if principal['scope']=='collect' or name in READ_TOOLS]}
             elif method=='tools/call':
