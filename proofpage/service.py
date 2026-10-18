@@ -5,7 +5,7 @@ import time
 from .core import import_file, preview
 from .imports import create_profile
 from .watch import create_watch, scan_watch
-from . import training, crawl, models, agent
+from . import training, crawl, models, agent, history
 from .mcp import TOOLS
 
 def response(status, value, content_type='application/json'):
@@ -22,11 +22,21 @@ def with_blockers(store, datasets):
 def get(store, path, query):
     if path == '/api/state':
         return response(200, {'sources': store.rows('SELECT s.*,(SELECT o.verdict FROM rights_observations o WHERE o.source_id=s.id ORDER BY o.observed_at DESC LIMIT 1) rights FROM sources s'), 'profiles': store.rows('SELECT * FROM import_profiles'), 'watches': store.rows('SELECT * FROM watches'), 'runs': store.rows('SELECT * FROM runs ORDER BY started_at DESC LIMIT 30'), 'datasets': with_blockers(store, store.rows('SELECT d.id,d.name,d.created_at,d.hash,d.revision_ids,m.format,(SELECT COUNT(*) FROM dataset_rights x WHERE x.dataset_id=d.id AND x.drifted=1) rights_changed FROM datasets d LEFT JOIN dataset_manifests m ON m.dataset_id=d.id ORDER BY d.created_at DESC')), 'items': store.search(query.get('q', [''])[0], snippets=True),
-                                'total': store.rows('SELECT COUNT(*) n FROM items')[0]['n'], 'approved': store.rows('SELECT COUNT(*) n FROM items i JOIN reviews v ON v.revision_id=i.current_revision WHERE v.approved=1')[0]['n']})
+                                'unread': history.unread_counts(store)['total'], 'total': store.rows('SELECT COUNT(*) n FROM items')[0]['n'], 'approved': store.rows('SELECT COUNT(*) n FROM items i JOIN reviews v ON v.revision_id=i.current_revision WHERE v.approved=1')[0]['n']})
     if path.startswith('/api/watches/'):
         return response(200, store.rows('SELECT path,state,detail FROM watch_files WHERE watch_id=?', (path.rsplit('/', 1)[1],)))
+    if path.startswith('/api/items/') and path.endswith('/timeline'):
+        try:
+            config = models.configuration()
+        except ValueError as exc:
+            config = {'configured': False, 'detail': str(exc)}
+        # The endpoint URL is never sent to the browser here; hosted operators keep theirs private.
+        model = {'configured': config['configured'], 'model': config.get('model', ''), 'detail': config['detail']}
+        return response(200, dict(history.timeline(store, path.split('/')[3]), model=model))
     if path.startswith('/api/items/'):
         return response(200, store.item(path.rsplit('/', 1)[1]))
+    if path == '/api/diff':
+        return response(200, history.compare(store, query.get('from', [''])[0], query.get('to', [''])[0]))
     if path.startswith('/api/revisions/'):
         return response(200, store.revision(path.rsplit('/', 1)[1]))
     if path == '/api/workbench':
@@ -43,7 +53,7 @@ def get(store, path, query):
         from .compliance import build
         return response(200, build(store, path.rsplit('/', 1)[1]))
     if path == '/api/inbox':
-        return response(200, store.rows('SELECT * FROM inbox ORDER BY created_at DESC LIMIT 200'))
+        return response(200, {'events': history.inbox(store, query.get('kind', [''])[0] or None, query.get('unseen', [''])[0] == '1'), 'unread': history.unread_counts(store)})
     if path.startswith('/api/candidates/'):
         return response(200, training.get_candidate(store, path.rsplit('/', 1)[1]))
     if path.startswith('/api/crawls/'):
@@ -105,6 +115,10 @@ def post(store, path, data):
     elif path == '/api/review':
         store.review(data['revision_id'], data['allowed'] is True, data['approved'] is True, data.get('rights_basis'), data.get('rights_note'))
         result = {'saved': True}
+    elif path == '/api/change-summary':
+        result = history.model_summary(store, data['from_revision'], data['to_revision'])
+    elif path == '/api/inbox-seen':
+        result = history.mark_seen(store, None if data.get('all') is True else data.get('ids'))
     elif path == '/api/freeze':
         result = store.freeze(data['name'])
     else:

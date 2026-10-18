@@ -290,19 +290,26 @@ class Store:
             db.execute('BEGIN IMMEDIATE')
             found = db.execute('SELECT * FROM items WHERE source_id=? AND external_id=?', (source_id, external_id)).fetchone()
             item_id = found['id'] if found else uuid.uuid4().hex
+            previous = found['current_revision'] if found else None
             old = db.execute('SELECT id FROM revisions WHERE item_id=? AND hash=?', (item_id, content_hash)).fetchone()
             if old:
-                if found['current_revision'] != old['id']:
-                    db.execute('UPDATE items SET current_revision=?,title=?,kind=? WHERE id=?', (old['id'], title, kind, item_id))
-                    db.execute('DELETE FROM search WHERE item_id=?', (item_id,))
-                    db.execute('INSERT INTO search VALUES(?,?,?)', (item_id, title, text))
-                    return True
-                return False
-            revision_id = uuid.uuid4().hex
-            db.execute('INSERT INTO revisions VALUES(?,?,?,?,?,?,?,?)', (revision_id, item_id, content_hash, text, raw, json.dumps(metadata), now(), source_time))
-            db.execute('INSERT INTO items VALUES(?,?,?,?,?,?) ON CONFLICT(source_id,external_id) DO UPDATE SET kind=excluded.kind,title=excluded.title,current_revision=excluded.current_revision', (item_id, source_id, external_id, kind, title, revision_id))
+                if previous == old['id']:
+                    return False
+                # Content returned to an earlier version; that version becomes current again.
+                revision_id = old['id']
+                db.execute('UPDATE items SET current_revision=?,title=?,kind=? WHERE id=?', (revision_id, title, kind, item_id))
+            else:
+                revision_id = uuid.uuid4().hex
+                db.execute('INSERT INTO revisions VALUES(?,?,?,?,?,?,?,?)', (revision_id, item_id, content_hash, text, raw, json.dumps(metadata), now(), source_time))
+                db.execute('INSERT INTO items VALUES(?,?,?,?,?,?) ON CONFLICT(source_id,external_id) DO UPDATE SET kind=excluded.kind,title=excluded.title,current_revision=excluded.current_revision', (item_id, source_id, external_id, kind, title, revision_id))
             db.execute('DELETE FROM search WHERE item_id=?', (item_id,))
             db.execute('INSERT INTO search VALUES(?,?,?)', (item_id, title, text))
+        if previous:
+            try:
+                from .history import record_change
+                record_change(self, item_id, previous, revision_id, now())
+            except Exception:
+                pass  # The revision is saved; a missing inbox entry must not undo it.
         return True
 
     def collect(self, source_id, target_url=None, render=False):
@@ -405,6 +412,10 @@ class Store:
             except Exception as exc:
                 # Provenance recording must never turn a completed capture into a failure.
                 rights_result = {'error': 'Rights and capture details were not recorded: ' + str(exc)[:300]}
+        try:
+            self._record_events(sources[0], target_url, page, state, detail)
+        except Exception:
+            pass
         with self.db() as db:
             cooldown = db.execute('SELECT until FROM cooldowns WHERE origin=?', (origin,)).fetchone()
             next_run = max(time.time() + max(60, source['interval_seconds']), cooldown['until'] if cooldown else 0)
@@ -442,6 +453,23 @@ class Store:
             db.execute('INSERT INTO policy_documents VALUES(?,?,?,?,?,?,?,?,?)', (uuid.uuid4().hex, origin, 'tdmrep', url, now(), status, digest(body) if body else None, body[:1024 * 1024], detail))
         return tdmrep_result(status, body, detail)
 
+    def _record_events(self, source, target_url, page, state, detail):
+        """Inbox entries for pages that disappeared and for sources that stopped working; each is recorded once per transition."""
+        from .history import PROBLEM_STATES, event
+        requested = target_url or source['location']
+        with self.db() as db:
+            if page and page['status'] in (404, 410):
+                item = db.execute('SELECT i.id,i.title,r.captured_at FROM items i JOIN revisions r ON r.id=i.current_revision WHERE i.source_id=? AND i.external_id=?', (source['id'], requested)).fetchone()
+                prior = db.execute('SELECT status FROM captures WHERE url=? ORDER BY requested_at DESC, rowid DESC LIMIT 1 OFFSET 1', (requested,)).fetchone()
+                if item and (prior is None or prior['status'] not in (404, 410)):
+                    event(db, 'link_rot', item['id'], {'item_id': item['id'], 'title': item['title'], 'source_id': source['id'], 'source_name': source['name'], 'url': requested,
+                                                        'status': page['status'], 'last_captured_at': item['captured_at'],
+                                                        'summary': f"The page now returns HTTP {page['status']}. Your last captured version is kept."}, now())
+                    return
+            if (target_url is None or target_url == source['location']) and state in PROBLEM_STATES and source['state'] in ('available', 'discovery'):
+                event(db, 'collection_problem', source['id'], {'source_id': source['id'], 'source_name': source['name'], 'url': requested, 'state': state,
+                                                                'previous_state': source['state'], 'summary': detail}, now())
+
     def _record_capture(self, run_id, source_id, origin, page, state, robots_url, robots_status, robots_body, tdmrep):
         from . import rights
         transport = page['transport']
@@ -451,7 +479,9 @@ class Store:
         headers = [[key, value] for key, value in (transport.get('header_list') or page['headers'].items()) if key.lower() != 'set-cookie']
         robots_sha = digest(robots_body) if robots_status == 200 else None
         html = page['body'] if 'html' in (page['headers'] or {}).get('content-type', 'text/html') else ''
-        observation = rights.observe(page['final_url'], page['headers'], html, robots_body, robots_status, tdmrep)
+        # Error, login, and challenge pages say nothing about the content's rights; reading them would fake drift.
+        confirmed = state in ('available', 'discovery')
+        observation = rights.observe(page['final_url'], page['headers'], html, robots_body, robots_status, tdmrep) if confirmed else None
         with LOCK, self.db() as db:
             db.execute('BEGIN IMMEDIATE')
             # Only confirmed content keeps its exact bytes; login forms and challenge pages are never stored.
@@ -463,6 +493,8 @@ class Store:
             db.execute('INSERT INTO captures VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', (
                 capture_id, run_id, source_id, page['url'], page['final_url'], page['requested_at'], page['status'], json.dumps(headers), body_sha, len(raw), int(exact),
                 transport.get('peer_ip'), json.dumps(transport.get('tls') or {}, sort_keys=True), json.dumps(transport.get('redirects') or []), page.get('revision_id'), robots_sha))
+            if not confirmed:
+                return {'capture_id': capture_id, 'recorded': False, 'note': 'Publisher signals are recorded only when page content is confirmed.'}
             return dict(rights.record(self, db, capture_id, source_id, page['final_url'], observation, now()), capture_id=capture_id)
 
     def search(self, query='', include_traces=True, snippets=False):

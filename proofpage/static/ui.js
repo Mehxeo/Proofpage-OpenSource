@@ -214,10 +214,10 @@ function navigate(next) {
   if (location.hash !== '#/' + next) history.pushState(null, '', '#/' + next);
 }
 
-function openItem(id) {
+function openItem(id, options = {}) {
   openedItemFromApp = true;
   history.pushState(null, '', '#/item/' + id);
-  action(() => showEvidence(id));
+  action(() => showEvidence(id, undefined, options));
 }
 
 async function applyRoute(initial = false) {

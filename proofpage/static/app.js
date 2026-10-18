@@ -8,7 +8,9 @@ const VIEWS = {
   sources: ['Sources', 'Every source, accounted for.', 'Set up collection and see exactly what each site allowed and returned.'],
   activity: ['Activity', 'The collection record.', 'Completed captures, access conditions, and unfinished work, newest first.'],
   datasets: ['Datasets', 'From evidence to a corpus.', 'Review individual revisions, confirm permission, then freeze an export.'],
+  timeline: ['Timeline', 'What changed, and when.', 'Content edits, publisher rights changes, broken links, and collection problems across your sources.'],
 };
+let evidenceContext = {};
 
 const KIND_ICONS = {document: 'file', conversation: 'message', human_message: 'message', message: 'message', agent_trace: 'plug'};
 const kindIcon = kind => KIND_ICONS[kind] || 'file';
@@ -49,6 +51,7 @@ function markNav() {
 let renderedView;
 function render() {
   $('count').textContent = state.total ?? state.items.length;
+  updateUnreadBadge(state.unread || 0);
   markNav();
   if (renderedView !== view) {
     renderedView = view;
@@ -56,6 +59,11 @@ function render() {
   }
   if (view === 'training' || view === 'agents') {
     action(() => renderWorkbench(view));
+    return;
+  }
+  if (view === 'timeline') {
+    setHeading(...VIEWS.timeline);
+    action(renderTimeline);
     return;
   }
   const [label, title, subtitle] = VIEWS[view] || VIEWS.library;
@@ -150,7 +158,7 @@ function renderLibrary() {
 function sourceCard(source) {
   const run = state.runs.find(r => r.source_id === source.id);
   const web = source.kind === 'web';
-  const schedule = web ? (source.interval_seconds ? `Refreshes every ${source.interval_seconds >= 3600 ? pluralize(source.interval_seconds / 3600, 'hour') : pluralize(source.interval_seconds / 60, 'minute')} while Proofpage runs` : 'Manual refresh') : 'Supplied archive · source fields preserved';
+  const schedule = web ? (source.interval_seconds ? `Watching every ${source.interval_seconds >= 3600 ? (source.interval_seconds === 3600 ? 'hour' : pluralize(source.interval_seconds / 3600, 'hour')) : pluralize(source.interval_seconds / 60, 'minute')} · changes go to Timeline` : 'Not watched · manual refresh') : 'Supplied archive · source fields preserved';
   const letter = (hostname(source.location) || source.name || '?').replace(/[^a-z0-9]/gi, '')[0] || '?';
   const live = web && /^https?:\/\//i.test(source.location);
   return `<article class="card source-card">
@@ -160,7 +168,7 @@ function sourceCard(source) {
     <div class="card-meta"><span>${icon(web ? 'clock' : 'folder')}${escape(schedule)}${run ? ' · last run ' + escape(relativeTime(run.finished_at || run.started_at)) : ''}</span>
       ${web ? `<div class="actions">
         ${live ? `<a class="button icon-button small" href="${escape(source.location)}" target="_blank" rel="noopener noreferrer" aria-label="Open live page" title="Open live page">${icon('external')}</a>` : ''}
-        <button type="button" class="small" data-schedule="${escape(source.id)}" data-interval="${source.interval_seconds ? 0 : 3600}">${icon(source.interval_seconds ? 'pause' : 'refresh')}${source.interval_seconds ? 'Stop schedule' : 'Refresh hourly'}</button>
+        <button type="button" class="small" data-schedule="${escape(source.id)}" data-interval="${source.interval_seconds ? 0 : 3600}" title="${source.interval_seconds ? 'Stop re-collecting this page' : 'Re-collect every hour while Proofpage runs and record changes in Timeline'}">${icon(source.interval_seconds ? 'pause' : 'eye')}${source.interval_seconds ? 'Stop watching' : 'Watch hourly'}</button>
         <button type="button" class="secondary small" data-collect="${escape(source.id)}">${icon('collect')}Collect</button>
       </div>` : ''}
     </div>
@@ -268,8 +276,9 @@ function evidenceTabs(tabs) {
   $('evidence-tabs').innerHTML = tabs.map(([id, label], index) => `<button type="button" role="tab" id="tab-${id}" aria-controls="panel-${id}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${label}</button>`).join('');
 }
 
-async function showEvidence(id, revision) {
+async function showEvidence(id, revision, options = {}) {
   const item = await api(revision ? 'revisions/' + revision : 'items/' + id);
+  evidenceContext = {id, revision, options};
   const metadata = JSON.parse(item.metadata || '{}');
   const findings = item.findings || [];
   const branchTargets = (metadata.normalized?.messages || []).filter(message => message.role === 'assistant' && message.id);
@@ -306,10 +315,7 @@ async function showEvidence(id, revision) {
       <dl class="meta-grid">${provenance.map(([term, value]) => `<dt>${term}</dt><dd>${value}</dd>`).join('')}</dl>
       <details><summary>Full capture metadata</summary><pre>${escape(JSON.stringify(metadata, null, 2))}</pre></details>
     </section>
-    <section role="tabpanel" id="panel-versions" aria-labelledby="tab-versions" hidden>
-      <p class="muted">Each change creates a new immutable revision. Inspect or revoke an earlier version.</p>
-      <div class="versions">${item.revisions.map(r => `<button type="button" class="version${r.id === item.current_revision ? ' current' : ''}" data-revision="${escape(r.id)}" data-record="${escape(id)}"><span><b>${escape(date(r.captured_at))}</b><br><small>${r.id === item.current_revision ? 'Shown now' : 'Captured ' + escape(relativeTime(r.captured_at))}</small></span><code class="seal">${escape(r.hash.slice(0, 4))}·${escape(r.hash.slice(4, 8))}</code></button>`).join('')}</div>
-    </section>`;
+    <section role="tabpanel" id="panel-versions" aria-labelledby="tab-versions" hidden><div class="skeleton"></div></section>`;
   $('evidence-foot').innerHTML = `${basisFields(item.rights, item.review)}
     <label><input id="permission" type="checkbox"${item.review.allowed ? ' checked' : ''}> I have permission to include this revision in a dataset.</label>
     <label><input id="approved" type="checkbox"${item.review.approved ? ' checked' : ''}> I reviewed and approve it for a clean corpus.</label>
@@ -333,6 +339,7 @@ async function showEvidence(id, revision) {
   }, $('revoke'));
   $('evidence').scrollTop = 0;
   if (!$('evidence-dialog').open) $('evidence-dialog').showModal();
+  if (options.tab) selectTab($('tab-' + options.tab));
 }
 
 function selectTab(tab) {
@@ -344,6 +351,10 @@ function selectTab(tab) {
     if (panel) panel.hidden = !selected;
   });
   tab.focus();
+  if (tab.id === 'tab-versions' && !tab.dataset.loaded) {
+    tab.dataset.loaded = '1';
+    action(() => loadVersions(evidenceContext.options || {}));
+  }
 }
 
 document.addEventListener('keydown', event => {
@@ -425,11 +436,12 @@ document.addEventListener('click', event => {
     notice(result.detail + rightsNote(result.rights), result.state !== 'available');
     await refresh();
   }, b);
-  if (b.dataset.schedule) action(async () => { await api('schedule', {source_id: b.dataset.schedule, interval_seconds: Number(b.dataset.interval)}); await refresh(); }, b);
+  if (b.dataset.schedule) action(async () => { await api('schedule', {source_id: b.dataset.schedule, interval_seconds: Number(b.dataset.interval)}); await refresh(); notice(Number(b.dataset.interval) ? 'Watching hourly while Proofpage runs. Changes will appear in Timeline.' : 'Stopped watching this source.'); }, b);
   if (b.dataset.export) action(() => download('export/' + b.dataset.export, 'proofpage-' + b.dataset.export + '.jsonl'), b);
 });
 
 $('evidence-dialog').addEventListener('close', () => {
+  if (view === 'timeline') action(refresh);
   if (!location.hash.startsWith('#/item/')) return;
   if (openedItemFromApp) { openedItemFromApp = false; history.back(); }
   else history.replaceState(null, '', '#/' + view);
@@ -523,4 +535,5 @@ action(async () => {
   token = session.token;
   hostingMode = session.mode || 'local';
   await applyRoute(true);
+  startNotifications();
 });

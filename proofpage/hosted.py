@@ -18,7 +18,8 @@ from .billing import Billing
 STATIC = Path(__file__).parent / 'static'
 READ_TOOLS = {'proofpage_list_sources','proofpage_get_source_access','proofpage_get_run','proofpage_search',
               'proofpage_get_item','proofpage_get_evidence','proofpage_list_changes','proofpage_get_context',
-              'proofpage_get_crawl','proofpage_list_recipes','proofpage_get_rights'}
+              'proofpage_get_crawl','proofpage_list_recipes','proofpage_get_rights',
+              'proofpage_diff_revisions','proofpage_list_changes_since'}
 
 
 class HostedStore(Store):
@@ -351,7 +352,7 @@ def create_app(root=None, origin=None, development=False, scheduler=True, billin
                     return value
                 accounts.consume(uid,'writes')
                 if payload.get('render'): raise ValueError('Browser rendering is local-only.')
-                if path=='model-assist': accounts.consume(uid,'models')
+                if path in ('model-assist','change-summary'): accounts.consume(uid,'models')
                 value=service.post(store,'/api/'+path,payload)
                 if value[0]==200: accounts.audit(uid,'workspace.'+path.split('/')[0])
                 return value

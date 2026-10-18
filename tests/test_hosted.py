@@ -119,7 +119,7 @@ class HostedTests(unittest.TestCase):
         def rpc(method,params={}):return self.client.post('/agent',json={'jsonrpc':'2.0','id':1,'method':method,'params':params},headers={'Authorization':'Bearer '+key})
         tools=rpc('tools/list').json()['result']['tools']
         names={t['name'] for t in tools}
-        self.assertIn('proofpage_get_context',names);self.assertIn('proofpage_get_rights',names);self.assertNotIn('proofpage_collect',names)
+        self.assertIn('proofpage_get_context',names);self.assertIn('proofpage_get_rights',names);self.assertIn('proofpage_diff_revisions',names);self.assertIn('proofpage_list_changes_since',names);self.assertNotIn('proofpage_collect',names)
         self.assertFalse(any('approve' in n or 'export' in n for n in names))
         self.assertEqual(rpc('tools/call',{'name':'proofpage_collect','arguments':{'source_id':'anything'}}).status_code,401)
         response=rpc('tools/call',{'name':'proofpage_get_context','arguments':{'query':'sunlight'}})
