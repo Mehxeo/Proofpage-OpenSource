@@ -1,1 +1,22 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="popup.css"><script src="popup.js" defer></script><title>Proofpage capture</title></head><body><h1>Save what you can read.</h1><p>Sign in or complete the site’s challenge yourself, then preview the page. Proofpage does not read passwords or cookies.</p><details><summary>Connect to Proofpage</summary><p>Open Proofpage → Settings → Connect browser.</p><label>App port<input id="port" type="number" min="1" max="65535" value="8765"></label><label>Pairing code<input id="code" autocomplete="off"></label><button id="connect">Connect</button></details><button id="preview">Preview visible text</button><p id="status" role="status"></p><section id="result" hidden><label>Source URL<input id="url" readonly></label><label>Review and remove anything private<textarea id="text" rows="12"></textarea></label><label><input id="consent" type="checkbox"> I’m allowed to save this content and have checked it for private information.</label><button id="save" disabled>Save to Proofpage</button><button id="download">Download JSON instead</button><p>After connecting, Save sends your reviewed text directly to the app. The download option also works offline. This is user-supplied text, not a server response or signed web receipt.</p></section></body></html>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><link rel="stylesheet" href="popup.css"><script src="popup.js" defer></script><title>Proofpage · Capture</title></head>
+<body>
+<header><img src="icons/48.png" width="32" height="32" alt=""><strong>Proofpage</strong><span id="connection-state">Not connected</span></header>
+<main><h1>Keep the useful parts.</h1><p class="intro">Bring a page into your evidence library. You choose what stays.</p>
+<details id="connection-panel"><summary>Connect your desktop app</summary><p>In Proofpage, open Settings → Connect browser. Your code lasts five minutes.</p><div class="pair-fields"><label>App port<input id="port" type="number" min="1" max="65535" value="8765"></label><label>Pairing code<input id="code" autocomplete="off" spellcheck="false" placeholder="12-character code"></label></div><button id="connect" class="secondary">Connect</button></details>
+<button id="preview" class="primary">Preview this page <span aria-hidden="true">↗</span></button>
+<p id="status" role="status" aria-live="polite"></p>
+<section id="result" hidden>
+<div class="section-heading"><h2>Review your capture</h2><span id="capture-count"></span></div>
+<label>Source<input id="url" readonly></label>
+<label>Page text<textarea id="text" rows="7" placeholder="Remove anything you don’t want to save"></textarea></label>
+<details id="extras"><summary>Include more from this page</summary><p>References and table text only. Image files, video, and linked pages are not downloaded. Remove anything private below.</p>
+<label class="check"><input id="include-links" type="checkbox">Links <span id="links-count"></span></label><textarea id="links" hidden rows="3" aria-label="Reviewed links"></textarea>
+<label class="check"><input id="include-images" type="checkbox">Image references & alt text <span id="images-count"></span></label><textarea id="images" hidden rows="3" aria-label="Reviewed image references"></textarea>
+<label class="check"><input id="include-tables" type="checkbox">Tables <span id="tables-count"></span></label><textarea id="tables" hidden rows="3" aria-label="Reviewed tables"></textarea>
+</details>
+<label class="check consent"><input id="consent" type="checkbox">I can save this content and have removed private information.</label>
+<div class="actions"><button id="save" class="primary" disabled>Save to Proofpage</button><button id="download" class="secondary">Download JSON</button></div>
+<p class="evidence-note">Saved as user-supplied evidence. Reviewed content may be edited; it is not a signed server response.</p>
+</section></main><footer>On your device. On your terms.<p>Sign in on the website itself. Passwords and cookies stay in your browser.</p></footer>
+</body></html>

@@ -111,10 +111,17 @@ def parse_entry(name, data, adapter='auto', mapping=None):
                 raise ValueError('Browser capture requires an HTTP(S) source URL.')
             if not isinstance(obj.get('text'), str) or not obj['text'].strip() or len(obj['text']) > 500000:
                 raise ValueError('Browser capture requires text up to 500,000 characters.')
+            page_parts = obj.get('page_parts', {})
+            if (not isinstance(page_parts, dict) or set(page_parts) - {'links', 'images', 'tables'} or
+                    any(not isinstance(value, str) or len(value) > 100000 for value in page_parts.values())):
+                raise ValueError('Browser page parts must be reviewed links, image references or tables up to 100,000 characters each.')
             actual, kind, body = 'browser_capture', 'document', obj['text']
             external_id = url
             normalized = {'source_url': url, 'attestation': 'user_supplied',
                           'coverage': 'User-reviewed browser text; may be edited. Not an HTTP capture or server authenticity proof.'}
+            if page_parts:
+                normalized['page_parts'] = page_parts
+                normalized['coverage'] = 'User-reviewed browser content; optional references are not downloaded media. May be edited. Not an HTTP capture or server authenticity proof.'
         elif actual in ('chatgpt', 'claude'):
             normalized = normalize_chatgpt(obj) if actual == 'chatgpt' else normalize_claude(obj)
             kind = 'ai_conversation'

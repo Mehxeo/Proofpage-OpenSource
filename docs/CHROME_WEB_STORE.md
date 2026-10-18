@@ -41,3 +41,7 @@ No remote code is executed. The extension does not access browser cookies, passw
 Install the extension package and run the open-source Proofpage 0.2.2 app. Open Settings → Connect browser. Enter the displayed port and code in the companion and grant localhost permission. Visit example.com, preview text, confirm the review checkbox, then Save to Proofpage. Open Library and see the Browser pages record. Save again to check deduplication. Disconnect browser in Settings; another Save is rejected. Download JSON remains available without the app.
 
 The ZIP must have manifest.json at its root. Icons (16, 48 and 128 px) are bundled. A genuine Chrome capture screenshot has been uploaded (see `assets/companion-store.png`). Complete publisher verification, contact details, fee and policy declarations in the developer dashboard. Google review and approval are external requirements.
+
+## Next package
+
+The source companion is now 0.2.3, with a redesigned popup and optional reviewed links, image references/alt text and table text. The submitted 0.2.2 ZIP is unchanged. Do not withdraw its pending review. Before submitting 0.2.3, update the listing purpose and privacy policy to explain these optional references; verify the installed Chrome package and screenshot the real UI. Current checks: 114 Python tests passed, companion JavaScript fixture passed, and the popup layout was visually inspected in a local browser preview. The expanded installed-Chrome flow is not yet tested.

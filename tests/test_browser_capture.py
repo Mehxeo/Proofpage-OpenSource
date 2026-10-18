@@ -35,3 +35,10 @@ class BrowserCaptureTests(unittest.TestCase):
         for changes in ({'url':'file:///private'}, {'url':None}, {'text':''}, {'text':['bad']}, {'text':'x'*500001}):
             with self.subTest(changes=str(changes)[:60]), self.assertRaises(ValueError):
                 parse_entry('capture.json', self.payload(**changes))
+
+    def test_reviewed_page_parts_are_preserved(self):
+        row = parse_entry('capture.json', self.payload(page_parts={'images': 'Diagram — https://example.com/a.png', 'tables': 'Year | Value\n2026 | 4'}))[0]
+        self.assertEqual(row['metadata']['normalized']['page_parts']['tables'], 'Year | Value\n2026 | 4')
+        for value in ({'cookies': 'no'}, {'images': ['bad']}, {'links': 'x'*100001}, []):
+            with self.subTest(value=str(value)[:30]), self.assertRaises(ValueError):
+                parse_entry('capture.json', self.payload(page_parts=value))

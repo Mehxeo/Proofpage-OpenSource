@@ -4,7 +4,7 @@ Save a page you can read in Chrome straight to your local Proofpage library. Sig
 
 ## Install
 
-The Chrome Web Store submission is being prepared. **There is no published store listing yet.** Once Google approves the listing, installation will be the usual Add to Chrome button, with no Developer mode. Until then, the [developer ZIP](/downloads/proofpage-browser-companion.zip) is for testing only: extract it, open Chrome’s Extensions page, enable Developer mode, and Load unpacked. Ordinary users can keep using Proofpage’s Import files while waiting for the store release.
+The Chrome Web Store submission is pending review. **There is no published store listing yet.** Once Google approves the listing, installation will be the usual Add to Chrome button, with no Developer mode. Until then, the [developer ZIP](/downloads/proofpage-browser-companion.zip) is for testing only: extract it, open Chrome’s Extensions page, enable Developer mode, and Load unpacked. Ordinary users can keep using Proofpage’s Import files while waiting for the store release.
 
 ## Connect once per app session
 
@@ -41,3 +41,9 @@ The companion runs only when clicked. It sends reviewed content only to the pair
 ## Troubleshooting
 
 If a code fails, create a fresh code in Settings. If Save cannot reach the app, check the port and reconnect after restarting Proofpage. Browser internal pages and protected tabs may be unreadable. Finish loading the page before previewing. Pages over 500,000 text characters must be split.
+
+## Next companion version (0.2.3 source preview)
+
+The source version has a redesigned light/dark popup and optional reviewed links, image references with alt text, and table text under **Include more from this page**. Each category is off by default and editable. Selected content is added to the searchable evidence text and JSON export; newer app builds also retain the categories in normalized metadata. Direct saving stays compatible with Proofpage 0.2.2.
+
+These are references, not downloaded images, video, audio, PDFs, or complete offline pages. At most 100 links, 50 image references, and 20 tables are previewed. URL query strings are removed. Review resource URLs too: paths can contain personal information. The current store submission and published developer ZIP remain 0.2.2. Submit the newer package and update its listing/privacy description after the initial review is complete.
