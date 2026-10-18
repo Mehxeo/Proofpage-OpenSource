@@ -21,7 +21,11 @@ def backup(store, destination):
     except Exception:
         destination.unlink(missing_ok=True)
         raise
-    return {'path': str(destination), 'integrity': 'ok'}
+    result = {'path': str(destination), 'integrity': 'ok'}
+    with store.db() as db:
+        if 'signing_keys' in {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")} and db.execute('SELECT 1 FROM signing_keys').fetchone():
+            result['note'] = 'This backup contains your receipt-signing key. Keep it private; anyone with it can sign receipts as this workspace.'
+    return result
 
 
 def restore(backup_path, directory):

@@ -624,6 +624,10 @@ dialog.palette { top: 12vh; margin: 0 auto; width: min(640px, calc(100vw - 24px)
 .model-summary .muted { color: var(--muted); }
 .model-summary-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 12px; }
 
+.proof-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 10px; }
+.proof-head .pill .icon, .drawer-meta .pill .icon { width: 13px; height: 13px; }
+.pill:has(> .icon)::before { display: none; }
+
 .check-inline { display: inline-flex !important; align-items: center !important; gap: 6px !important; margin: 0; font-size: 13px; color: var(--ink-2); }
 .payload .message pre { max-height: 260px; }
 

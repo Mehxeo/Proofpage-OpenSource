@@ -19,7 +19,7 @@ STATIC = Path(__file__).parent / 'static'
 READ_TOOLS = {'proofpage_list_sources','proofpage_get_source_access','proofpage_get_run','proofpage_search',
               'proofpage_get_item','proofpage_get_evidence','proofpage_list_changes','proofpage_get_context',
               'proofpage_get_crawl','proofpage_list_recipes','proofpage_get_rights',
-              'proofpage_diff_revisions','proofpage_list_changes_since'}
+              'proofpage_diff_revisions','proofpage_list_changes_since','proofpage_get_receipt'}
 
 
 class HostedStore(Store):
@@ -342,6 +342,8 @@ def create_app(root=None, origin=None, development=False, scheduler=True, billin
         # No browser request may read server-side folders or select another account's data path.
         if path.startswith(('watch','watches')):
             raise ValueError('Folder watches run on your own computer in local mode. Upload an archive here.')
+        if path in ('anchor-settings','anchor-now'):
+            raise ValueError('Timestamp anchoring runs in the local edition, where you choose the services it contacts.')
         def dispatch():
             with lock_for(uid):
                 store=HostedStore(accounts,uid)

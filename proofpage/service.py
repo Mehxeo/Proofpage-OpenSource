@@ -5,7 +5,7 @@ import time
 from .core import import_file, preview
 from .imports import create_profile
 from .watch import create_watch, scan_watch
-from . import training, crawl, models, agent, history
+from . import training, crawl, models, agent, history, receipts
 from .mcp import TOOLS
 
 def response(status, value, content_type='application/json'):
@@ -35,6 +35,15 @@ def get(store, path, query):
         return response(200, dict(history.timeline(store, path.split('/')[3]), model=model))
     if path.startswith('/api/items/'):
         return response(200, store.item(path.rsplit('/', 1)[1]))
+    if path.startswith('/api/proof-bundle/'):
+        return response(200, receipts.proof_bundle(store, path.rsplit('/', 1)[1]), 'application/zip')
+    if path.startswith('/api/proof/'):
+        return response(200, receipts.revision_proof(store, path.rsplit('/', 1)[1]))
+    if path.startswith('/api/wacz/'):
+        from .wacz import export_wacz
+        return response(200, export_wacz(store, path.rsplit('/', 1)[1])[0], 'application/zip')
+    if path == '/api/receipts':
+        return response(200, receipts.overview(store))
     if path == '/api/diff':
         return response(200, history.compare(store, query.get('from', [''])[0], query.get('to', [''])[0]))
     if path.startswith('/api/revisions/'):
@@ -117,6 +126,12 @@ def post(store, path, data):
         result = {'saved': True}
     elif path == '/api/change-summary':
         result = history.model_summary(store, data['from_revision'], data['to_revision'])
+    elif path == '/api/receipts-verify':
+        result = receipts.verify_chain(store)
+    elif path == '/api/anchor-settings':
+        result = receipts.save_settings(store, data)
+    elif path == '/api/anchor-now':
+        result = receipts.anchor(store, force=True)
     elif path == '/api/inbox-seen':
         result = history.mark_seen(store, None if data.get('all') is True else data.get('ids'))
     elif path == '/api/freeze':

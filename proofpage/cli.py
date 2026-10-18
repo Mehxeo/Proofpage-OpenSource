@@ -23,6 +23,16 @@ def main():
     search.add_argument('query')
     rights = sub.add_parser('rights', help='Show the AI-usage signals recorded for a source; returns JSON')
     rights.add_argument('source', help='Source ID or its exact URL')
+    checker = sub.add_parser('verify', help='Verify a proof bundle (.zip) or web archive (.wacz) offline')
+    checker.add_argument('path')
+    archive = sub.add_parser('export-wacz', help='Export a source as a WACZ web archive with signed receipts')
+    archive.add_argument('source', help='Source ID or its exact URL')
+    archive.add_argument('--output', required=True, help='New file to create, for example ~/Proofpage/exports/site.wacz')
+    proof = sub.add_parser('proof-bundle', help='Write a proof bundle for one revision')
+    proof.add_argument('revision')
+    proof.add_argument('--output', required=True, help='New ZIP file to create')
+    sub.add_parser('receipts', help='Show the signing key and re-check the receipt chain; returns JSON')
+    sub.add_parser('anchor', help='Timestamp receipts issued since the last anchor (requires anchoring settings)')
     imp = sub.add_parser('import', help='Preview an archive or import selected entries')
     imp.add_argument('path')
     imp.add_argument('--select', action='append', help='Exact entry name from preview; repeat for multiple entries')
@@ -86,6 +96,12 @@ def main():
         from .remote import run
         run()
         return
+    if args.command == 'verify':
+        from .verify import verify_path
+        report = verify_path(args.path)
+        print('\n'.join(report.lines))
+        print(f"\n{'VERIFIED' if not report.failures else 'NOT VERIFIED'}: {report.failures} failed check(s).")
+        raise SystemExit(1 if report.failures else 0)
     if args.command == 'validate-dataset':
         from .datasets import load_corpus
         records = load_corpus(args.path, args.sha256)
@@ -125,6 +141,28 @@ def main():
         result = store.collect(source['id'])
     elif args.command == 'search':
         result = store.search(args.query)
+    elif args.command in ('export-wacz', 'proof-bundle'):
+        target = Path(args.output).expanduser()
+        if target.exists():
+            parser.error('Choose a new output file; existing files are never overwritten.')
+        if args.command == 'export-wacz':
+            from .wacz import export_wacz
+            sources = store.rows('SELECT id FROM sources WHERE id=? OR location=?', (args.source, args.source))
+            if not sources:
+                parser.error('Source not found. Use a source ID or its exact URL.')
+            data, summary = export_wacz(store, sources[0]['id'])
+        else:
+            from .receipts import proof_bundle
+            data, summary = proof_bundle(store, args.revision), {}
+        with open(target, 'xb') as handle:
+            handle.write(data)
+        result = {'path': str(target.resolve()), 'bytes': len(data), **summary}
+    elif args.command == 'receipts':
+        from .receipts import key_info, verify_chain
+        result = {'key': key_info(store), 'chain': verify_chain(store)}
+    elif args.command == 'anchor':
+        from .receipts import anchor
+        result = anchor(store, force=True)
     elif args.command == 'rights':
         sources = store.rows('SELECT * FROM sources WHERE id=? OR location=?', (args.source, args.source))
         if not sources:

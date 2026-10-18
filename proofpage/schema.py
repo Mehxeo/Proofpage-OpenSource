@@ -33,6 +33,17 @@ MIGRATIONS = [
         "ALTER TABLE reviews ADD COLUMN rights_basis TEXT",
         "ALTER TABLE reviews ADD COLUMN rights_note TEXT NOT NULL DEFAULT ''",
     ]),
+    (4, [
+        # Signed, hash-chained receipts. The key lives in the database so backups and hosted exports keep proofs verifiable.
+        "CREATE TABLE signing_keys(id TEXT PRIMARY KEY,algorithm TEXT NOT NULL,public_key TEXT NOT NULL,private_key TEXT NOT NULL,created_at TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1)",
+        "CREATE TABLE receipts(seq INTEGER PRIMARY KEY,id TEXT NOT NULL UNIQUE,capture_id TEXT NOT NULL,key_id TEXT NOT NULL,body TEXT NOT NULL,hash TEXT NOT NULL UNIQUE,prev_hash TEXT,signature TEXT NOT NULL,created_at TEXT NOT NULL,anchor_id TEXT)",
+        "CREATE INDEX receipts_capture ON receipts(capture_id)",
+        "CREATE INDEX receipts_anchor ON receipts(anchor_id)",
+        "CREATE TABLE anchors(id TEXT PRIMARY KEY,created_at TEXT NOT NULL,first_seq INTEGER NOT NULL,last_seq INTEGER NOT NULL,root TEXT NOT NULL,imprint TEXT NOT NULL,tsa_url TEXT,tsa_token BLOB,tsa_time TEXT,tsa_state TEXT NOT NULL DEFAULT 'off',tsa_detail TEXT NOT NULL DEFAULT '',ots_calendar TEXT,ots_proof BLOB,ots_state TEXT NOT NULL DEFAULT 'off',ots_detail TEXT NOT NULL DEFAULT '')",
+        "CREATE TABLE settings(key TEXT PRIMARY KEY,value TEXT NOT NULL)",
+        "ALTER TABLE captures ADD COLUMN http_version TEXT",
+        "ALTER TABLE captures ADD COLUMN reason TEXT",
+    ]),
 ]
 
 

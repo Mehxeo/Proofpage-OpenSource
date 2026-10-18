@@ -9,6 +9,7 @@ const VIEWS = {
   activity: ['Activity', 'The collection record.', 'Completed captures, access conditions, and unfinished work, newest first.'],
   datasets: ['Datasets', 'From evidence to a corpus.', 'Review individual revisions, confirm permission, then freeze an export.'],
   timeline: ['Timeline', 'What changed, and when.', 'Content edits, publisher rights changes, broken links, and collection problems across your sources.'],
+  settings: ['Settings', 'Proof you can hand to anyone.', 'Your receipt-signing key, chain integrity, and optional timestamp anchoring.'],
 };
 let evidenceContext = {};
 
@@ -61,9 +62,9 @@ function render() {
     action(() => renderWorkbench(view));
     return;
   }
-  if (view === 'timeline') {
-    setHeading(...VIEWS.timeline);
-    action(renderTimeline);
+  if (view === 'timeline' || view === 'settings') {
+    setHeading(...VIEWS[view]);
+    action(view === 'timeline' ? renderTimeline : renderSettings);
     return;
   }
   const [label, title, subtitle] = VIEWS[view] || VIEWS.library;
@@ -168,6 +169,7 @@ function sourceCard(source) {
     <div class="card-meta"><span>${icon(web ? 'clock' : 'folder')}${escape(schedule)}${run ? ' · last run ' + escape(relativeTime(run.finished_at || run.started_at)) : ''}</span>
       ${web ? `<div class="actions">
         ${live ? `<a class="button icon-button small" href="${escape(source.location)}" target="_blank" rel="noopener noreferrer" aria-label="Open live page" title="Open live page">${icon('external')}</a>` : ''}
+        <button type="button" class="icon-button small" data-wacz="${escape(source.id)}" data-wacz-name="${escape(hostname(source.location))}" aria-label="Export as a WACZ web archive" title="Export as a WACZ web archive with signed receipts">${icon('download')}</button>
         <button type="button" class="small" data-schedule="${escape(source.id)}" data-interval="${source.interval_seconds ? 0 : 3600}" title="${source.interval_seconds ? 'Stop re-collecting this page' : 'Re-collect every hour while Proofpage runs and record changes in Timeline'}">${icon(source.interval_seconds ? 'pause' : 'eye')}${source.interval_seconds ? 'Stop watching' : 'Watch hourly'}</button>
         <button type="button" class="secondary small" data-collect="${escape(source.id)}">${icon('collect')}Collect</button>
       </div>` : ''}
@@ -284,8 +286,8 @@ async function showEvidence(id, revision, options = {}) {
   const branchTargets = (metadata.normalized?.messages || []).filter(message => message.role === 'assistant' && message.id);
   $('evidence-title').textContent = item.title || 'Untitled record';
   $('evidence-kicker').innerHTML = `<span class="tag">${icon(kindIcon(item.kind))}${escape(kindLabel(item.kind))}</span>${item.rights?.state === 'observed' || item.rights?.state === 'not_recorded' ? rightsChip(item.rights.train, 'train', true, item.rights.summary) : ''}${item.is_current === false ? '<span class="pill tone-warn">Earlier revision</span>' : ''}`;
-  $('evidence-meta').innerHTML = `<span>${icon('globe', 'icon-sm')}${escape(item.source_name)}</span><span title="${escape(date(item.captured_at))}">${icon('clock', 'icon-sm')}Captured ${escape(relativeTime(item.captured_at))}</span>${seal(item.hash, 'Revision SHA-256')}${/^https?:\/\//i.test(metadata.url || '') ? `<a href="${escape(metadata.url)}" target="_blank" rel="noopener noreferrer">${icon('external', 'icon-sm')}Live page</a>` : ''}`;
-  evidenceTabs([['reader', 'Reader'], ['rights', 'Rights'], ['original', 'Original evidence'], ['provenance', 'Provenance'], ['versions', `Versions <span class="count">${item.revisions.length}</span>`]]);
+  $('evidence-meta').innerHTML = `<span>${icon('globe', 'icon-sm')}${escape(item.source_name)}</span><span title="${escape(date(item.captured_at))}">${icon('clock', 'icon-sm')}Captured ${escape(relativeTime(item.captured_at))}</span>${seal(item.hash, 'Revision SHA-256')}${item.proof && item.proof.state !== 'none' ? proofPill(item.proof.state) : ''}${/^https?:\/\//i.test(metadata.url || '') ? `<a href="${escape(metadata.url)}" target="_blank" rel="noopener noreferrer">${icon('external', 'icon-sm')}Live page</a>` : ''}`;
+  evidenceTabs([['reader', 'Reader'], ['rights', 'Rights'], ['original', 'Original evidence'], ['provenance', 'Provenance'], ['proof', 'Proof'], ['versions', `Versions <span class="count">${item.revisions.length}</span>`]]);
   const provenance = [
     ['Source', escape(item.source_name)],
     ['Kind', escape(kindLabel(item.kind))],
@@ -315,6 +317,7 @@ async function showEvidence(id, revision, options = {}) {
       <dl class="meta-grid">${provenance.map(([term, value]) => `<dt>${term}</dt><dd>${value}</dd>`).join('')}</dl>
       <details><summary>Full capture metadata</summary><pre>${escape(JSON.stringify(metadata, null, 2))}</pre></details>
     </section>
+    <section role="tabpanel" id="panel-proof" aria-labelledby="tab-proof" hidden>${proofPanel(item.proof, item)}</section>
     <section role="tabpanel" id="panel-versions" aria-labelledby="tab-versions" hidden><div class="skeleton"></div></section>`;
   $('evidence-foot').innerHTML = `${basisFields(item.rights, item.review)}
     <label><input id="permission" type="checkbox"${item.review.allowed ? ' checked' : ''}> I have permission to include this revision in a dataset.</label>

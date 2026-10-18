@@ -45,7 +45,8 @@ def context(store, query, source_ids=None, max_chars=12000):
                         'item_id': item['id'], 'revision_id': item['current_revision'], 'source_id': item['source_id'],
                         'title': item['title'], 'start': start, 'end': start+len(excerpt), 'text': excerpt,
                         'captured_at': item['captured_at'], 'source_time': item['source_time'],
-                        'rights': item.get('rights') or {'state': 'user_supplied' if item.get('source_kind') != 'web' else 'not_recorded'}})
+                        'rights': item.get('rights') or {'state': 'user_supplied' if item.get('source_kind') != 'web' else 'not_recorded'},
+                        'receipt_hash': item.get('receipt_hash')})
         remaining -= len(excerpt)
     return {'query': query, 'excerpts': results, 'characters': max_chars-remaining,
             'coverage': 'Local lexical retrieval from at most 100 matching records; not exhaustive semantic search.',

@@ -471,35 +471,51 @@ class Store:
                                                                 'previous_state': source['state'], 'summary': detail}, now())
 
     def _record_capture(self, run_id, source_id, origin, page, state, robots_url, robots_status, robots_body, tdmrep):
-        from . import rights
+        from . import receipts, rights
         transport = page['transport']
         exact = transport.get('raw') is not None
         raw = transport['raw'] if exact else page['body'].encode('utf-8')
         body_sha = hashlib.sha256(raw).hexdigest()
-        headers = [[key, value] for key, value in (transport.get('header_list') or page['headers'].items()) if key.lower() != 'set-cookie']
+        headers = json.dumps([[key, value] for key, value in (transport.get('header_list') or page['headers'].items()) if key.lower() != 'set-cookie'])
         robots_sha = digest(robots_body) if robots_status == 200 else None
         html = page['body'] if 'html' in (page['headers'] or {}).get('content-type', 'text/html') else ''
         # Error, login, and challenge pages say nothing about the content's rights; reading them would fake drift.
         confirmed = state in ('available', 'discovery')
         observation = rights.observe(page['final_url'], page['headers'], html, robots_body, robots_status, tdmrep) if confirmed else None
+        tls = transport.get('tls') or {}
         with LOCK, self.db() as db:
             db.execute('BEGIN IMMEDIATE')
             # Only confirmed content keeps its exact bytes; login forms and challenge pages are never stored.
-            if state in ('available', 'discovery'):
+            if confirmed:
                 db.execute('INSERT OR IGNORE INTO capture_payloads VALUES(?,?)', (body_sha, zlib.compress(raw, 6)))
             if robots_sha and not db.execute("SELECT 1 FROM policy_documents WHERE origin=? AND kind='robots' AND sha256=?", (origin, robots_sha)).fetchone():
                 db.execute('INSERT INTO policy_documents VALUES(?,?,?,?,?,?,?,?,?)', (uuid.uuid4().hex, origin, 'robots', robots_url, now(), 200, robots_sha, robots_body[:MAX_BYTES], ''))
             capture_id = uuid.uuid4().hex
-            db.execute('INSERT INTO captures VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', (
-                capture_id, run_id, source_id, page['url'], page['final_url'], page['requested_at'], page['status'], json.dumps(headers), body_sha, len(raw), int(exact),
-                transport.get('peer_ip'), json.dumps(transport.get('tls') or {}, sort_keys=True), json.dumps(transport.get('redirects') or []), page.get('revision_id'), robots_sha))
-            if not confirmed:
-                return {'capture_id': capture_id, 'recorded': False, 'note': 'Publisher signals are recorded only when page content is confirmed.'}
-            return dict(rights.record(self, db, capture_id, source_id, page['final_url'], observation, now()), capture_id=capture_id)
+            db.execute('INSERT INTO captures(id,run_id,source_id,url,final_url,requested_at,status,headers,body_sha256,body_bytes,raw_exact,peer_ip,tls,redirects,revision_id,robots_sha256,http_version,reason) '
+                       'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', (
+                capture_id, run_id, source_id, page['url'], page['final_url'], page['requested_at'], page['status'], headers, body_sha, len(raw), int(exact),
+                transport.get('peer_ip'), json.dumps(tls, sort_keys=True), json.dumps(transport.get('redirects') or []), page.get('revision_id'), robots_sha,
+                transport.get('http_version'), transport.get('reason')))
+            result = {'capture_id': capture_id, 'recorded': False, 'note': 'Publisher signals are recorded only when page content is confirmed.'}
+            observation_hash = None
+            if confirmed:
+                result = dict(rights.record(self, db, capture_id, source_id, page['final_url'], observation, now()), capture_id=capture_id)
+                observation_hash = db.execute('SELECT hash FROM rights_observations WHERE id=?', (result['id'],)).fetchone()['hash']
+            revision_hash = db.execute('SELECT hash FROM revisions WHERE id=?', (page['revision_id'],)).fetchone()['hash'] if page.get('revision_id') else None
+            result['receipt'] = receipts.issue(db, {
+                'capture_id': capture_id, 'source_id': source_id, 'run_id': run_id, 'url': page['url'], 'final_url': page['final_url'],
+                'requested_at': page['requested_at'], 'status': page['status'], 'headers_sha256': hashlib.sha256(headers.encode('utf-8')).hexdigest(),
+                'body_sha256': body_sha, 'body_bytes': len(raw), 'raw_exact': exact, 'body_stored': confirmed,
+                'revision_id': page.get('revision_id'), 'revision_hash': revision_hash, 'robots_sha256': robots_sha,
+                'rights_observation_hash': observation_hash, 'rights_verdict': {use: observation['verdict'][use] for use in ('train', 'ai_use', 'search')} if observation else None,
+                'peer_ip': transport.get('peer_ip'), 'tls': {key: tls.get(key) for key in ('version', 'cert_sha256', 'issuer', 'not_after')} if tls else None,
+                'redirects': transport.get('redirects') or [], 'http_version': transport.get('http_version'), 'reason': transport.get('reason')})
+            return result
 
     def search(self, query='', include_traces=True, snippets=False):
         columns = ('i.*,r.text,r.hash,r.captured_at,r.source_time,s.name source_name,s.kind source_kind,COALESCE(v.allowed,0) allowed,COALESCE(v.approved,0) approved,'
-                   '(SELECT o.verdict FROM captures c JOIN rights_observations o ON o.capture_id=c.id WHERE c.revision_id=i.current_revision ORDER BY o.observed_at DESC LIMIT 1) rights')
+                   '(SELECT o.verdict FROM captures c JOIN rights_observations o ON o.capture_id=c.id WHERE c.revision_id=i.current_revision ORDER BY o.observed_at DESC LIMIT 1) rights,'
+                   '(SELECT rc.hash FROM receipts rc JOIN captures c ON c.id=rc.capture_id WHERE c.revision_id=i.current_revision ORDER BY rc.seq DESC LIMIT 1) receipt_hash')
         joins = 'JOIN revisions r ON r.id=i.current_revision JOIN sources s ON s.id=i.source_id LEFT JOIN reviews v ON v.revision_id=i.current_revision'
         if query.strip():
             terms = ' AND '.join('"' + t.replace('"', '""') + '"' for t in query.split())
@@ -520,9 +536,11 @@ class Store:
         reviews = self.rows('SELECT allowed,approved,rights_basis,rights_note FROM reviews WHERE revision_id=?', (result[0]['current_revision'],))
         result[0]['review'] = reviews[0] if reviews else {'allowed': 0, 'approved': 0, 'rights_basis': None, 'rights_note': ''}
         from .quality import findings
+        from .receipts import revision_proof
         from .rights import revision_rights
         result[0]['findings'] = findings(result[0]['text'])
         result[0]['rights'] = revision_rights(self, result[0]['current_revision'])
+        result[0]['proof'] = revision_proof(self, result[0]['current_revision'])
         return result[0]
 
     def review(self, revision_id, allowed, approved, rights_basis=None, rights_note=None):
@@ -557,8 +575,10 @@ class Store:
         result['current_revision'] = revision_id  # The revision selected for review, never a database update.
         reviews = self.rows('SELECT allowed,approved,rights_basis,rights_note FROM reviews WHERE revision_id=?', (revision_id,))
         result['review'] = reviews[0] if reviews else {'allowed': 0, 'approved': 0, 'rights_basis': None, 'rights_note': ''}
+        from .receipts import revision_proof
         from .rights import revision_rights
         result['rights'] = revision_rights(self, revision_id)
+        result['proof'] = revision_proof(self, revision_id)
         return result
 
     def freeze(self, name):

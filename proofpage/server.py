@@ -101,6 +101,7 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
     def scheduler():
         pending = {}
         last_watch = {}
+        last_anchor_check = 0
         with ThreadPoolExecutor(max_workers=4, thread_name_prefix='proofpage') as pool:
             while not stop.wait(5):
                 for key, future in list(pending.items()):
@@ -116,6 +117,11 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 jobs += [('crawl:' + c['id'], lambda cid: crawl.step_job(store, cid), c['id']) for c in store.rows("SELECT id FROM crawl_jobs WHERE state IN ('queued','running') AND next_attempt<=? ORDER BY updated_at", (time.time(),))]
                 watches = sorted(store.rows('SELECT id FROM watches WHERE enabled=1'), key=lambda w: last_watch.get(w['id'], 0))
                 jobs += [('watch:' + w['id'], lambda wid: scan_watch(store, wid), w['id']) for w in watches]
+                if time.time() - last_anchor_check > 600 and 'anchor' not in pending:
+                    # Anchoring is off unless configured, and runs at most daily; this only checks.
+                    from .receipts import anchor
+                    last_anchor_check = time.time()
+                    pending['anchor'] = pool.submit(anchor, store)
                 for key, operation, identifier in jobs:
                     if len(pending) >= 8:
                         break
