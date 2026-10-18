@@ -1,6 +1,6 @@
 # Chrome Web Store submission
 
-Status: ZIP uploaded and listing draft saved under item `kiiobhppgpjpccapcejhnagfneopcppk`. Not submitted or approved. Google lists two remaining requirements: publisher contact email verification and the three data-use certifications. Do not advertise an Add to Chrome link until Google provides the published listing.
+Status: submitted to Google on October 18, 2026 under item `kiiobhppgpjpccapcejhnagfneopcppk`. Dashboard confirmed **Pending review**. Publisher email is verified and all three data-use certifications are saved. Automatic publication after approval is enabled. Not yet approved or publicly installable. Do not advertise an Add to Chrome link until Google provides the published listing.
 
 ## Listing copy
 
