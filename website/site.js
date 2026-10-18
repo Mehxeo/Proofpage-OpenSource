@@ -2,38 +2,24 @@ const $ = id => document.getElementById(id);
 const theme = $('theme');
 function setTheme(light) { document.body.classList.toggle('light', light); theme.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme'); }
 try { setTheme(localStorage.getItem('proofpage-site-theme') === 'light'); } catch {}
-theme.addEventListener('click', () => { const light = !document.body.classList.contains('light'); setTheme(light); try { localStorage.setItem('proofpage-site-theme', light ? 'light' : 'dark'); } catch {} });
-const examples = {
- exact: ['“The archive is available for research and education.”', '✓ Exact wording', 'The archive is available for research and education.', 'The wording matches the saved passage. You can inspect the original capture and its signed receipt.'],
- changed: ['“The archive is available for commercial use.”', '↔ Changed wording', 'The archive is available for research and education.', 'The answer changed the permitted purpose. Review the actual passage before relying on the claim.'],
- missing: ['“The archive guarantees that every record is accurate.”', '? Not found', 'The archive is available for research and education.', 'This claim does not appear in the captured passage. A confident answer is not a substitute for a source.']
-};
-document.querySelectorAll('[data-example]').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('[data-example]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); const [quote,status,evidence,detail] = examples[b.dataset.example]; $('demo-quote').textContent=quote; $('demo-status').textContent=status; $('demo-status').classList.toggle('warning',b.dataset.example!=='exact'); $('demo-evidence').textContent=evidence; $('demo-detail').textContent=detail; }));
+theme.onclick = () => { const light = !document.body.classList.contains('light'); setTheme(light); try { localStorage.setItem('proofpage-site-theme', light ? 'light' : 'dark'); } catch {} };
 function platform(name) { document.querySelectorAll('[data-platform]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.platform===name))); document.querySelectorAll('.platform-panel').forEach(p => p.hidden = p.id !== 'platform-'+name); }
-document.querySelectorAll('[data-platform]').forEach(b => b.addEventListener('click', () => platform(b.dataset.platform)));
+document.querySelectorAll('[data-platform]').forEach(b => b.onclick = () => platform(b.dataset.platform));
 if (/Win/.test(navigator.platform)) platform('windows'); else if (/Linux/.test(navigator.platform)) platform('linux');
-$('copy-command').addEventListener('click',async () => { try { await navigator.clipboard.writeText($('install-command').textContent); $('copy-status').textContent='Commands copied.'; } catch { $('copy-status').textContent='Select and copy the commands above.'; } });
+$('copy-command').onclick=async()=>{try{await navigator.clipboard.writeText($('install-command').textContent);$('copy-status').textContent='Commands copied.';}catch{$('copy-status').textContent='Select and copy the commands above.';}};
+const motion = matchMedia('(prefers-reduced-motion: reduce)');
+const transcript = '$ collect public-source\n✓ original preserved\n✓ revision hash recorded\n\n$ retrieve cited-context\n→ passage + source + receipt\n\n$ draft training-example\n→ ready for your review';
+let typed=0, paused=motion.matches, hold=0;
+function updateMotion(){ $('motion-toggle').textContent=paused?'Play':'Pause'; $('motion-toggle').setAttribute('aria-pressed',String(paused)); }
+$('motion-toggle').onclick=()=>{paused=!paused;updateMotion();};
+if(motion.matches){$('typed-workflow').textContent=transcript;typed=transcript.length;}updateMotion();
+motion.addEventListener('change',e=>{paused=e.matches;if(paused){$('typed-workflow').textContent=transcript;$('product-film').pause();}updateMotion();});
+setInterval(()=>{if(paused||document.hidden)return;if(typed<transcript.length){$('typed-workflow').textContent=transcript.slice(0,++typed);}else if(++hold>90){typed=0;hold=0;}},55);
+// Video is user-initiated: no autoplay, no surprise downloads or motion.
+$('product-film').addEventListener('error',()=>{document.querySelector('.film-bottom p').textContent='Video unavailable. Read the walkthrough below or download the MP4.';});
 
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-const art = document.querySelector('.paper-field pre');
-const lines = art.textContent.split('\n'); art.textContent = '';
-lines.forEach((line, i) => { const row = document.createElement('span'); row.textContent = line || ' '; row.style.setProperty('--row', i); art.append(row); });
-let motionPaused = false, captureFrame = 0;
-const stages = ['01 / Capture the page', '02 / Preserve the original', '03 / Sign the receipt', '04 / Check the quoted words'];
-$('motion-toggle').addEventListener('click', () => { motionPaused = !motionPaused; document.body.classList.toggle('motion-paused', motionPaused); $('motion-toggle').textContent = motionPaused ? 'Play animation' : 'Pause animation'; $('motion-toggle').setAttribute('aria-pressed', String(motionPaused)); });
-let typed = stages[0].length, hold = 0;
-setInterval(() => {
- if (motionPaused || reducedMotion.matches || document.hidden) return;
- if (typed < stages[captureFrame].length) { typed++; $('capture-step').textContent=stages[captureFrame].slice(0,typed); }
- else if (++hold > 22) { hold=0; typed=0; captureFrame=(captureFrame+1)%stages.length; $('capture-step').textContent=''; }
-}, 65);
-const rain=$('glyph-rain');
-for(let i=0;i<22;i++){const drop=document.createElement('span');drop.textContent=['01','{}','↓','+','::','✓'][i%6];drop.style.setProperty('--x',`${(i*47)%100}%`);drop.style.setProperty('--delay',`${-(i%9)}s`);drop.style.setProperty('--duration',`${4+i%5}s`);rain.append(drop);}
-
-if (!reducedMotion.matches && 'IntersectionObserver' in window) { const observer = new IntersectionObserver(entries => { entries.forEach(entry => { if(entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); } }); }, {threshold:.08}); document.querySelectorAll('.section-heading,.app-shot,.feature-grid article,.maker').forEach(el => { el.classList.add('reveal-ready'); observer.observe(el); }); }
-const screens = { library: ['/images/library.png', 'Proofpage library showing captured sources, review controls, and the evidence workspace', 'Your library: captured pages, immutable revisions, and evidence you can inspect.'], claims: ['/images/claim-check.png', 'Proofpage Claim Check showing a checked answer and citation matching results', 'Claim Check: trace quoted wording back to captured evidence.'] };
-document.querySelectorAll('[data-screen]').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('[data-screen]').forEach(b => b.setAttribute('aria-pressed', String(b===button))); const [src,alt,caption] = screens[button.dataset.screen]; $('app-screenshot').src=src; $('app-screenshot').alt=alt; $('screenshot-caption').textContent=caption; }));
-
-document.querySelector('.screenshot-open').onclick=()=>{ $('screenshot-large').src=$('app-screenshot').src; $('screenshot-large').alt=$('app-screenshot').alt; $('screenshot-dialog').showModal(); };
-$('screenshot-close').onclick=()=>$('screenshot-dialog').close();
-$('screenshot-dialog').addEventListener('click',e=>{if(e.target===$('screenshot-dialog'))$('screenshot-dialog').close();});
+const film=$('product-film');
+$('play-tour').onclick=async()=>{if(film.paused){try{await film.play();}catch{$('play-tour').textContent='Use the video controls to play';}}else film.pause();};
+film.addEventListener('play',()=>{$('play-tour').textContent='Pause tour Ⅱ';});
+film.addEventListener('pause',()=>{$('play-tour').textContent='Play the 18-second tour ▷';});
+film.addEventListener('ended',()=>{$('play-tour').textContent='Replay tour ↻';});
