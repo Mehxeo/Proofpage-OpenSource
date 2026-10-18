@@ -24,13 +24,23 @@ receive Google documents or tokens. See the public
 
 ## Demonstration requirements
 
-Use a dedicated review workspace and a fictional document created for testing.
+Use a dedicated review workspace and Google's published Docs API quickstart
+sample, or a fictional document explicitly authorized for testing.
 Show Connect Google Docs, the actual consent flow including any unverified-app
 notice, the correct app name and OAuth client ID, document selection and owner
 permission, Sync, captured text and provenance, and Disconnect. Do not include
 private documents, tokens, authorization codes, or unrelated browser tabs in the
 video. Upload the real walkthrough as an unlisted YouTube video and provide its
 URL in Data Access. All assigned OAuth clients must be covered.
+
+The existing approved connection successfully fetched Google's public quickstart
+sample through `documents.get` and extracted its text. No private document was
+read and no new Google Doc was created. The preconfigured native build also
+passed startup, MCP, OCR, and PDF checks with a separate empty configuration
+directory; its packaged report confirmed `google_configuration: bundled`.
+Completing a fresh review-workspace authorization and attaching the finished
+YouTube demo remain separate requirements. These checks are not a submitted or
+approved Google scope review.
 
 The next desktop build supports native-client metadata bundled before signing;
 it does not require end-user Google Cloud setup. Keep it in review/staging until
