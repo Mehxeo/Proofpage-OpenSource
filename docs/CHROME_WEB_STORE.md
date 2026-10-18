@@ -1,6 +1,6 @@
 # Chrome Web Store submission
 
-Status: prepared locally; not submitted or approved. Publisher dashboard sign-in is required. Do not advertise an Add to Chrome link until Google provides the published listing.
+Status: ZIP uploaded and listing draft saved under item `kiiobhppgpjpccapcejhnagfneopcppk`. Not submitted or approved. Google lists two remaining requirements: publisher contact email verification and the three data-use certifications. Do not advertise an Add to Chrome link until Google provides the published listing.
 
 ## Listing copy
 
@@ -34,10 +34,10 @@ Privacy policy: https://proofpage.app/companion-privacy.html
 - storage: remember the paired localhost port and import-only token in local extension storage, not sync.
 - Optional http://127.0.0.1/*: POST the reviewed capture to the user's local Proofpage app. Requested only when connecting; port configurable because the app may use another local port. No remote host access.
 
-No remote code is executed. The extension does not access browser cookies, passwords, payment data or general browsing history. It handles website content and the selected page URL/title only after a user action; selected content could contain personal information and is therefore previewed for review. Disclose website content in the dashboard's data-use form; do not claim that no data is handled. No sale, advertising or unrelated use.
+No remote code is executed. The extension does not access browser cookies, passwords, payment data or general browsing history. It handles website content and the selected page URL/title only after a user action; selected content could contain personal information and is therefore previewed for review. Disclose website content and Web history (the user-selected page URL/title, not background history access) in the dashboard's data-use form; do not claim that no data is handled. No sale, advertising or unrelated use.
 
 ## Reviewer steps
 
 Install the extension package and run the open-source Proofpage 0.2.2 app. Open Settings → Connect browser. Enter the displayed port and code in the companion and grant localhost permission. Visit example.com, preview text, confirm the review checkbox, then Save to Proofpage. Open Library and see the Browser pages record. Save again to check deduplication. Disconnect browser in Settings; another Save is rejected. Download JSON remains available without the app.
 
-The ZIP must have manifest.json at its root. Icons (16, 48 and 128 px) are bundled. Supply a genuine screenshot of the extension before submission. Complete publisher verification, contact details, fee and policy declarations in the developer dashboard. Google review and approval are external requirements.
+The ZIP must have manifest.json at its root. Icons (16, 48 and 128 px) are bundled. A genuine Chrome capture screenshot has been uploaded (see `assets/companion-store.png`). Complete publisher verification, contact details, fee and policy declarations in the developer dashboard. Google review and approval are external requirements.
