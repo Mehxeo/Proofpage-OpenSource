@@ -25,7 +25,7 @@ Exact payload duplicates are removed. Source groups and near duplicates (0.85 Ja
 
 ## Existing models through MCP
 
-Configure your MCP-capable assistant with the command in README. Eighteen tools support source inspection, collection, cited retrieval, freshness checks, durable bounded crawls, extraction submissions, and training drafts. No approval/export tool is exposed. Configure source URLs in Proofpage first.
+Configure your MCP-capable assistant with the command in README. Twenty-seven tools support source inspection, collection, cited retrieval, freshness checks, durable bounded crawls, extraction submissions, and training drafts. No approval/export tool is exposed. Configure source URLs in Proofpage first.
 
 Typical sequence:
 
@@ -72,7 +72,7 @@ Desktop downloads include a separate console MCP helper, so the assistant does n
 
 The prompt contains local filesystem paths, but no API keys or session token. Hosted users should create scoped keys in Account and configure them through the client's secure credential settings, never paste secrets into a prompt.
 
-## Evidence tools (development branch)
+## Evidence tools 
 
 Rights, history and receipts: `proofpage_get_rights`, `proofpage_diff_revisions`, `proofpage_list_changes_since`, `proofpage_get_receipt`.
 

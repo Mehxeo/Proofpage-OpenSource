@@ -714,3 +714,16 @@ dialog.palette { top: 12vh; margin: 0 auto; width: min(640px, calc(100vw - 24px)
 .claim-results blockquote, .claim-preview-row blockquote { margin: 12px 0; padding: 8px 16px; border-left: 3px solid var(--accent); white-space: pre-wrap; overflow-wrap: anywhere; }
 .claim-document { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 400px; overflow: auto; }
 .claim-results .card p { display: block; overflow: visible; -webkit-line-clamp: unset; margin: 10px 0; }
+
+/* 0.2.1 — clearer workspace hierarchy and gentle interaction feedback. */
+:root{--radius:12px;--radius-lg:18px;--sidebar:232px;--paper:#f7f6f0;--sidebar-bg:#f0f0e7;--line:#dedfd4}
+:root[data-theme="dark"]{--paper:#0b0f0c;--sidebar-bg:#101710;--surface:#151d16;--surface-2:#1c271d;--accent:#a6daa8;--accent-soft:#233c28;--line:#2b382c}
+.heading h1{font-family:var(--font-ui);font-weight:650;letter-spacing:-1.6px;font-size:clamp(30px,3.5vw,44px)}
+.heading{padding-bottom:26px;border-bottom:1px solid var(--line);margin-bottom:26px}.heading p{max-width:640px;line-height:1.65}.topbar{gap:14px}.help-link{font-size:12px;white-space:nowrap;color:var(--accent)}
+.sidebar nav button.active{background:var(--accent-soft);color:var(--accent)}.sidebar nav button{border-radius:10px;transition:background .18s,transform .18s}.sidebar nav button:hover{transform:translateX(2px)}
+.card,.panel{box-shadow:0 3px 12px #00000004}.card{transition:box-shadow .2s,border-color .2s,transform .2s}.card:hover{border-color:var(--line-strong);box-shadow:var(--shadow);transform:translateY(-2px)}
+.onboarding{position:relative;overflow:hidden;background:radial-gradient(ellipse at top right,var(--accent-soft),transparent 70%),var(--surface);padding:36px}.onboarding h2{font-size:34px;line-height:1.15}.onboarding .actions{gap:12px;margin-top:24px}.steps li{padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.claim-results .card{border-left:3px solid var(--accent)}.claim-preview-row{padding:20px;margin:15px 0;background:var(--surface-2);border-radius:12px}.drawer{box-shadow:-20px 0 80px #0003}.drawer-head{background:var(--surface)}
+button.primary{box-shadow:0 3px 8px #0001}button.primary:hover{transform:translateY(-1px)}.page-footer{font-size:11px;line-height:1.7}.panel{animation:panel-enter .22s ease-out}@keyframes panel-enter{from{opacity:.6;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media(max-width:760px){.heading{padding-bottom:18px}.help-link{font-size:11px}.onboarding{padding:22px}.onboarding h2{font-size:29px}.sidebar nav button:hover{transform:none}.topbar #breadcrumb{display:none}}
+@media(prefers-reduced-motion:reduce){.panel{animation:none}.card,.sidebar nav button,button.primary{transition:none;transform:none!important}}

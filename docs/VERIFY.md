@@ -1,6 +1,6 @@
 # Claim Check
 
-Open **Verify**, paste an answer containing quoted passages and URLs, then choose **Review quotes and sources**. Correct the suggested citation URLs before starting. Preview never fetches pages.
+Open **Check quotes**, paste an answer containing quoted passages and URLs, then choose **Review quotes and sources**. Correct the suggested citation URLs before starting. Preview never fetches pages.
 
 Leave collection unchecked to search stored evidence only. Check **Collect missing or stale sources** to authorize fetching the listed public pages when the last successful capture is older than 24 hours. Each collection also checks robots and budgeted rights metadata. Logins and challenges are never bypassed. Site cooldowns can leave a check queued; keep Proofpage open to advance it. Cancel stops future requests; an active request can finish.
 

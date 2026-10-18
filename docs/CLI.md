@@ -57,7 +57,7 @@ Example client configuration (replace paths with your checkout and Python interp
 }
 ```
 
-Eighteen tools expose source access, configured collection, run status, cited context, freshness, bounded crawling, extraction submissions, draft examples, and revision history. Returned source material is untrusted data, never agent instructions. MCP can collect only an existing source. Initialization and newline-delimited stdio follow the [MCP lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle) and [transport specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports).
+Twenty-seven tools expose source access, configured collection, run status, cited context, freshness, bounded crawling, extraction submissions, draft examples, and revision history. Returned source material is untrusted data, never agent instructions. MCP can collect only an existing source. Initialization and newline-delimited stdio follow the [MCP lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle) and [transport specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports).
 
 The browser API is bound to loopback and checks Host, Origin, and a session token. Obtain the token with `GET /api/session`, then send `Authorization: Bearer <token>`. Routes are implemented in `proofpage/server.py`; this is a local application, not an internet-facing service.
 
@@ -75,6 +75,6 @@ The tests use isolated temporary databases and deterministic responses. Live web
 
 The [MIT license](../LICENSE) covers both editions. See [Contributing](../CONTRIBUTING.md), [Security](../SECURITY.md), and [self-hosting/paid-service setup](HOSTING.md). Hosted mode adds invitation-based accounts, recovery, scoped agent keys, usage limits, customer billing, and portable workspace downloads. No price or live payment configuration is assumed.
 
-## Evidence features (development branch)
+## Evidence features 
 
 See [Claim Check](VERIFY.md#cli-and-agents) for quote checking, [Proof](PROOF.md) for `verify`, `proof-bundle`, `export-wacz`, `receipts` and `anchor`, and [Rights Radar](RIGHTS.md) for `rights`. These commands extend the original CLI without replacing `verify` (offline cryptographic verification) with quote matching.

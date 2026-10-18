@@ -65,7 +65,7 @@ def export_wacz(store, source_id):
         warc.write(member)
         return offset, len(member)
 
-    info = 'software: Proofpage 0.2.0\r\nformat: WARC File Format 1.1\r\nconformsTo: https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.1/\r\n' \
+    info = 'software: Proofpage 0.2.1\r\nformat: WARC File Format 1.1\r\nconformsTo: https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.1/\r\n' \
            f'description: Captures of {source["name"]} ({source["location"]}) exported by Proofpage.\r\n'
     write(_record('warcinfo', None, _warc_date(created), 'application/warc-fields', info.encode('utf-8'), [('WARC-Filename', 'data.warc.gz')])[0])
 
@@ -120,7 +120,7 @@ def export_wacz(store, source_id):
         files['proofpage/README.md'] = (b'Signed Proofpage receipts for the captures in this archive. Run `python3 proofpage/verify_proof.py <this file>.wacz` '
                                         b'to check the archive digests, the receipt signatures, and that each receipt\'s response body is in the index.\n')
     package = {'profile': 'data-package', 'wacz_version': '1.1.1', 'title': source['name'], 'description': f"Captures of {source['location']} exported by Proofpage.",
-               'created': created, 'software': 'Proofpage 0.2.0', 'mainPageURL': source['location'], 'mainPageDate': pages[-1]['ts'] if pages else _warc_date(created),
+               'created': created, 'software': 'Proofpage 0.2.1', 'mainPageURL': source['location'], 'mainPageDate': pages[-1]['ts'] if pages else _warc_date(created),
                'resources': [{'name': Path(name).name, 'path': name, 'hash': 'sha256:' + sha256(data), 'bytes': len(data)} for name, data in sorted(files.items())]}
     files['datapackage.json'] = json.dumps(package, indent=2).encode('utf-8')
     files['datapackage-digest.json'] = json.dumps({'path': 'datapackage.json', 'hash': 'sha256:' + sha256(files['datapackage.json'])}, indent=2).encode('utf-8')

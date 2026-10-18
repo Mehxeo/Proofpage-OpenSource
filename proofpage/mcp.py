@@ -128,7 +128,7 @@ def run(store):
             if method == 'initialize':
                 initialized = True
                 version = request.get('params', {}).get('protocolVersion')
-                result = {'protocolVersion': version if version in ('2024-11-05', '2025-03-26', '2025-06-18') else '2025-06-18', 'capabilities': {'tools': {}}, 'serverInfo': {'name': 'proofpage', 'version': '0.2.0'}}
+                result = {'protocolVersion': version if version in ('2024-11-05', '2025-03-26', '2025-06-18') else '2025-06-18', 'capabilities': {'tools': {}}, 'serverInfo': {'name': 'proofpage', 'version': '0.2.1'}}
             elif method == 'ping':
                 result = {}
             elif not initialized:

@@ -21,7 +21,19 @@ lines.forEach((line, i) => { const row = document.createElement('span'); row.tex
 let motionPaused = false, captureFrame = 0;
 const stages = ['01 / Capture the page', '02 / Preserve the original', '03 / Sign the receipt', '04 / Check the quoted words'];
 $('motion-toggle').addEventListener('click', () => { motionPaused = !motionPaused; document.body.classList.toggle('motion-paused', motionPaused); $('motion-toggle').textContent = motionPaused ? 'Play animation' : 'Pause animation'; $('motion-toggle').setAttribute('aria-pressed', String(motionPaused)); });
-setInterval(() => { if (motionPaused || reducedMotion.matches || document.hidden) return; captureFrame = (captureFrame + 1) % stages.length; $('capture-step').textContent = stages[captureFrame]; }, 2400);
+let typed = stages[0].length, hold = 0;
+setInterval(() => {
+ if (motionPaused || reducedMotion.matches || document.hidden) return;
+ if (typed < stages[captureFrame].length) { typed++; $('capture-step').textContent=stages[captureFrame].slice(0,typed); }
+ else if (++hold > 22) { hold=0; typed=0; captureFrame=(captureFrame+1)%stages.length; $('capture-step').textContent=''; }
+}, 65);
+const rain=$('glyph-rain');
+for(let i=0;i<22;i++){const drop=document.createElement('span');drop.textContent=['01','{}','↓','+','::','✓'][i%6];drop.style.setProperty('--x',`${(i*47)%100}%`);drop.style.setProperty('--delay',`${-(i%9)}s`);drop.style.setProperty('--duration',`${4+i%5}s`);rain.append(drop);}
+
 if (!reducedMotion.matches && 'IntersectionObserver' in window) { const observer = new IntersectionObserver(entries => { entries.forEach(entry => { if(entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); } }); }, {threshold:.08}); document.querySelectorAll('.section-heading,.app-shot,.feature-grid article,.maker').forEach(el => { el.classList.add('reveal-ready'); observer.observe(el); }); }
 const screens = { library: ['/images/library.png', 'Proofpage library showing captured sources, review controls, and the evidence workspace', 'Your library: captured pages, immutable revisions, and evidence you can inspect.'], claims: ['/images/claim-check.png', 'Proofpage Claim Check showing a checked answer and citation matching results', 'Claim Check: trace quoted wording back to captured evidence.'] };
 document.querySelectorAll('[data-screen]').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('[data-screen]').forEach(b => b.setAttribute('aria-pressed', String(b===button))); const [src,alt,caption] = screens[button.dataset.screen]; $('app-screenshot').src=src; $('app-screenshot').alt=alt; $('screenshot-caption').textContent=caption; }));
+
+document.querySelector('.screenshot-open').onclick=()=>{ $('screenshot-large').src=$('app-screenshot').src; $('screenshot-large').alt=$('app-screenshot').alt; $('screenshot-dialog').showModal(); };
+$('screenshot-close').onclick=()=>$('screenshot-dialog').close();
+$('screenshot-dialog').addEventListener('click',e=>{if(e.target===$('screenshot-dialog'))$('screenshot-dialog').close();});

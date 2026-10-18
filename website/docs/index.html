@@ -1,0 +1,168 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Proofpage documentation</title><meta name="description" content="Install Proofpage, capture pages, check quotes, review rights, export evidence, and connect your AI assistant."><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/docs/docs.css"><script src="/docs/docs.js" defer></script></head><body><header><a class="brand" href="/">Proofpage / Docs</a><nav><a href="/#download">Download</a><a href="https://github.com/Mehxeo/Proofpage-OpenSource">GitHub ↗</a></nav></header><div class="docs-layout"><aside><label for="docs-search">Find in docs</label><input id="docs-search" type="search" placeholder="Search topics…"><nav aria-label="Documentation"><a href="#start">Start here</a><a href="#browser-capture">Signed-in pages</a><a href="#verify">Check quotes</a><a href="#rights">Review rights</a><a href="#proof">Receipts & archives</a><a href="#agents">AI assistants & training</a><a href="#cli">Command line</a></nav><p>Made by Utsav Das.</p></aside><main><h1>Get something useful done.</h1><p>Start with a page. Keep its evidence. Check a quote or prepare a reviewed dataset.</p><p id="search-status" role="status"></p><article id="start" data-doc><h2>Start with one page</h2>
+<h3>Download and open</h3>
+<p><a href="/#download">Download Proofpage</a> for your computer. Extract the archive and open the app. On Mac, drag Proofpage.app into Applications. On Windows, keep the extracted support files beside Proofpage.exe. The desktop app includes Python; you do not need to install Python or use a terminal.</p>
+<p>Proofpage opens your local workspace in your browser. Keep its launcher running while you use it. Your evidence is stored separately from the application in your user folder under Proofpage/data.</p>
+<h3>Capture your first page</h3>
+<p>1. Choose <strong>Add source</strong>.</p>
+<p>2. Paste a public page URL. The name is optional.</p>
+<p>3. Leave <strong>Collect this page now</strong> checked and choose <strong>Save source</strong>.</p>
+<p>4. Open <strong>Library</strong>, select the captured page, and inspect Reader, Original, Rights, Versions, and Proof.</p>
+<p>If a site blocks collection, the source card explains the outcome. For pages you can read after signing in, use <a href="#browser-capture">the browser companion</a>. Do not paste account passwords into Proofpage.</p>
+<h3>Check an AI answer</h3>
+<p>Open <strong>Check quotes</strong> and paste an answer containing quoted passages and source URLs. Preview the quote/source pairs, correct them if necessary, and start the check. Leave collection off to use only saved pages. A wording match is not a factual truth verdict.</p>
+<h3>Use the library with an assistant</h3>
+<p>Open <strong>Agent access</strong>, copy the setup prompt, and paste it into an assistant that supports local MCP tools. The prompt includes your installed executable and workspace paths. After moving the app, recopy it. <a href="#agents">Assistant setup and training exports</a>.</p>
+<h3>Update safely</h3>
+<p>Close Proofpage and make a private copy of your Proofpage/data folder before updating. Replace the application, not the data folder, then reopen it. Backups include your private receipt-signing key. Keep the older backup until you have checked the updated library.</p>
+<h3>Need help?</h3>
+<p><a href="https://github.com/Mehxeo/Proofpage-OpenSource/issues">Report a problem</a> with your operating system, Proofpage version, and what happened. Remove private page content, passwords, and tokens before sharing logs. For optional CLI installation and advanced backup commands, see <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/INSTALL.md">the installation guide</a>.</p></article><article id="browser-capture" data-doc><h2>Browser capture</h2>
+<p>Use the optional browser companion for pages you can read in your own browser, including pages behind your own login. Sign in on the website itself, and complete any CAPTCHA yourself. The companion does not solve challenges, collect passwords, or copy session cookies.</p>
+<h3>Install the companion</h3>
+<p>Download <a href="/downloads/proofpage-browser-companion.zip">the companion ZIP</a>, extract it, then open Chrome or Edge&#x27;s Extensions page. Turn on Developer mode and choose <strong>Load unpacked</strong>, selecting the extracted folder containing manifest.json. This is an optional unpacked extension, not a Chrome Web Store listing. No Python is required.</p>
+<h3>Save a page</h3>
+<p>1. Open the page and sign in normally if needed.</p>
+<p>2. Open the Proofpage companion and choose <strong>Preview visible text</strong>.</p>
+<p>3. Review the text. Delete anything private or unnecessary. Form fields, cookies, scripts, hidden elements, query strings, and URL fragments are not copied, but visible page content can still contain private information.</p>
+<p>4. Confirm you have permission to save it, then choose <strong>Download for Proofpage</strong>.</p>
+<p>5. In Proofpage, choose <strong>Import files</strong>, create or select an account profile using automatic format detection, select the JSON file, check its preview entry, and import.</p>
+<h3>What this evidence means</h3>
+<p>The import is explicitly user-supplied browser text. It may have been edited. The source URL and user-reported save time are retained in Original/Provenance, but are not independently verified. It is not a raw server response and does not receive a web-capture receipt. No images, iframe contents, or browser cookies are included. The URL&#x27;s query and fragment are omitted to avoid copying login tokens; this can make the URL less specific.</p>
+<p>Imported text is searchable by your assistant through the evidence library. Automatic URL-based Claim Check and WACZ export use direct web captures, not these imports. Rights review still applies before dataset export. Only save and share content you are allowed to use.</p>
+<h3>Troubleshooting</h3>
+<p>Browser internal pages and some protected tabs cannot be read by extensions. Finish loading or signing in before opening the companion. If no text is found, use the website&#x27;s own export or save a text file for import. Pages over 500,000 text characters must be split. The companion runs only when clicked and has no background collector or network endpoint.</p></article><article id="verify" data-doc><h2>Claim Check</h2>
+<p>Open <strong>Check quotes</strong>, paste an answer containing quoted passages and URLs, then choose <strong>Review quotes and sources</strong>. Correct the suggested citation URLs before starting. Preview never fetches pages.</p>
+<p>Leave collection unchecked to search stored evidence only. Check <strong>Collect missing or stale sources</strong> to authorize fetching the listed public pages when the last successful capture is older than 24 hours. Each collection also checks robots and budgeted rights metadata. Logins and challenges are never bypassed. Site cooldowns can leave a check queued; keep Proofpage open to advance it. Cancel stops future requests; an active request can finish.</p>
+<div class="table-scroll"><table>
+<tr><td>Result</td><td>Meaning</td></tr>
+<tr><td>Exact wording</td><td>The quote matches after Unicode compatibility, case, quote/dash and whitespace normalization</td></tr>
+<tr><td>Close wording</td><td>A similar passage exists; compare it carefully, especially numbers and negations</td></tr>
+<tr><td>Found in an older version</td><td>The best match is in an earlier stored revision</td></tr>
+<tr><td>Not found</td><td>No match in the bounded evidence searched</td></tr>
+<tr><td>No citation</td><td>No URL was paired with the quote</td></tr>
+<tr><td>Not captured</td><td>Offline mode has no evidence for that URL</td></tr>
+<tr><td>Source unreachable / Collection blocked</td><td>The latest observation failed or access was restricted; any archived match remains visible</td></tr>
+<tr><td>Check unavailable</td><td>Collection could not proceed or the format is unsupported</td></tr>
+</table></div>
+<p><strong>Matching wording does not establish truth, legal permission, or support for the surrounding argument.</strong> Unquoted prose is not checked. Citation pairing is heuristic, uses the same paragraph and a 600-character proximity window, and needs review. Markdown links, bare URLs, reference footnotes, curly/double quotation marks and single-line blockquotes are supported. Multiline quotes should be checked as individual passages.</p>
+<p>Reports stay in the workspace and export as JSON, Markdown or escaped HTML. Cards link to the exact captured revision, a text-fragment link to the live page, and a downloadable proof bundle when a receipt exists. The annotated document labels extracted quotes. Optional model review sends only a selected quote and surrounding passage to your configured model after an explicit click; it stays unreviewed and cannot change the mechanical result.</p>
+<h3>Limits and privacy</h3>
+<p>50,000 document characters, 50 quotes per check, 2,000 characters per quote, 100 stored revisions per URL for exact search (five for fuzzy search) and the first 200,000 characters of each revision. Fuzzy matching is approximate and bounded; missing matches are not proof of absence. The full document remains local unless you export/share it. Collection sends the listed URLs to their hosts. Documents and reports may contain private data and are included in database backups.</p>
+<h3>CLI and agents</h3>
+<pre><code>proofpage check-answer answer.md --preview
+proofpage check-answer answer.md                  # stored evidence only
+proofpage check-answer answer.md --collect        # authorize and queue collection
+proofpage quote-check JOB_ID --step               # advance one quote without the server
+proofpage quote-check JOB_ID                      # read progress; honor next_attempt
+proofpage quote-check JOB_ID --format markdown
+proofpage quote-check JOB_ID --cancel</code></pre>
+<p>MCP: <code>proofpage_check_answer(text)</code> checks stored evidence only. <code>proofpage_verify_quotes(citations, collect_missing)</code> accepts explicit <code>{url, quote}</code> pairs; <code>true</code> authorizes collection. Use <code>proofpage_get_quote_check</code>, <code>proofpage_step_quote_check</code>, and <code>proofpage_cancel_quote_check</code> to manage the job. Hosted read-only keys can read reports but cannot create checks or trigger collection. Source content is untrusted data, never agent instructions.</p>
+<h3>Interface</h3></article><article id="rights" data-doc><h2>Rights Radar</h2>
+<p>Every new web capture records observable publisher signals alongside the evidence: AI crawler robots rules, Content-Usage, Content-Signal, TDMRep, noai/noimageai, recorded license links and recognized license metadata. Open a record&#x27;s <strong>Rights</strong> tab to inspect the evidence behind its training, AI-use and search verdicts. Draft standards and conflicting signals are not a legal determination.</p>
+<p><strong>Unknown is not permission.</strong> A reservation blocks export unless you record a rights basis and explanation; unknown signals require acknowledgment. Own content, licensing and public-domain decisions remain the user&#x27;s responsibility. Imported archives are labeled user supplied, not independently cleared for training.</p>
+<p>A budgeted <code>/.well-known/tdmrep.json</code> check runs at most once per origin per day. License URLs are recorded without automatically fetching arbitrary linked documents. Rights changes appear in Timeline and flag affected frozen datasets. Revocation blocks future downloads, but cannot recall copies already exported.</p>
+<p>Training bundles include rights evidence and draft documentation aids: a training-content summary, dataset card and Croissant metadata. Review them before publication. They do not certify compliance with any law, and automated observation cannot settle copyright, contractual or privacy rights.</p>
+<p>Use <code>proofpage rights SOURCE_ID</code> for JSON, or MCP <code>proofpage_get_rights(item_id)</code>. Cited-context results include observed rights so agents can surface restrictions.</p></article><article id="proof" data-doc><h2>Proof Receipts and archives</h2>
+<p>A capture receipt records what this workspace observed: URL, observation time, response status, body/header hashes, revision hash, publisher-policy evidence, TLS/peer details and the previous receipt hash. It is signed with a per-workspace Ed25519 key. <strong>It does not prove what the remote server sent, or that the page&#x27;s statements are true.</strong> A local clock is not an independent timestamp.</p>
+<p>Open <strong>Settings</strong> to inspect your public-key fingerprint and check chain integrity. Keep backups private: the signing key is stored in the workspace database and travels with backups. Anyone holding that key can sign as your workspace. The stdlib signing fallback is not constant-time; optional <code>cryptography</code> is used when installed.</p>
+<p>Signatures and chain links detect altered receipts and missing intermediate links. A trusted saved chain head or external anchor is needed to detect truncation of the tail. A verifier must also establish whether it trusts the included public key; a self-contained bundle alone cannot establish the signer&#x27;s real-world identity.</p>
+<h3>Offline proof bundles</h3>
+<p>Open a record → <strong>Proof → Download proof bundle</strong>. A per-revision ZIP includes receipts, original body and headers, available rights/policy evidence, anchor proofs and <code>verify_proof.py</code>. With Python 3 installed, extract and run:</p>
+<pre><code>python3 verify_proof.py
+# Or from a Proofpage Python installation:
+proofpage verify proof-bundle.zip
+proofpage receipts</code></pre>
+<p>No extra Python packages are required for bundle verification. Independently verify receipt signatures with OpenSSL using the instructions inside the bundle. Tampered files fail verification. Old captures without receipts are not backfilled with invented historical signing times.</p>
+<h3>Optional timestamp anchoring</h3>
+<p>Off by default. Configure a trusted RFC 3161 timestamp authority and/or OpenTimestamps calendar in Settings. Only a digest of the Merkle root is submitted, not URLs, content or receipts. The service sees your network connection. Anchoring operates in local mode only. A timestamp token needs independent trust/certificate verification; a pending OpenTimestamps submission is not a confirmed Bitcoin timestamp. Upgrade and verify it with the external <code>ots</code> client. Restoring a backup pauses anchoring and collection.</p>
+<h3>WACZ</h3>
+<p>Use a source card&#x27;s WACZ export or <code>proofpage export-wacz SOURCE_ID --output site.wacz</code>. It includes WARC records, indexes, page metadata and receipt sidecars. Assets absent from capture cannot be replayed; this is not a full browser session recording. Reconstructed legacy records are labeled. Ed25519 sidecars are not WACZ-Auth signatures. ReplayWeb.page 2.5.3 replay was verified for a live example.com capture. <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/REPLAY_COMPATIBILITY.md">Verification record</a>.</p></article><article id="agents" data-doc><h2>Train from evidence; give existing models evidence tools</h2>
+<h3>Training workflow</h3>
+<p>1. Collect a public page, run a bounded crawl, or import a supplied archive.</p>
+<p>2. Open evidence and choose <strong>Create training example</strong>. For a conversation with explicit parent links, choose a particular assistant branch; sibling branches and tool outputs are not flattened into the example.</p>
+<p>3. Choose a format: supervised messages, preferred/rejected response pairs, prompt/completion corrections, observed tool traces, or evaluation questions. Supply an exact source quote. Preference pairs require a rationale. Human-message examples require the actual participant and explicit context/role approval.</p>
+<p>4. Inspect the draft, full evidence, and screening findings in <strong>Training</strong>. Confirm permission and correctness, then approve. Model output and imported branches are never automatically approved. Editing creates another draft linked to the prior example.</p>
+<p>5. Select approved examples of one format and freeze a dataset. Download its ZIP bundle. It includes trainer payloads, source citations/hashes, a manifest, grouped train/validation/test partitions, and <code>validate.py</code>.</p>
+<p>6. Unzip and run <code>python validate.py</code> before using the data. Revoking either source permission or an example&#x27;s approval blocks future managed exports. Previously downloaded files cannot be recalled.</p>
+<p>Payload formats:</p>
+<div class="table-scroll"><table>
+<tr><td>Format</td><td>JSONL shape</td><td>Intended use</td></tr>
+<tr><td>Supervised</td><td><code>{&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:&quot;...&quot;},{&quot;role&quot;:&quot;assistant&quot;,&quot;content&quot;:&quot;...&quot;}]}</code></td><td>Conversational SFT</td></tr>
+<tr><td>Preference</td><td><code>{&quot;prompt&quot;:&quot;...&quot;,&quot;chosen&quot;:&quot;...&quot;,&quot;rejected&quot;:&quot;...&quot;}</code></td><td>DPO/preference training</td></tr>
+<tr><td>Correction</td><td><code>{&quot;prompt&quot;:&quot;...&quot;,&quot;completion&quot;:&quot;...&quot;}</code></td><td>Prompt/completion SFT</td></tr>
+<tr><td>Evaluation</td><td><code>{&quot;prompt&quot;:&quot;...&quot;,&quot;reference&quot;:&quot;...&quot;}</code></td><td>Held-out evaluation; all records in test</td></tr>
+<tr><td>Trace</td><td><code>{&quot;events&quot;:[...]}</code></td><td>Actual observed calls/results; adapt to your trainer&#x27;s tool schema</td></tr>
+</table></div>
+<p>SFT and preference shapes follow the primary <a href="https://huggingface.co/docs/trl/dataset_formats">TRL dataset formats</a>, <a href="https://huggingface.co/docs/trl/sft_trainer">SFT trainer</a>, and <a href="https://huggingface.co/docs/trl/dpo_trainer">DPO trainer</a> documentation. Load <code>train.jsonl</code> with your trainer&#x27;s JSON dataset loader and its selected model/tokenizer. Proofpage prepares data; it does not provision GPUs, download a training model, or launch paid training jobs.</p>
+<p>Exact payload duplicates are removed. Source groups and near duplicates (0.85 Jaccard similarity of word five-grams) remain together. Assignment is deterministic within the dataset; at least one group is allocated to train unless the format is evaluation. Small bundles can have empty validation/test partitions. Splits are not a global registry: across independently frozen datasets, check source overlap yourself and keep evaluation sources out of training. Heuristic screening catches common credentials, emails, phone numbers, and instruction-like text; it is not comprehensive anonymization or a factual verifier. The original evidence stays unchanged when a draft is redacted.</p>
+<h3>Existing models through MCP</h3>
+<p>Configure your MCP-capable assistant with the command in README. Twenty-seven tools support source inspection, collection, cited retrieval, freshness checks, durable bounded crawls, extraction submissions, and training drafts. No approval/export tool is exposed. Configure source URLs in Proofpage first.</p>
+<p>Typical sequence:</p>
+<p>1. <code>proofpage_list_sources</code></p>
+<p>2. <code>proofpage_ensure_fresh</code> with <code>source_id</code> and <code>max_age_seconds</code></p>
+<p>3. <code>proofpage_get_context</code> with <code>query</code></p>
+<p>4. Answer with the returned citation IDs, or submit a grounded draft through <code>proofpage_draft_example</code>.</p>
+<p>For multiple pages: <code>proofpage_start_crawl</code>, <code>proofpage_step_crawl</code>, <code>proofpage_get_crawl</code>, and optionally <code>proofpage_cancel_crawl</code>. The web server advances jobs automatically; a standalone stdio client must call step. Respect <code>next_attempt</code>; do not loop through cooldowns. Collection stays on the starting origin and directory, up to 20 pages/depth 3. HTML links (including pagination links), sitemap/XML/RSS links are discovered. A feed is a discovery source, not inferred article content. Jobs survive restart; individual failures remain visible. Restore cancels pending crawls. Cancellation stops future requests; an in-flight request may finish.</p>
+<p><code>python examples/agent_client.py --home .proofpage &quot;your search&quot;</code> demonstrates a real subprocess handshake and cited context request. Recorded successful collection/context/freshness calls can become observed-trace drafts. Internal reasoning is never inferred or fabricated.</p>
+<h3>Use a local or hosted model in the workbench</h3>
+<p>Before starting the server:</p>
+<pre><code>export PROOFPAGE_MODEL_URL=http://127.0.0.1:11434/v1
+export PROOFPAGE_MODEL_NAME=your-installed-model
+# Hosted endpoints can additionally use PROOFPAGE_MODEL_KEY.
+python3 -m proofpage --home .proofpage serve</code></pre>
+<p>Use an OpenAI-compatible <code>/v1</code> base URL supporting chat completions and JSON output. Ollama documents <a href="https://docs.ollama.com/api/openai-compatibility">OpenAI compatibility</a>. Proofpage does not install or pull an LLM. Remote endpoints require HTTPS; redirects are refused. Credentials stay in the server environment and are not shown in the UI.</p>
+<p><strong>Draft with my model</strong> sends up to 20,000 characters of selected evidence only after the explicit send action. Detected credentials block transmission. Review personal data before sending to a hosted provider. <strong>New extraction recipe</strong> defines fields; <strong>Extract with my model</strong> requires exact source quotes for non-null values. Missing fields are null. An exact quote does not prove the model interpreted it correctly. Results remain unreviewed.</p>
+<h3>Optional offline JavaScript rendering</h3>
+<pre><code>python3 -m venv .venv
+.venv/bin/python -m pip install -e &#x27;.[render]&#x27;
+.venv/bin/python -m playwright install chromium
+.venv/bin/python -m proofpage --home .proofpage serve</code></pre>
+<p>Enable rendering in a crawl. Chromium executes captured inline JavaScript with external resources, network calls, service workers, and WebSockets blocked. Original HTML is retained in provenance. Pages requiring external scripts or API data remain incomplete; this is deliberately not a general authenticated browser crawler. Each capture records blocked-request coverage. Missing Chromium produces a failed run, never a successful capture.</p>
+<h3>Connect by copying a prompt</h3>
+<p>In the local workspace, open <strong>Agent access → Copy setup prompt</strong>, then paste it into an MCP-capable AI assistant. The prompt includes the actual executable and workspace paths. <strong>Copy MCP configuration</strong> provides the raw JSON instead. If clipboard access is denied, Proofpage displays selectable text for manual copying.</p>
+<p>Desktop downloads include a separate console MCP helper, so the assistant does not need a system Python installation. Keep the app&#x27;s support files together and recopy settings after moving the app. The assistant must support local stdio MCP and be permitted to configure integrations; a prompt cannot add support to clients that lack it. It should preserve existing configuration and verify the connection with <code>proofpage_list_sources</code>. A normal web-chat model may only be able to explain the setup.</p>
+<p>The prompt contains local filesystem paths, but no API keys or session token. Hosted users should create scoped keys in Account and configure them through the client&#x27;s secure credential settings, never paste secrets into a prompt.</p>
+<h3>Evidence tools </h3>
+<p>Rights, history and receipts: <code>proofpage_get_rights</code>, <code>proofpage_diff_revisions</code>, <code>proofpage_list_changes_since</code>, <code>proofpage_get_receipt</code>.</p>
+<p>Quote checks: <code>proofpage_check_answer</code>, <code>proofpage_verify_quotes</code>, <code>proofpage_get_quote_check</code>, <code>proofpage_step_quote_check</code>, <code>proofpage_cancel_quote_check</code>. <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/VERIFY.md">Schemas and consent</a>. Mechanical matches and model-written reviews never approve training data.</p></article><article id="cli" data-doc><h2>CLI and workflows</h2>
+<h3>CLI</h3>
+<pre><code>python3 -m proofpage --home .proofpage collect https://example.com
+python3 -m proofpage --home .proofpage search documentation
+python3 -m proofpage --home .proofpage profile &quot;Personal LinkedIn&quot; --provider LinkedIn --account personal --adapter linkedin
+python3 -m proofpage --home .proofpage import export.zip
+python3 -m proofpage --home .proofpage import export.zip --select Messages.csv --profile PROFILE_ID</code></pre>
+<p>The first import command previews categories; the second imports only selected entries. Use the ID returned by <code>profile</code> for <code>PROFILE_ID</code>. Reuse a profile for successive archives from the same account, even when the ZIP filename changes. Different accounts use different profiles. Stable supplied IDs create revisions when records change; rows without IDs are deduplicated by content and become separate records when changed. Markdown, text, and HTML documents use their category filename as stable identity.</p>
+<p>Adapters are tested with synthetic fixtures: ChatGPT-style mappings preserve nodes, parents, children, roles, tool metadata, and the selected node; Claude-style <code>chat_messages</code> preserve supplied roles, content, and attachment references; LinkedIn message CSVs preserve human participants. These are local export adapters, not live account connections. Actual provider variations may require additional fixtures. A saved mapping can name source fields for text, ID, title, role, and timestamp without relabeling human speakers as AI assistants.</p>
+<h3>Automatic archive ingestion</h3>
+<p>In Sources, choose <strong>Watch an export folder</strong>, an existing profile, the local folder, and exact category filenames. Existing files and future arrivals are eligible. The server polls only that folder, waits for files to settle, and records outcomes persistently. It excludes symlinks and subfolders, bounds file counts and sizes, and isolates failed files. It never requests exports from the provider. Pause/resume and file outcomes are available in Sources. A file already in progress can finish after pause.</p>
+<pre><code>python3 -m proofpage --home .proofpage watch /absolute/path/to/exports --profile PROFILE_ID --category Messages.csv --category Connections.csv
+python3 -m proofpage --home .proofpage scan WATCH_ID</code></pre>
+<p><code>serve</code> drives continuous watches and schedules. <code>scan</code> performs one scan; a new file settles on a subsequent scan at least two seconds later. Failed files are retried after their size or modification time changes. Missing configured ZIP categories are reported. The native client imports using the same profiles; continuous watching is provided by the server.</p>
+<h3>Backups and corpus validation</h3>
+<pre><code>python3 -m proofpage --home .proofpage backup /absolute/path/to/new-backup.sqlite3
+python3 -m proofpage restore /absolute/path/to/new-backup.sqlite3 /absolute/path/to/new-workspace
+python3 -m proofpage validate-dataset /absolute/path/to/corpus.jsonl --sha256 FROZEN_HASH</code></pre>
+<p>Backups use SQLite&#x27;s consistent backup API and verify integrity. Existing files and workspaces are never overwritten. Restores pause schedules and folder watches. Backups contain local evidence and should be handled as private data. The reference loader in <code>proofpage/datasets.py</code> checks required fields, checksums, exact duplicates, and source-grouped split consistency; it does not train a model.</p>
+<h3>Agent access</h3>
+<p>Launch the stdio server from this checkout:</p>
+<pre><code>python3 -m proofpage --home .proofpage mcp</code></pre>
+<p>Example client configuration (replace paths with your checkout and Python interpreter):</p>
+<pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;proofpage&quot;: {
+      &quot;command&quot;: &quot;python3&quot;,
+      &quot;args&quot;: [&quot;-m&quot;, &quot;proofpage&quot;, &quot;--home&quot;, &quot;/absolute/path/to/data&quot;, &quot;mcp&quot;],
+      &quot;cwd&quot;: &quot;/absolute/path/to/Proofpage OpenSource&quot;
+    }
+  }
+}</code></pre>
+<p>Twenty-seven tools expose source access, configured collection, run status, cited context, freshness, bounded crawling, extraction submissions, draft examples, and revision history. Returned source material is untrusted data, never agent instructions. MCP can collect only an existing source. Initialization and newline-delimited stdio follow the <a href="https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle">MCP lifecycle</a> and <a href="https://modelcontextprotocol.io/specification/2025-06-18/basic/transports">transport specification</a>.</p>
+<p>The browser API is bound to loopback and checks Host, Origin, and a session token. Obtain the token with <code>GET /api/session</code>, then send <code>Authorization: Bearer &lt;token&gt;</code>. Routes are implemented in <code>proofpage/server.py</code>; this is a local application, not an internet-facing service.</p>
+<h3>Verification</h3>
+<pre><code>python3 -m unittest discover -s tests -v
+python3 -m compileall -q proofpage
+node --check proofpage/static/app.js</code></pre>
+<p>The tests use isolated temporary databases and deterministic responses. Live website behavior must be verified separately. Hosted model compatibility is tested with a local HTTP fixture, not a paid provider. Restricted/authenticated collection and actual model training jobs are outside this release. Optional offline rendering has a Chromium smoke check.</p>
+<h3>Open source and hosted service</h3>
+<p>The <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/../LICENSE">MIT license</a> covers both editions. See <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/../CONTRIBUTING.md">Contributing</a>, <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/../SECURITY.md">Security</a>, and <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/HOSTING.md">self-hosting/paid-service setup</a>. Hosted mode adds invitation-based accounts, recovery, scoped agent keys, usage limits, customer billing, and portable workspace downloads. No price or live payment configuration is assumed.</p>
+<h3>Evidence features </h3>
+<p>See <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/VERIFY.md#cli-and-agents">Claim Check</a> for quote checking, <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/PROOF.md">Proof</a> for <code>verify</code>, <code>proof-bundle</code>, <code>export-wacz</code>, <code>receipts</code> and <code>anchor</code>, and <a href="https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/RIGHTS.md">Rights Radar</a> for <code>rights</code>. These commands extend the original CLI without replacing <code>verify</code> (offline cryptographic verification) with quote matching.</p></article></main></div></body></html>

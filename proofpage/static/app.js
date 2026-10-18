@@ -4,7 +4,7 @@ const filters = {kind: '', source: '', review: '', rights: ''};
 let layout = (() => { try { return localStorage.getItem('proofpage-layout') || 'grid'; } catch { return 'grid'; } })();
 
 const VIEWS = {
-  verify: ['Verify', 'Does the source say that?', 'Check quoted passages against captured evidence. Review the source before trusting the answer.'],
+  verify: ['Check quotes', 'Does the source say that?', 'Check quoted passages against captured evidence. Review the source before trusting the answer.'],
   library: ['Library', 'A library you can trace.', 'Collect useful material. Keep the evidence behind it.'],
   sources: ['Sources', 'Every source, accounted for.', 'Set up collection and see exactly what each site allowed and returned.'],
   activity: ['Activity', 'The collection record.', 'Completed captures, access conditions, and unfinished work, newest first.'],
@@ -88,9 +88,9 @@ function itemCard(item) {
 function onboarding() {
   return `<section class="panel onboarding">
     <div>
-      <span class="tag">${icon('seal')}Welcome</span>
+      
       <h2>Start a library you can trace.</h2>
-      <p>Every record keeps its source, capture time, original response, and a SHA-256 revision hash, so you, your reviewers, and your AI tools can check where it came from.</p>
+      <p>Save a page, check a quote, or bring your own files. Every record keeps its source and revision history.</p>
       <div class="actions">
         <button type="button" class="primary" id="try-example">${icon('collect')}Try with example.com</button>
         <button type="button" class="secondary" data-open="source-dialog">${icon('plus')}Add your own page</button>
@@ -499,12 +499,13 @@ $('source-form').onsubmit = event => {
   event.preventDefault();
   const form = new FormData(event.target);
   action(async () => {
-    await api('sources', {name: form.get('name'), url: form.get('url')});
+    const source = await api('sources', {name: form.get('name').trim() || new URL(form.get('url')).hostname, url: form.get('url')});
+    if (form.get('collect_now')) { notice('Source saved. Collecting the page…'); await api('collect', {source_id: source.id}); }
     $('source-dialog').close();
     event.target.reset();
     navigate('sources');
     await refresh();
-    notice('Source added. Choose Collect to capture it.');
+    notice(form.get('collect_now') ? 'Collection finished. Open the source to inspect its outcome.' : 'Source saved. Choose Collect when you’re ready.');
   }, event.submitter);
 };
 

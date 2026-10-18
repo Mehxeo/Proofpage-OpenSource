@@ -104,7 +104,18 @@ def parse_entry(name, data, adapter='auto', mapping=None):
         source_time = field(obj, 'created_at', 'create_time', 'DATE', 'Date')
         kind = 'structured_record'
         body = '\n'.join(f'{key}: {value}' for key, value in obj.items()) if obj else raw
-        if actual in ('chatgpt', 'claude'):
+        if obj.get('proofpage_capture') == 'visible-text-v1':
+            from urllib.parse import urlsplit
+            url = obj.get('url', '')
+            if not isinstance(url, str) or urlsplit(url).scheme not in ('http', 'https') or not urlsplit(url).hostname:
+                raise ValueError('Browser capture requires an HTTP(S) source URL.')
+            if not isinstance(obj.get('text'), str) or not obj['text'].strip() or len(obj['text']) > 500000:
+                raise ValueError('Browser capture requires text up to 500,000 characters.')
+            actual, kind, body = 'browser_capture', 'document', obj['text']
+            external_id = url
+            normalized = {'source_url': url, 'attestation': 'user_supplied',
+                          'coverage': 'User-reviewed browser text; may be edited. Not an HTTP capture or server authenticity proof.'}
+        elif actual in ('chatgpt', 'claude'):
             normalized = normalize_chatgpt(obj) if actual == 'chatgpt' else normalize_claude(obj)
             kind = 'ai_conversation'
             body = '\n\n'.join(f"[{m.get('role') or 'unknown'}] {m['text']}" for m in normalized['messages'])
