@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .core import MAX_BYTES, archive_entries, import_file, now
 
-SUPPORTED = {'.zip', '.csv', '.json', '.jsonl', '.txt', '.md', '.html'}
+SUPPORTED = {'.zip', '.csv', '.json', '.jsonl', '.txt', '.md', '.html', '.png', '.jpg', '.jpeg', '.webp', '.pdf'}
 
 
 def create_watch(store, profile_id, directory, categories):

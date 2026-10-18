@@ -156,3 +156,7 @@ On Windows, use `py -3` and `.venv\Scripts\python.exe` / `.venv\Scripts\proofpag
 The repository also includes an optional [self-hosted edition](docs/HOSTING.md) with isolated accounts and billing integration. A managed paid service is **not live**. Local use remains free and independent of hosted accounts.
 
 Signing and notarization workflows are available for maintainers: [secure setup guide](docs/SIGNING.md). Signing status is stated per release; adding workflows alone does not make existing downloads signed.
+
+### Images, PDFs, and OCR
+
+The 0.3 desktop app saves original files and extracts searchable text locally, including scanned PDF pages. Save public image/PDF URLs directly and watch them hourly. [Media and automation guide](docs/MEDIA.md).

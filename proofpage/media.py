@@ -3,6 +3,8 @@ import base64
 import hashlib
 import json
 import struct
+import threading
+_EXTRACTION_SLOT = threading.BoundedSemaphore(1)
 from pathlib import Path
 
 EXTENSIONS = {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.pdf': 'application/pdf'}
@@ -59,5 +61,38 @@ def bundle(store, revision_id):
         archive.writestr('original' + suffix, data)
         archive.writestr('manifest.json', json.dumps({**info, 'revision_id': revision_id,
             'file': 'original' + suffix, 'attestation': 'user_supplied'}, indent=2))
+        extraction = json.loads(store.rows('SELECT metadata FROM revisions WHERE id=?', (revision_id,))[0]['metadata']).get('extraction')
+        if extraction:
+            archive.writestr('extraction.json', json.dumps(extraction, indent=2))
+            archive.writestr('extracted.txt', extraction.get('text', ''))
         archive.writestr('README.txt', 'Original user-supplied file. Verify its SHA-256 against manifest.json.\nThis hash detects changes; it does not prove authorship, source authenticity, or permission.\n')
     return buffer.getvalue()
+
+
+def enrich(record, data):
+    """Attach derived text; keep original bytes/hash untouched. Failures retain the file."""
+    import subprocess
+    import sys
+    import tempfile
+    if not record['metadata'].get('asset'):
+        return record
+    with tempfile.TemporaryDirectory(prefix='proofpage-extract-') as folder:
+        source, output = Path(folder) / 'input', Path(folder) / 'output.json'
+        source.write_bytes(data)
+        if getattr(sys, 'frozen', False):
+            helper = Path(sys.executable).with_name('Proofpage-MCP.exe' if sys.platform == 'win32' else 'Proofpage-MCP')
+            command = [str(helper), '--extract-worker']
+        else:
+            command = [sys.executable, '-m', 'proofpage.media_worker']
+        try:
+            with _EXTRACTION_SLOT:
+                subprocess.run(command + [str(source), str(output), record['metadata']['asset']['mime']],
+                           check=True, timeout=90, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           **({'creationflags': subprocess.CREATE_NO_WINDOW} if sys.platform == 'win32' else {}))
+            result = json.loads(output.read_text(encoding='utf-8'))
+        except (OSError, ValueError, subprocess.SubprocessError):
+            result = {'status': 'unavailable', 'text': '', 'pages': [], 'warning': 'Extraction failed or exceeded 90 seconds. Original retained.'}
+    record['metadata']['extraction'] = {**result, 'original_sha256': record['metadata']['asset']['sha256']}
+    record['metadata']['coverage'] = 'Original file retained. Locally extracted text is derived, unreviewed evidence; no malware scan or source authenticity guarantee.'
+    record['text'] = result['text'] or f"File: {record['title']}\nNo text extracted. {result.get('warning', '')}"
+    return record

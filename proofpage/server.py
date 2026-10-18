@@ -74,7 +74,7 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
             return True
 
         def do_OPTIONS(self):
-            if self.path not in ('/api/companion/pair', '/api/companion/import', '/api/companion/import-file'):
+            if self.path not in ('/api/companion/pair', '/api/companion/import', '/api/companion/import-file', '/api/companion/import-url'):
                 return self.send(403, {'error': 'Not allowed.'})
             if self.extension_request():
                 self.send(200, {})
@@ -105,6 +105,12 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                         return self.send(401, {'error': 'Connect the companion again in Proofpage Settings.'})
                     if data.get('reviewed') is not True:
                         raise ValueError('Review this page before importing.')
+                    if self.path == '/api/companion/import-url':
+                        from .core import validate_url
+                        url = validate_url(str(data.get('url', '')))
+                        source = store.source('Saved web file', 'web', url)
+                        result = store.collect(source['id'])
+                        return self.send(200, result)
                     from .adapters import parse_entry
                     from .imports import import_archive
                     filename = 'page.json'
@@ -153,7 +159,7 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 self.send(400, {'error': str(exc)})
 
         def do_POST(self):
-            if self.path in ('/api/companion/pair', '/api/companion/import', '/api/companion/import-file'):
+            if self.path in ('/api/companion/pair', '/api/companion/import', '/api/companion/import-file', '/api/companion/import-url'):
                 return self.companion_post()
             if not self.authorized():
                 return

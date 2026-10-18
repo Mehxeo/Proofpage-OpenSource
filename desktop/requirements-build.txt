@@ -1,3 +1,6 @@
 pyinstaller==6.22.0
 Pillow>=11,<13
 certifi>=2026.2.25
+pypdfium2==5.14.0
+rapidocr==3.10.0
+onnxruntime>=1.20,<2

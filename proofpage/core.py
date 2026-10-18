@@ -174,7 +174,7 @@ def fetch(url, allowed=None):
             connection.sock = sock
         connection.connect = connect
         try:
-            connection.request('GET', urllib.parse.urlunsplit(('', '', parsed.path or '/', parsed.query, '')), headers={'User-Agent': USER_AGENT, 'Accept': 'text/html,text/plain', 'Accept-Encoding': 'identity'})
+            connection.request('GET', urllib.parse.urlunsplit(('', '', parsed.path or '/', parsed.query, '')), headers={'User-Agent': USER_AGENT, 'Accept': 'text/html,text/plain,application/pdf,image/png,image/jpeg,image/webp', 'Accept-Encoding': 'identity'})
             response = connection.getresponse()
             if response.status in (301, 302, 303, 307, 308):
                 target = urllib.parse.urljoin(url, response.getheader('Location', ''))
@@ -374,6 +374,16 @@ class Store:
                     state, title, text = classify(status, body)
                     content_type = headers.get('content-type', '')
                     render_metadata = {}
+                    file_capture = None
+                    from .media import EXTENSIONS, file_record, enrich
+                    mime = content_type.split(';', 1)[0].strip().lower()
+                    if status == 200 and mime in EXTENSIONS.values():
+                        suffix = next(ext for ext, value in EXTENSIONS.items() if value == mime)
+                        filename = Path(urllib.parse.urlsplit(final_url).path).name or ('download' + suffix)
+                        if Path(filename).suffix.lower() not in EXTENSIONS:
+                            filename += suffix
+                        file_capture = enrich(file_record(filename, transport['raw']), transport['raw'])
+                        state = 'available'
                     if render and status == 200 and 'text/html' in content_type and state not in ('authentication_required', 'challenge_required'):
                         from .render import render_html
                         original_html = body
@@ -383,7 +393,7 @@ class Store:
                     if 'text/plain' in content_type and status == 200:
                         text, title = body, source['name']
                         state = 'available' if body.strip() else 'insufficient_content'
-                    elif 'text/html' not in content_type and status == 200:
+                    elif 'text/html' not in content_type and status == 200 and file_capture is None:
                         if 'xml' in content_type:
                             from .crawl import discover
                             discovered_urls = discover(body, final_url)
@@ -391,7 +401,10 @@ class Store:
                         else:
                             state = 'unsupported_format'
                     if state == 'available':
-                        added = int(self.save(source_id, source['location'], 'document', title or source['name'], text, body, {'url': final_url, 'status': status, 'coverage': 'Single observed page; attachments were not acquired.', **render_metadata}))
+                        if file_capture is not None:
+                            added = int(self.save(source_id, source['location'], file_capture['kind'], file_capture['title'], file_capture['text'], file_capture['raw'], {**file_capture['metadata'], 'url': final_url, 'status': status}))
+                        else:
+                            added = int(self.save(source_id, source['location'], 'document', title or source['name'], text, body, {'url': final_url, 'status': status, 'coverage': 'Single observed page; attachments were not acquired.', **render_metadata}))
                         detail = 'Captured requested page.' if added else 'No substantive change.'
                         page['revision_id'] = self.rows('SELECT current_revision FROM items WHERE source_id=? AND external_id=?', (source_id, source['location']))[0]['current_revision']
                         tdmrep = self._tdmrep(origin, source['location'])

@@ -50,6 +50,9 @@ def import_archive(store, filename, data, selected, profile_id=None):
         try:
             records = parse_entry(name, content, profile['adapter'] if profile else 'auto', json.loads(profile['mapping']) if profile else None)
             for record in records:
+                if record['metadata'].get('asset'):
+                    from .media import enrich
+                    enrich(record, content)
                 explicit_id = record['external_id']
                 category = Path(name).name if profile else name
                 external_id = category + ':' + (str(explicit_id) if explicit_id is not None else digest(record['raw']))

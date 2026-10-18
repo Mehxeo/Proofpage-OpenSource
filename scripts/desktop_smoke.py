@@ -39,3 +39,16 @@ with tempfile.TemporaryDirectory(prefix='proofpage-desktop-') as directory:
     assert {'proofpage_verify_quotes', 'proofpage_check_answer', 'proofpage_get_receipt', 'proofpage_get_rights', 'proofpage_diff_revisions'} <= tool_names, replies
     assert replies[2]['result']['isError'] is False, replies
     print('Copied MCP configuration launches the bundled helper and verifies real tools.')
+
+    # Verify extraction engines/models really ship in the archive, without system Python.
+    from PIL import Image, ImageDraw, ImageFont
+    image = Image.new('RGB', (900, 160), 'white')
+    ImageDraw.Draw(image).text((20, 35), 'Original evidence 12345', font=ImageFont.load_default(size=42), fill='black')
+    for suffix, mime in [('png', 'image/png'), ('pdf', 'application/pdf')]:
+        original = Path(directory) / ('sample.' + suffix)
+        image.save(original)
+        extracted = Path(directory) / ('extracted-' + suffix + '.json')
+        subprocess.run([entry['command'], '--extract-worker', str(original), str(extracted), mime], check=True, timeout=90)
+        result = json.loads(extracted.read_text())
+        assert result['status'] == 'complete' and '12345' in result['text'], result
+    print('Packaged offline image OCR and scanned-PDF extraction passed.')

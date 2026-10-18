@@ -556,7 +556,7 @@ function originalFileView(item, metadata) {
     ${asset.mime.startsWith('image/') ? `<img class="original-image" data-original-preview alt="User-supplied image: ${escape(asset.filename)}" loading="lazy">` : '<p>Download the PDF to view it in your trusted PDF reader.</p>'}
     <button type="button" class="primary" data-original-file="${escape(item.current_revision)}" data-filename="${escape(asset.filename)}">Download original file</button>
     <button type="button" class="secondary" data-file-bundle="${escape(item.current_revision)}">File + hash manifest</button>
-    <p class="muted">No OCR or PDF text extraction yet. Embedded file metadata is preserved and may contain private information.</p>
+    <p class="muted">${escape(metadata.extraction ? 'Extraction: ' + metadata.extraction.status + '. ' + metadata.extraction.warning : 'No text extraction was performed in this older capture.')} Embedded file metadata is preserved.</p>
     <details><summary>File SHA-256</summary><code>${escape(asset.sha256)}</code></details></div>`;
 }
 

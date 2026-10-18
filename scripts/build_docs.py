@@ -3,7 +3,7 @@ import html
 import re
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
-PAGES = [('start','QUICKSTART.md','Start here'),('browser-capture','BROWSER_CAPTURE.md','Signed-in pages'),('verify','VERIFY.md','Check quotes'),('rights','RIGHTS.md','Review rights'),('proof','PROOF.md','Receipts & archives'),('agents','TRAINING_AND_AGENTS.md','AI assistants & training'),('cli','CLI.md','Command line')]
+PAGES = [('start','QUICKSTART.md','Start here'),('browser-capture','BROWSER_CAPTURE.md','Signed-in pages'),('media','MEDIA.md','Images, PDFs & automation'),('verify','VERIFY.md','Check quotes'),('rights','RIGHTS.md','Review rights'),('proof','PROOF.md','Receipts & archives'),('agents','TRAINING_AND_AGENTS.md','AI assistants & training'),('cli','CLI.md','Command line')]
 
 def inline(text):
     text = html.escape(text)

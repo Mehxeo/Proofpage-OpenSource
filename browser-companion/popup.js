@@ -28,6 +28,8 @@ $('preview').onclick = async () => {
     }});
     if(!result?.text?.trim()&&!result?.images?.length&&!result?.tables?.length)throw new Error('No readable text found. Finish signing in or loading the page, then try again.');
     capture=result;
+    $('web-image').replaceChildren();
+    for(const image of result.images||[]){const option=document.createElement('option');option.value=image.url;option.textContent=image.label+' — '+image.url;$('web-image').appendChild(option);}
     for(const kind of ['links','images','tables']) {
       const entries=result[kind]||[];
       $(kind).value=kind==='tables'?entries.join('\n\n'):entries.map(x=>x.label+' — '+x.url).join('\n');
@@ -61,7 +63,7 @@ $('download').onclick=downloadCapture;
 let connection;
 chrome.storage.local.get('connection').then(saved=>{connection=saved.connection; if(connection){$('port').value=connection.port; $('connection-state').textContent='Pairing saved';}});
 async function request(path, data, port, token) {
- const response=await fetch(`http://127.0.0.1:${port}/api/companion/${path}`, {method:'POST',headers:{'Content-Type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})},body:JSON.stringify(data),signal:AbortSignal.timeout(15000)});
+ const response=await fetch(`http://127.0.0.1:${port}/api/companion/${path}`, {method:'POST',headers:{'Content-Type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})},body:JSON.stringify(data),signal:AbortSignal.timeout(120000)});
  const result=await response.json();
  if(response.status===401&&token){connection=null;await chrome.storage.local.remove('connection');$('connection-state').textContent='Reconnect needed';$('connection-panel').open=true;}
  if(response.status===404&&path==='import-file')throw new Error('This app version does not support original-file imports. Update Proofpage first.');
@@ -107,4 +109,20 @@ $('save-file').onclick=async()=>{
   $('status').textContent=result.added?'Original file saved. Open your library to preview or download it.':'This original file is already in your library.';
  }catch(e){$('status').textContent=(e.message||'File import failed.')+' You can also use Import files in the desktop app.';}
  finally{fileReady();}
+};
+
+$('web-image').onchange=()=>{$('web-file-url').value=$('web-image').value;};
+$('save-web-file').onclick=async()=>{
+ if(!connection){$('connection-panel').open=true;$('status').textContent='Connect your desktop app first.';return;}
+ if(!$('web-file-consent').checked){$('status').textContent='Confirm you can save this file first.';return;}
+ $('save-web-file').disabled=true;
+ try{
+  const url=new URL($('web-file-url').value.trim()||$('web-image').value);
+  if(!['https:','http:'].includes(url.protocol)||url.username||url.password)throw Error('Use a public HTTP or HTTPS URL without credentials.');
+  $('status').textContent='Saving the original and extracting text locally…';
+  const result=await request('import-url',{reviewed:true,url:url.href},connection.port,connection.token);
+  if(result.state!=='available')throw Error(result.detail||'This file could not be collected.');
+  $('status').textContent='Saved. Open the file in Proofpage; use Sources → Watch hourly to collect changes automatically.';
+ }catch(e){$('status').textContent=e.message||'Unable to save this file.';}
+ finally{$('save-web-file').disabled=false;}
 };

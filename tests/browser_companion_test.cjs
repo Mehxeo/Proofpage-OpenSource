@@ -1,6 +1,6 @@
 // Exercise the actual popup code with a deterministic extension/DOM fixture.
 const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
-const nodes={};for(const id of ['preview','status','result','url','text','consent','save','download','port','code','connect','connection-state','connection-panel','capture-count','extras','links','images','tables','links-count','images-count','tables-count','include-links','include-images','include-tables','original-file','file-consent','save-file'])nodes[id]={value:'',textContent:'',hidden:false,disabled:false,checked:false};
+const nodes={};for(const id of ['preview','status','result','url','text','consent','save','download','port','code','connect','connection-state','connection-panel','capture-count','extras','links','images','tables','links-count','images-count','tables-count','include-links','include-images','include-tables','original-file','file-consent','save-file','web-image','web-file-url','web-file-consent','save-web-file'])nodes[id]={value:'',textContent:'',hidden:false,disabled:false,checked:false,replaceChildren(){},appendChild(){}};
 let artifact,downloaded=false,fail=false;
 const fixture=[['Readable account page',false,true],['password=never-copy',true,true],['hidden token',false,false],['Selected evidence',false,true]];
 let index=0;
