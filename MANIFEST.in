@@ -16,3 +16,5 @@ recursive-include docs/assets *.svg
 recursive-include desktop *.py *.png *.txt
 
 recursive-include desktop *.spec
+
+recursive-include proofpage/skills *.md

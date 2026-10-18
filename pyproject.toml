@@ -25,4 +25,4 @@ include-package-data = false
 packages = ["proofpage"]
 
 [tool.setuptools.package-data]
-proofpage = ["static/*", "static/fonts/*"]
+proofpage = ["static/*", "static/fonts/*", "skills/proofpage/SKILL.md"]

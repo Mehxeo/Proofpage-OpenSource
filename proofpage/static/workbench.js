@@ -108,6 +108,9 @@ async function renderAgents() {
       </ol>
       <div class="actions"><button type="button" class="primary" id="copy-mcp-prompt">${icon('copy')}Copy setup prompt</button><button type="button" class="secondary" id="copy-mcp-config">${icon('copy')}Copy MCP configuration</button></div>
       <p id="mcp-copy-status" class="copy-status" role="status"></p>
+      <div class="actions"><button type="button" class="secondary" id="test-mcp">${icon('check')}Test MCP connection</button><button type="button" class="secondary" id="download-skill">${icon('download')}Download SKILL.md</button><button type="button" class="secondary" id="copy-skill">${icon('copy')}Copy skill</button></div>
+      <p id="mcp-test-status" role="status" aria-live="polite">Test the local server before setting up your assistant. No pages are collected.</p>
+      <details><summary>Use the skill with your assistant</summary><p>Install the downloaded SKILL.md in a folder named proofpage using your client’s skill installation flow. For a project-local Codex skill, use .agents/skills/proofpage/SKILL.md; for Claude Code, use .claude/skills/proofpage/SKILL.md. A skill teaches the workflow; it does not connect MCP or run a scheduler. Use the setup prompt above to connect first.</p></details>
       <details><summary>Connection settings and manual setup</summary><textarea id="mcp-setup-text" readonly aria-label="MCP setup text" rows="10" class="mono"></textarea></details>
       ${tools.length ? `<details><summary>What your assistant can do</summary><ul class="tool-list">${tools.map(tool => `<li><code>${escape(tool.name)}</code>${escape(tool.description)}</li>`).join('')}</ul></details>` : ''}
       <p class="muted">Your assistant needs support for local MCP tools and permission to configure them. Settings contain local paths; copy them only to an assistant you trust. Collection and draft tools are available; approval and export stay in Proofpage.</p>
@@ -155,9 +158,20 @@ async function renderAgents() {
         $('mcp-copy-status').textContent = 'Select and copy the text below; clipboard access is unavailable.';
       }
     };
+    $('copy-skill').onclick = () => copyConnection(connection.skill);
+    $('download-skill').onclick = () => saveText('SKILL.md', connection.skill);
+    $('test-mcp').onclick = () => action(async () => {
+      $('mcp-test-status').textContent = 'Starting the local MCP helper and checking this workspace…';
+      try {
+        const result = await api('mcp-check', {});
+        $('mcp-test-status').textContent = (result.ok ? `Passed: ${pluralize(result.tools, 'tool')} · ${pluralize(result.sources, 'source')}. ` : 'Connection check failed. ') + result.detail;
+      } catch (error) { $('mcp-test-status').textContent = 'Check failed: ' + error.message; }
+    }, $('test-mcp'));
     $('copy-mcp-prompt').onclick = () => copyConnection(connection.prompt);
     $('copy-mcp-config').onclick = () => copyConnection(JSON.stringify(connection.config, null, 2));
   } else {
+    for (const id of ['test-mcp', 'download-skill', 'copy-skill']) $(id).disabled = true;
+    $('mcp-test-status').textContent = 'Local helper testing and skill download are available in the desktop edition.';
     $('copy-mcp-prompt').disabled = true;
     $('copy-mcp-config').disabled = true;
     $('mcp-copy-status').textContent = 'For hosted access, create a scoped key in Account and follow the hosted connection guide. Never paste that key into a prompt.';

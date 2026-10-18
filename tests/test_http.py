@@ -49,6 +49,13 @@ class HttpTests(unittest.TestCase):
             body = response.read().decode()
             return response.status, json.loads(body) if response.headers.get_content_type() == 'application/json' else body
 
+    def test_mcp_connection_check_requires_session(self):
+        self.assertEqual(self.request('/api/mcp-check', {}, {'Authorization': ''})[0], 401)
+        status, result = self.request('/api/mcp-check', {})
+        self.assertEqual(status, 200)
+        self.assertTrue(result['ok'], result)
+        self.assertGreater(result['tools'], 0)
+
     def test_companion_pair_import_and_revocation(self):
         origin = 'chrome-extension://' + 'a' * 32
         other = 'chrome-extension://' + 'b' * 32

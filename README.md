@@ -160,3 +160,10 @@ Signing and notarization workflows are available for maintainers: [secure setup 
 ### Images, PDFs, and OCR
 
 The 0.3 desktop app saves original files and extracts searchable text locally, including scanned PDF pages. Save public image/PDF URLs directly and watch them hourly. [Media and automation guide](docs/MEDIA.md).
+
+
+### Automation and assistant setup (current source)
+
+Open **Agent access → Test MCP connection** to check the actual local server. Copy the setup prompt to a local MCP-capable assistant, then confirm it can list your sources. Download the bundled [Proofpage skill](proofpage/skills/proofpage/SKILL.md) for collection, schedules, research and training-draft workflows. In **Sources → Set schedule**, choose an interval or pause. Scheduled collection requires the app/server to stay running.
+
+These setup improvements are in the current source branch; the published 0.3.0 desktop installers predate them. ChatGPT web requires a separate compatible remote connector, not the local stdio configuration.

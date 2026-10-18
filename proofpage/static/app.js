@@ -172,7 +172,7 @@ function sourceCard(source) {
       ${web ? `<div class="actions">
         ${live ? `<a class="button icon-button small" href="${escape(source.location)}" target="_blank" rel="noopener noreferrer" aria-label="Open live page" title="Open live page">${icon('external')}</a>` : ''}
         <button type="button" class="icon-button small" data-wacz="${escape(source.id)}" data-wacz-name="${escape(hostname(source.location))}" aria-label="Export as a WACZ web archive" title="Export as a WACZ web archive with signed receipts">${icon('download')}</button>
-        <button type="button" class="small" data-schedule="${escape(source.id)}" data-interval="${source.interval_seconds ? 0 : 3600}" title="${source.interval_seconds ? 'Stop re-collecting this page' : 'Re-collect every hour while Proofpage runs and record changes in Timeline'}">${icon(source.interval_seconds ? 'pause' : 'eye')}${source.interval_seconds ? 'Stop watching' : 'Watch hourly'}</button>
+        <button type="button" class="small" data-schedule="${escape(source.id)}" data-interval="${source.interval_seconds ? 0 : 3600}" title="Choose how often to collect this source while Proofpage runs">${icon(source.interval_seconds ? 'pause' : 'eye')}${source.interval_seconds ? 'Edit schedule' : 'Set schedule'}</button>
         <button type="button" class="secondary small" data-collect="${escape(source.id)}">${icon('collect')}Collect</button>
       </div>` : ''}
     </div>
@@ -442,7 +442,19 @@ document.addEventListener('click', event => {
     notice(result.detail + rightsNote(result.rights), result.state !== 'available');
     await refresh();
   }, b);
-  if (b.dataset.schedule) action(async () => { await api('schedule', {source_id: b.dataset.schedule, interval_seconds: Number(b.dataset.interval)}); await refresh(); notice(Number(b.dataset.interval) ? 'Watching hourly while Proofpage runs. Changes will appear in Timeline.' : 'Stopped watching this source.'); }, b);
+  if (b.dataset.schedule) {
+    const source = state.sources.find(s => s.id === b.dataset.schedule);
+    if (!source) return;
+    const current = Number(source.interval_seconds || 0);
+    const presets = [[0, 'Manual only / paused'], [900, 'Every 15 minutes'], [3600, 'Every hour'], [21600, 'Every 6 hours'], [86400, 'Every day']];
+    if (current && !presets.some(([value]) => value === current)) presets.push([current, `Current: every ${current} seconds`]);
+    openModal('Schedule collection', `<form id="schedule-form"><p>Keep <b>${escape(source.name)}</b> up to date. Changes appear in Timeline.</p><label>Collect this source<select name="interval_seconds">${presets.map(([value,label]) => `<option value="${value}"${value === current ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label><p class="callout">${icon('clock')}<span>Leave Proofpage running. Collection pauses when the app closes. Site cooldowns and daily budgets may delay a run. Your first scheduled check starts after the selected interval.</span></p><div class="actions"><button type="submit" class="primary">Save schedule</button></div><p class="dialog-error" role="alert"></p></form>`);
+    $('schedule-form').onsubmit = event => { event.preventDefault(); action(async () => {
+      const interval = Number(new FormData(event.target).get('interval_seconds'));
+      await api('schedule', {source_id: source.id, interval_seconds: interval});
+      $('work-dialog').close(); await refresh(); notice(interval ? 'Schedule saved. Keep Proofpage running to collect updates.' : 'Schedule paused. You can still collect manually.');
+    }, event.submitter); };
+  }
   if (b.dataset.originalFile) action(() => download('original-file/' + b.dataset.originalFile, b.dataset.filename), b);
   if (b.dataset.fileBundle) action(() => download('file-bundle/' + b.dataset.fileBundle, 'proofpage-file-bundle.zip'), b);
   if (b.dataset.export) action(() => download('export/' + b.dataset.export, 'proofpage-' + b.dataset.export + '.jsonl'), b);

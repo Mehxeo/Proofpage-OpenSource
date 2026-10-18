@@ -11,3 +11,10 @@ Validation: 124 Python tests passed, including new schedule boundaries, pause, d
 The user reported completing a Chrome save, but neither the earlier isolated test workspace nor the running desktop app's default data workspace contained a saved record when checked. End-to-end confirmation of that transfer remains unresolved.
 
 These are source changes, not a new signed installer or an update to the pending Chrome Store package. Native audio/video extraction, multimodal trainer formats, and a ChatGPT-ready remote MCP connector remain outside the implemented capabilities.
+
+
+## MCP and skill follow-up
+
+127 tests pass. New subprocess acceptance starts the generated source MCP configuration from an unrelated working directory with spaces in the workspace path. It verifies initialize, tool discovery, source listing, no response to notifications, and a structured error for invalid schedule input. A session-authenticated HTTP diagnostic runs the real helper; unauthenticated requests fail. Skill validation passes and every referenced tool exists. The built wheel contains the skill and portable entry point; desktop packaging includes the skill directory.
+
+Browser acceptance: the Test MCP connection button returned 29 tools and the correct one-source fixture workspace. Download SKILL.md produced bytes identical to the packaged file. Scheduling a daily run persisted, reopening showed that choice, and pausing restored manual collection. No new installer or client configuration was installed by these tests.

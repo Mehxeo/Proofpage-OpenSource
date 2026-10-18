@@ -92,3 +92,12 @@ For custom-model work, choose SFT conversations, preference pairs, corrections o
 Local stdio configuration is for clients supporting local MCP, such as Claude Desktop and coding assistants. It cannot be pasted as a remote URL into ChatGPT web or Claude web. ChatGPT requires a compatible remote MCP connection; Proofpage's hosted bridge is not yet a ChatGPT-ready OAuth/Streamable HTTP connector. Do not expose the local app or credentials to work around this. Export evidence for manual upload when a local MCP client is unavailable.
 
 References checked October 18, 2026: [Claude local MCP setup](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop), [ChatGPT MCP requirements](https://help.openai.com/en/articles/12584461-developer-mode-and-full-mcp-apps-in-chatgpt-beta).
+
+
+## Setup verification and reusable skill
+
+In Agent access, choose **Test MCP connection**. Proofpage launches its actual stdio helper in an unrelated working directory, initializes MCP, lists tools and reads this workspace's source list. It collects no pages. Missing helpers, timeouts and invalid responses are reported as failures. This checks the server installation, not whether Claude or another client has loaded its configuration; confirm that separately with `proofpage_list_sources` in the assistant.
+
+Choose **Download SKILL.md** or **Copy skill** for collection, schedules, cited research and training-draft instructions. The packaged source is [proofpage/skills/proofpage/SKILL.md](../proofpage/skills/proofpage/SKILL.md). Install it with your assistant's skill mechanism. For project-local Codex use `.agents/skills/proofpage/SKILL.md`; for Claude Code use `.claude/skills/proofpage/SKILL.md`. The skill does not install MCP, grant access or start a scheduler.
+
+Sources now offers **Set schedule** / **Edit schedule**, with 15-minute, hourly, six-hour and daily choices plus pause. The first scheduled check starts after that interval; use Collect for an immediate capture. Keep the app/server open, and inspect Activity and Timeline for actual results and delays.

@@ -14,7 +14,7 @@ import tomllib
 root = Path(SPECPATH).parent
 version = tomllib.loads((root / 'pyproject.toml').read_text())['project']['version']
 # verify.py ships as source: proof bundles and WACZ exports embed it as the standalone offline verifier.
-datas = [(str(root / 'proofpage/static'), 'proofpage/static'), (str(root / 'proofpage/verify.py'), 'proofpage'), (certifi.where(), 'certifi')]
+datas = [(str(root / 'proofpage/skills'), 'proofpage/skills'), (str(root / 'proofpage/static'), 'proofpage/static'), (str(root / 'proofpage/verify.py'), 'proofpage'), (certifi.where(), 'certifi')]
 gui = Analysis([str(root / 'desktop/entry.py')], pathex=[str(root)], datas=datas + media_datas, binaries=media_binaries, hiddenimports=['certifi'] + media_hidden, excludes=['playwright', 'fastapi', 'uvicorn', 'stripe', 'httpx'])
 mcp = Analysis([str(root / 'desktop/mcp_entry.py')], pathex=[str(root)], datas=media_datas, binaries=media_binaries, hiddenimports=['certifi'] + media_hidden, excludes=['playwright', 'fastapi', 'uvicorn', 'stripe', 'httpx'])
 app_exe = EXE(PYZ(gui.pure), gui.scripts, [], exclude_binaries=True, name='Proofpage', console=False, icon=str(root / 'desktop/icon.png'))

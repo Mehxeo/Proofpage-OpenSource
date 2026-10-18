@@ -172,6 +172,9 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 data = json.loads(self.rfile.read(length))
                 if not isinstance(data, dict):
                     raise ValueError('Expected a JSON object.')
+                if self.path == '/api/mcp-check':
+                    from .mcp_setup import check
+                    return self.send(200, check(store))
                 if self.path == '/api/companion-code':
                     with companion_lock:
                         companion['code'] = secrets.token_hex(6).upper()
