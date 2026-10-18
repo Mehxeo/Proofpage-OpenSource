@@ -4,7 +4,7 @@
 
 [Download Proofpage](/#download) for your computer. Extract the archive and open the app. On Mac, drag Proofpage.app into Applications. On Windows, keep the extracted support files beside Proofpage.exe. The desktop app includes Python; you do not need to install Python or use a terminal.
 
-Proofpage opens your local workspace in your browser. Keep its launcher running while you use it. Your evidence is stored separately from the application in your user folder under Proofpage/data.
+The desktop download opens your workspace in a native Tauri window. Keep it open for scheduled collection. Source/CLI installations still use your browser. Your evidence is stored separately from the application in your user folder under Proofpage/data.
 
 ## Capture your first page
 
@@ -34,6 +34,6 @@ Close Proofpage and make a private copy of your Proofpage/data folder before upd
 
 ## Check for app updates
 
-Open Settings → App updates → Check for updates (or App updates in the desktop launcher). This explicit check contacts GitHub without sending workspace data. When a newer stable release is available, Proofpage offers the download for this computer, or the release page if there is no matching build.
+Open Settings → App updates → Check for updates. This explicit check contacts GitHub without sending workspace data. When a newer stable release is available, Proofpage offers the download for this computer, or the release page if there is no matching build.
 
 Back up your workspace and quit Proofpage before replacing the app. On Mac, drag the new app into Applications and choose Replace. On Windows/Linux, extract the complete archive into a new app folder. Keep your home-folder Proofpage/data directory: the library lives separately from the application. This is a guided download-and-replace flow, not automatic installation.

@@ -2,7 +2,7 @@
 
 <p align="center">
 <a href="https://proofpage.app">Website</a> ·
-<a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.3.1">Download</a> ·
+<a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.4.0">Download</a> ·
 <a href="#install-and-run">Install & run</a> ·
 <a href="docs/CLI.md">CLI guide</a> ·
 <a href="docs/TRAINING_AND_AGENTS.md">Training & agents</a> ·
@@ -17,7 +17,7 @@ Proofpage turns public web pages and your own exported files into **traceable ev
 
 ![Proofpage evidence workspace](docs/archival-library-light.png)
 
-> **New in v0.3.1:** Easier automation, a built-in MCP connection check, downloadable assistant skill, improved Settings and saved appearance preferences.
+> **New in v0.4.0:** A native Tauri desktop window, simpler Settings, and an in-app update check. Includes the existing automation, MCP, OCR/PDF and personal-training workflows.
 
 ## What you can do
 
@@ -50,16 +50,16 @@ Back up your workspace before updating. For the easiest setup, use the native do
 
 ### Download, extract, open
 
-Choose your computer from the [v0.3.1 downloads](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.3.1):
+Choose your computer from the [v0.4.0 downloads](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.4.0):
 
 | Computer | Download | Open it |
 | --- | --- | --- |
-| Mac with Apple silicon (M1 or newer), macOS 14+ | **Proofpage-0.3.1-darwin-arm64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
-| Mac with Intel processor, macOS 13+ | **Proofpage-0.3.1-darwin-x86_64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
-| Windows 10/11, 64-bit Intel/AMD | **Proofpage-0.3.1-windows-x86_64.zip** | Extract the entire ZIP, then double-click **Proofpage.exe** |
-| Linux, 64-bit Intel/AMD desktop | **Proofpage-0.3.1-linux-x86_64.tar.gz** | Extract with your archive manager, then open the **Proofpage** executable |
+| Mac with Apple silicon (M1 or newer), macOS 14+ | **Proofpage-0.4.0-darwin-arm64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
+| Mac with Intel processor, macOS 13+ | **Proofpage-0.4.0-darwin-x86_64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
+| Windows 10/11, 64-bit Intel/AMD | **Proofpage-0.4.0-windows-x86_64.zip** | Extract the entire ZIP, then double-click **Proofpage.exe** |
+| Linux, 64-bit Intel/AMD desktop | **Proofpage-0.4.0-linux-x86_64.tar.gz** | Extract with your archive manager, then open the **Proofpage** executable |
 
-The small Proofpage window opens your workspace in your default browser. Click **Open workspace** to return to it or **Show data folder** to find your files. Keep the app open while you work; closing its window stops the local server. Active captures may take a little time to finish.
+Proofpage opens in its own native Tauri window. Keep it open for scheduled collection; closing the window stops the local engine after active captures finish. Settings → App updates checks for releases and offers a matching download. Updating currently uses download-and-replace. Your library stays in your home folder under Proofpage/data.
 
 **No terminal. No Python setup. No account.** Keep all extracted files together on Windows and Linux. The app chooses an available local port automatically. Linux requires a graphical desktop and system libraries compatible with Ubuntu 22.04 or newer; not every distribution has been tested. On Mac, use About This Mac to find your processor type.
 
@@ -79,7 +79,7 @@ Backups and exports are saved where you choose. Updating or replacing the applic
 <details>
 <summary><strong>Python installation and CLI setup (optional)</strong></summary>
 
-For developers and terminal users, download **proofpage-0.3.1-local.zip** instead. This source-oriented bundle requires Python 3.11+. Extract it and run:
+For developers and terminal users, download **proofpage-0.4.0-local.zip** instead. This source-oriented bundle requires Python 3.11+. Extract it and run:
 
 ```sh
 python3 scripts/install.py
@@ -107,7 +107,7 @@ Desktop downloads include the MCP helper, so this does not require installing Py
 
 ## Prefer the terminal?
 
-The optional Python installation includes a CLI. Desktop downloads focus on the browser workspace. After following the optional CLI setup above, on macOS/Linux:
+The optional Python installation includes a CLI. Desktop downloads open a native workspace window. After following the optional CLI setup above, on macOS/Linux:
 
 ```sh
 ~/Proofpage/proofpage --help
@@ -166,4 +166,8 @@ The 0.3 desktop app saves original files and extracts searchable text locally, i
 
 Open **Agent access → Test MCP connection** to check the actual local server. Copy the setup prompt to a local MCP-capable assistant, then confirm it can list your sources. Download the bundled [Proofpage skill](proofpage/skills/proofpage/SKILL.md) for collection, schedules, research and training-draft workflows. In **Sources → Set schedule**, choose an interval or pause. Scheduled collection requires the app/server to stay running.
 
-These setup improvements are included in the 0.3.1 desktop release. ChatGPT web requires a separate compatible remote connector, not the local stdio configuration.
+These setup improvements are included in the 0.4.0 desktop release. ChatGPT web requires a separate compatible remote connector, not the local stdio configuration.
+
+Native runtime requirements: Windows uses Microsoft Edge WebView2. Linux needs WebKitGTK 4.1 (`libwebkit2gtk-4.1-0` on Ubuntu) and a graphical desktop.
+
+Build the native app yourself: [Tauri desktop build guide](docs/NATIVE_DESKTOP.md).
