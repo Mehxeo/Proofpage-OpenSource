@@ -4,6 +4,7 @@ const filters = {kind: '', source: '', review: '', rights: ''};
 let layout = (() => { try { return localStorage.getItem('proofpage-layout') === 'list' ? 'list' : 'grid'; } catch { return 'grid'; } })();
 
 const VIEWS = {
+  business: ['Business context', 'Give your assistant the right background.', 'Choose sources, review passages, and take your context to another assistant.'],
   verify: ['Check quotes', 'Does the source say that?', 'Check quoted passages against captured evidence. Review the source before trusting the answer.'],
   library: ['Library', 'A library you can trace.', 'Collect useful material. Keep the evidence behind it.'],
   sources: ['Sources', 'Every source, accounted for.', 'Set up collection and see exactly what each site allowed and returned.'],
@@ -59,6 +60,7 @@ function render() {
     renderedView = view;
     window.scrollTo(0, 0);
   }
+  if (view === 'business') { setHeading(...VIEWS.business); action(renderBusiness); return; }
   if (view === 'verify') { setHeading(...VIEWS.verify); action(renderClaims); return; }
   if (view === 'training' || view === 'agents') {
     action(() => renderWorkbench(view));

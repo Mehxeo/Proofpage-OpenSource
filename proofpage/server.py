@@ -149,6 +149,9 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                     return self.send(200, {'token': token})
                 if self.headers.get('Authorization') != 'Bearer ' + token:
                     return self.send(401, {'error': 'Local session required.'})
+                if path == '/api/google-docs':
+                    from .google_docs import status
+                    return self.send(200, status(store))
                 if path == '/api/updates':
                     from .updates import check
                     return self.send(200, check())
@@ -178,6 +181,17 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 if self.path == '/api/mcp-check':
                     from .mcp_setup import check
                     return self.send(200, check(store))
+                if self.path.startswith('/api/google-docs/'):
+                    from . import google_docs
+                    operation = self.path.rsplit('/', 1)[1]
+                    try:
+                        if operation == 'select': result = google_docs.select(store, data.get('document'), data.get('interval', 0), data.get('owner_permission'))
+                        elif operation == 'sync': result = google_docs.sync(store, data.get('document'))
+                        elif operation in ('connect', 'disconnect'): result = getattr(google_docs, operation)(store)
+                        else: raise ValueError('Unknown operation.')
+                        return self.send(200, result)
+                    except Exception:
+                        return self.send(400, {'error': 'Google Docs operation did not complete. Check setup, access, and OS credential vault; previous evidence is preserved.'})
                 if self.path == '/api/companion-code':
                     with companion_lock:
                         companion['code'] = secrets.token_hex(6).upper()
@@ -213,6 +227,8 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 jobs = [('web:' + s['id'], store.collect, s['id']) for s in store.rows("SELECT id FROM sources WHERE kind='web' AND interval_seconds>0 AND next_run<=? ORDER BY next_run", (time.time(),))]
                 jobs += [('crawl:' + c['id'], lambda cid: crawl.step_job(store, cid), c['id']) for c in store.rows("SELECT id FROM crawl_jobs WHERE state IN ('queued','running') AND next_attempt<=? ORDER BY updated_at", (time.time(),))]
                 jobs += [('claim:' + c['id'], lambda cid: claims.step(store, cid), c['id']) for c in store.rows("SELECT id FROM claim_checks WHERE state='queued' AND next_attempt<=? AND lease_until<=? ORDER BY created_at", (time.time(), time.time()))]
+                from . import google_docs
+                jobs += [('google:' + d['document_id'], lambda did: google_docs.sync(store, did), d['document_id']) for d in store.rows('SELECT document_id FROM google_documents WHERE interval_seconds>0 AND next_run<=?', (time.time(),))]
                 watches = sorted(store.rows('SELECT id FROM watches WHERE enabled=1'), key=lambda w: last_watch.get(w['id'], 0))
                 jobs += [('watch:' + w['id'], lambda wid: scan_watch(store, wid), w['id']) for w in watches]
                 if time.time() - last_anchor_check > 600 and 'anchor' not in pending:

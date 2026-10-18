@@ -1,0 +1,28 @@
+name: Check pinned Proofpage evidence
+description: Validate offline inputs and optionally compare to a supplied workspace. Install Proofpage first.
+inputs:
+  manifest:
+    description: Path to evidence manifest
+    required: true
+  sha256:
+    description: Trusted manifest SHA-256 (required to protect against replacement)
+    required: true
+  home:
+    description: Existing Proofpage workspace to compare; omit for offline integrity only
+    default: ''
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PP_MANIFEST: ${{ inputs.manifest }}
+        PP_SHA256: ${{ inputs.sha256 }}
+        PP_HOME: ${{ inputs.home }}
+      run: |
+        set -euo pipefail
+        test -n "$PP_SHA256"
+        if [ -n "$PP_HOME" ]; then
+          python -m proofpage --home "$PP_HOME" evidence check "$PP_MANIFEST" --sha256 "$PP_SHA256" > proofpage-evidence-report.json
+        else
+          python -m proofpage evidence replay "$PP_MANIFEST" --sha256 "$PP_SHA256" > /dev/null
+        fi

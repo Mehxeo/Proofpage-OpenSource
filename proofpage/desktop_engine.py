@@ -43,8 +43,16 @@ def main():
                         assert check(store)['ok']
                         from . import verify
                         assert Path(verify.__file__).with_suffix('.py').is_file()
+                        # Exercise the bundled OAuth imports, not the build machine's Python.
+                        from google_auth_oauthlib.flow import InstalledAppFlow
+                        from google.oauth2.credentials import Credentials
+                        from . import google_docs
+                        import importlib
+                        backend = 'macOS' if sys.platform == 'darwin' else 'Windows' if sys.platform == 'win32' else 'SecretService'
+                        importlib.import_module('keyring.backends.' + backend)
+                        assert google_docs.status(store)['installed']
                         report.write_text(json.dumps({'ready': True, 'gui': True, 'shell': 'tauri', 'records': len(state['items']),
-                                                      'offline_verifier': True, 'mcp': connection['config']['mcpServers']['proofpage']}))
+                                                      'offline_verifier': True, 'google_oauth': True, 'mcp': connection['config']['mcpServers']['proofpage']}))
                         print('PROOFPAGE_SMOKE_OK', flush=True)
             except Exception:
                 import traceback

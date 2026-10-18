@@ -48,6 +48,23 @@ MIGRATIONS = [
         "CREATE TABLE claim_checks(id TEXT PRIMARY KEY,text TEXT NOT NULL,created_at TEXT NOT NULL,state TEXT NOT NULL,collect_missing INTEGER NOT NULL,max_age INTEGER NOT NULL,next_attempt REAL NOT NULL DEFAULT 0,lease_until REAL NOT NULL DEFAULT 0,detail TEXT NOT NULL DEFAULT '')",
         "CREATE TABLE claim_items(job_id TEXT NOT NULL,position INTEGER NOT NULL,url TEXT,quote TEXT NOT NULL,start INTEGER,end INTEGER,result TEXT,state TEXT NOT NULL DEFAULT 'queued',PRIMARY KEY(job_id,position))",
     ]),
+    (6, [
+        "CREATE TABLE evidence_runs(id TEXT PRIMARY KEY,name TEXT NOT NULL,created_at TEXT NOT NULL,manifest TEXT NOT NULL,sha256 TEXT NOT NULL)",
+        "CREATE TABLE evidence_dependencies(run_id TEXT NOT NULL,output_id TEXT NOT NULL,revision_id TEXT NOT NULL,item_id TEXT NOT NULL,PRIMARY KEY(run_id,output_id,revision_id))",
+        "CREATE INDEX evidence_dependencies_item ON evidence_dependencies(item_id)",
+    ]),
+    (7, [
+        "CREATE TABLE business_profiles(id TEXT PRIMARY KEY,name TEXT NOT NULL,created_at TEXT NOT NULL)",
+        "CREATE TABLE business_sources(profile_id TEXT NOT NULL,revision_id TEXT NOT NULL,role TEXT NOT NULL,PRIMARY KEY(profile_id,revision_id))",
+        "CREATE TABLE business_facts(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL,revision_id TEXT NOT NULL,section TEXT NOT NULL,text TEXT NOT NULL,quote TEXT NOT NULL,start INTEGER NOT NULL,end INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'draft',reviewed_at TEXT)",
+    ]),
+    (8, [
+        "CREATE TABLE google_documents(document_id TEXT PRIMARY KEY,title TEXT NOT NULL,interval_seconds INTEGER NOT NULL DEFAULT 0,next_run REAL NOT NULL DEFAULT 0,last_sync TEXT,state TEXT NOT NULL,detail TEXT NOT NULL DEFAULT '')",
+    ]),
+    (9, [
+        "ALTER TABLE google_documents ADD COLUMN owner_permission INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE google_documents ADD COLUMN permission_at TEXT",
+    ]),
 
 ]
 

@@ -16,7 +16,7 @@ from . import service, crawl, mcp, claims
 from .billing import Billing
 
 STATIC = Path(__file__).parent / 'static'
-READ_TOOLS = {'proofpage_list_sources','proofpage_get_source_access','proofpage_get_run','proofpage_search',
+READ_TOOLS = {'proofpage_business_profiles','proofpage_business_context','proofpage_replay_context','proofpage_check_evidence_run','proofpage_list_evidence_runs','proofpage_affected_outputs','proofpage_list_sources','proofpage_get_source_access','proofpage_get_run','proofpage_search',
               'proofpage_get_item','proofpage_get_evidence','proofpage_list_changes','proofpage_get_context',
               'proofpage_get_crawl','proofpage_list_recipes','proofpage_get_rights',
               'proofpage_diff_revisions','proofpage_list_changes_since','proofpage_get_receipt','proofpage_get_quote_check'}

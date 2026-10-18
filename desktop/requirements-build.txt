@@ -4,3 +4,5 @@ certifi>=2026.2.25
 pypdfium2==5.14.0
 rapidocr==3.10.0
 onnxruntime>=1.20,<2
+google-auth-oauthlib>=1.2,<2
+keyring>=25,<26

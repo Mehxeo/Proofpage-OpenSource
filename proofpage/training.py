@@ -61,6 +61,8 @@ def get_candidate(store, candidate_id):
 
 def create_candidate(store, revision_id, kind, payload, quote, notes='', origin='manual', mapping=None, redact_sensitive=False, parent_id=None):
     revision = store.revision(revision_id)
+    if json.loads(revision['metadata']).get('adapter') == 'google_docs':
+        raise ValueError('Google Docs API snapshots are limited to personal context in this release and cannot be added to training datasets.')
     payload = validate_payload(kind, payload)
     quote = text(quote, 'Evidence quote')
     offset = revision['text'].find(quote)
@@ -156,6 +158,8 @@ def freeze_training(store, name, candidate_ids, kind):
             continue
         seen.add(candidate['hash'])
         revision = store.revision(candidate['revision_id'])
+        if json.loads(revision['metadata']).get('adapter') == 'google_docs':
+            raise ValueError('Google Docs API snapshots cannot be frozen into training datasets.')
         candidates.append(candidate)
         records.append({'text': json.dumps(candidate['payload'], sort_keys=True), 'source_id': revision['source_id']})
     groups = grouped_splits(records)

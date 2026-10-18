@@ -4,7 +4,7 @@ import sys
 import certifi
 from PyInstaller.utils.hooks import collect_all
 media_datas, media_binaries, media_hidden = [], [], []
-for package in ("rapidocr", "pypdfium2", "pypdfium2_raw", "onnxruntime"):
+for package in ("rapidocr", "pypdfium2", "pypdfium2_raw", "onnxruntime", "google_auth_oauthlib", "keyring"):
     d, b, h = collect_all(package)
     media_datas += d
     media_binaries += b

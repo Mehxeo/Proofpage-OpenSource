@@ -20,6 +20,30 @@ def with_blockers(store, datasets):
 
 
 def get(store, path, query):
+    if path == '/api/business':
+        return response(200, store.rows('SELECT * FROM business_profiles ORDER BY created_at DESC'))
+    if path.startswith('/api/business/'):
+        from . import business
+        parts = path.split('/')
+        if len(parts) == 5 and parts[4] == 'export':
+            return response(200, business.export_pack(store, parts[3]), 'application/zip')
+        return response(200, business.get(store, parts[3]))
+    if path == '/api/evidence-runs':
+        from .evidence_runs import list_runs
+        return response(200, list_runs(store))
+    if path.startswith('/api/evidence-runs/'):
+        from . import evidence_runs, evidence
+        parts = path.split('/')
+        if len(parts) == 5 and parts[4] == 'export':
+            return response(200, evidence.canonical(evidence_runs.get(store, parts[3])), 'application/octet-stream')
+        if len(parts) == 5 and parts[4] == 'check':
+            return response(200, evidence_runs.check(store, parts[3]))
+        if len(parts) == 4:
+            return response(200, evidence_runs.replay_context(store, parts[3]))
+        raise ValueError('Unknown evidence run operation.')
+    if path.startswith('/api/affected-outputs/'):
+        from .evidence_runs import affected
+        return response(200, affected(store, path.rsplit('/', 1)[1]))
     if path.startswith('/api/file-bundle/'):
         from .media import bundle
         return response(200, bundle(store, path.rsplit('/', 1)[1]), 'application/zip')
@@ -92,7 +116,28 @@ def get(store, path, query):
 
 
 def post(store, path, data):
-    if path == '/api/claim-preview':
+    if path.startswith('/api/business-'):
+        from . import business
+        if path == '/api/business-create':
+            result = business.create(store, data.get('name'))
+        elif path == '/api/business-attach':
+            result = business.attach(store, data['profile_id'], data['revision_id'], data['role'])
+        elif path == '/api/business-draft':
+            result = business.draft(store, data['profile_id'])
+        elif path == '/api/business-training-draft':
+            result = business.training_draft(store, data['fact_id'], data['prompt'])
+        elif path == '/api/business-review':
+            result = business.review(store, data['fact_id'], data['text'], data['decision'], data.get('permission'), data.get('acknowledge'))
+        elif path == '/api/business-bookmark-preview':
+            result = business.bookmark_preview(data.get('html'))
+        elif path == '/api/business-bookmark-import':
+            result = business.import_bookmarks(store, data.get('html'), data.get('selected'))
+        else:
+            raise ValueError('Unknown business operation.')
+    elif path == '/api/record-context':
+        from .evidence_runs import record_context
+        result = record_context(store, data.get('query'), data.get('output_id'), data.get('name', 'Evidence run'))
+    elif path == '/api/claim-preview':
         result = claims.extract(data.get('text'))
     elif path == '/api/claim-check':
         result = claims.create(store, data.get('citations'), data.get('text', ''), data.get('collect_missing', False), data.get('max_age', 86400))

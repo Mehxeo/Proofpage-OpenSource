@@ -75,9 +75,134 @@ def main():
     sub.add_parser('remote-mcp', help='Connect an agent to a hosted workspace')
     sub.add_parser('mcp', help='Run the local MCP server over stdio')
     sub.add_parser('desktop', help='Open the optional Tk desktop interface')
+    ev = sub.add_parser('evidence', help='Record, replay, check, or explicitly refresh pinned inputs')
+    ev.add_argument('operation', choices=['record', 'replay', 'check', 'refresh'])
+    ev.add_argument('path', help='Manifest JSON path; record creates a new file')
+    ev.add_argument('--revision', action='append', default=[])
+    ev.add_argument('--dependencies', help='JSON file of output IDs and exact quote ranges')
+    ev.add_argument('--sha256', help='Trusted manifest checksum')
+    ev.add_argument('--name', default='Evidence run')
+    runs = sub.add_parser('evidence-run', help='Track retrieved agent inputs and output dependencies')
+    runs.add_argument('operation', choices=['record-context', 'list', 'replay', 'check', 'affected', 'export'])
+    runs.add_argument('identifier', nargs='?', help='Run ID, or item ID for affected')
+    runs.add_argument('--query')
+    runs.add_argument('--output-id')
+    runs.add_argument('--name', default='Evidence run')
+    runs.add_argument('--output', help='New manifest file for export')
+    business_parser = sub.add_parser('business', help='Local business context profiles and portable exports')
+    business_parser.add_argument('operation', choices=['create', 'list', 'get', 'attach', 'draft', 'review', 'export', 'bookmarks-preview', 'bookmarks-import'])
+    business_parser.add_argument('--id')
+    business_parser.add_argument('--name')
+    business_parser.add_argument('--revision')
+    business_parser.add_argument('--role', choices=['business', 'customer', 'reference', 'writing'])
+    business_parser.add_argument('--text')
+    business_parser.add_argument('--decision', choices=['draft', 'approved', 'rejected'])
+    business_parser.add_argument('--permission', action='store_true')
+    business_parser.add_argument('--acknowledge', action='store_true')
+    business_parser.add_argument('--path')
+    business_parser.add_argument('--select', type=int, action='append')
+    google = sub.add_parser('google-docs', help='Connect and sync explicitly selected Google Docs (optional google extra)')
+    google.add_argument('operation', choices=['status', 'connect', 'disconnect', 'select', 'sync'])
+    google.add_argument('--document')
+    google.add_argument('--interval', type=int, default=0, choices=[0, 3600, 21600, 86400])
+    google.add_argument('--owner-permission', action='store_true', help='Confirm owner permission to retain personal-context snapshots')
+    http_mcp = sub.add_parser('mcp-http', help='Serve read-only OAuth-protected MCP behind your HTTPS reverse proxy')
+    http_mcp.add_argument('--port', type=int, default=8910)
+    skill = sub.add_parser('install-skill', help='Install the bundled skill in a chosen project without overwriting')
+    skill.add_argument('--project', required=True)
+    skill.add_argument('--client', required=True, choices=['codex', 'claude'])
     args = parser.parse_args()
     if args.command is None:
         parser.print_help()
+        return
+    if args.command == 'install-skill':
+        from .skill_install import install
+        try: print(json.dumps(install(args.project, args.client), indent=2))
+        except (ValueError, OSError) as exc:
+            print(json.dumps({'error': str(exc)})); raise SystemExit(2)
+        return
+    if args.command == 'mcp-http':
+        from .mcp_http import run
+        run(Store(args.home), args.port)
+        return
+    if args.command == 'google-docs':
+        from . import google_docs
+        try:
+            workspace = Store(args.home)
+            if args.operation == 'select': result = google_docs.select(workspace, args.document, args.interval, args.owner_permission)
+            elif args.operation == 'sync': result = google_docs.sync(workspace, args.document)
+            else: result = getattr(google_docs, args.operation)(workspace)
+            print(json.dumps(result, indent=2))
+        except (ImportError, ValueError, OSError):
+            print(json.dumps({'error': 'Google Docs operation failed. Install the google extra and check OAuth configuration, OS vault, and selected document access.'}))
+            raise SystemExit(2)
+        return
+    if args.command == 'business':
+        from . import business
+        try:
+            workspace = Store(args.home)
+            op = args.operation
+            if op == 'create': result = business.create(workspace, args.name)
+            elif op == 'list': result = workspace.rows('SELECT * FROM business_profiles ORDER BY created_at DESC')
+            elif op == 'get': result = business.get(workspace, args.id)
+            elif op == 'attach': result = business.attach(workspace, args.id, args.revision, args.role)
+            elif op == 'draft': result = business.draft(workspace, args.id)
+            elif op == 'review': result = business.review(workspace, args.id, args.text, args.decision, args.permission, args.acknowledge)
+            elif op.startswith('bookmarks-'):
+                if not args.path: raise ValueError('Provide --path to a bookmark HTML export.')
+                with open(args.path, encoding='utf-8') as handle: html = handle.read(2 * 1024 * 1024 + 1)
+                result = business.bookmark_preview(html) if op == 'bookmarks-preview' else business.import_bookmarks(workspace, html, args.select)
+            else:
+                if not args.path: raise ValueError('Provide --path for a new ZIP file.')
+                payload = business.export_pack(workspace, args.id)
+                descriptor = os.open(args.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                with os.fdopen(descriptor, 'wb') as handle: handle.write(payload)
+                result = {'path': args.path, 'bytes': len(payload)}
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        except (ValueError, OSError) as exc:
+            print(json.dumps({'error': str(exc)})); raise SystemExit(2)
+        return
+    if args.command == 'evidence-run':
+        from . import evidence_runs, evidence
+        try:
+            workspace = Store(args.home)
+            if args.operation == 'record-context':
+                result = evidence_runs.record_context(workspace, args.query, args.output_id, args.name)
+            elif args.operation == 'list':
+                result = evidence_runs.list_runs(workspace)
+            elif args.operation == 'export':
+                if not args.output:
+                    raise ValueError('Provide --output with a new file path.')
+                result = {'sha256': evidence.write(evidence_runs.get(workspace, args.identifier), args.output)}
+            else:
+                operation = {'replay': evidence_runs.replay_context, 'check': evidence_runs.check, 'affected': evidence_runs.affected}[args.operation]
+                result = operation(workspace, args.identifier)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            if args.operation == 'check' and not result['ok']:
+                raise SystemExit(1)
+        except (ValueError, OSError) as exc:
+            print(json.dumps({'error': str(exc)}))
+            raise SystemExit(2)
+        return
+    if args.command == 'evidence':
+        from . import evidence
+        try:
+            if args.operation == 'record':
+                dependencies = json.loads(Path(args.dependencies).read_text()) if args.dependencies else []
+                manifest = evidence.record(Store(args.home), args.revision, dependencies, args.name)
+                checksum = evidence.write(manifest, args.path)
+                result = {'path': str(Path(args.path).resolve()), 'sha256': checksum}
+            else:
+                manifest = evidence.replay(args.path, args.sha256)
+                result = manifest if args.operation == 'replay' else evidence.compare(Store(args.home), manifest) if args.operation == 'check' else evidence.refresh(Store(args.home), manifest)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            if args.operation == 'check' and not result['ok']:
+                raise SystemExit(1)
+            if args.operation == 'refresh' and (not result['comparison']['ok'] or any(r.get('state') != 'available' for r in result['refresh'])):
+                raise SystemExit(1)
+        except (ValueError, OSError) as exc:
+            print(json.dumps({'error': str(exc)}))
+            raise SystemExit(2)
         return
     if args.command == 'doctor':
         with sqlite3.connect(':memory:') as db:

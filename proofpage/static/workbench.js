@@ -100,7 +100,7 @@ async function renderAgents() {
     </div>
     <section class="panel" id="connect-panel">
       <div class="panel-head"><div><h3>Connect your AI assistant</h3><p>Use a local MCP client such as Claude Desktop or a coding assistant. The setup prompt contains this workspace’s exact connection settings.</p></div>${tools.length ? `<span class="pill tone-accent">${pluralize(tools.length, 'MCP tool')}</span>` : ''}</div>
-      <p class="callout">${icon('info')}<span>ChatGPT on the web needs a remote MCP integration; it cannot launch this local connection. Proofpage does not yet provide a ChatGPT-ready remote connector. You can export evidence for upload, or use a local MCP-capable client. Claude’s web connector is also separate from local desktop setup.</span></p>
+      <p class="callout">${icon('info')}<span>ChatGPT on the web needs a remote MCP integration; it cannot launch this local connection. The source edition includes a separate OAuth-protected remote MCP server for self-hosting. It requires a public HTTPS deployment and an authorization provider; this local setup does not activate it. You can also export approved context for upload. Claude’s web connector is separate from its local desktop setup.</span></p>
       <ol class="setup-steps">
         <li><b>Copy the setup prompt</b><span>It includes this computer’s executable and data-folder paths.</span></li>
         <li><b>Paste it into your assistant</b><span>It asks the assistant to keep existing integrations and add Proofpage.</span></li>
@@ -120,6 +120,7 @@ async function renderAgents() {
         <h3>Try cited context</h3>
         <p>See exactly what an assistant receives: bounded excerpts with stable citation IDs.</p>
         <div class="searchbox">${icon('search')}<input name="query" required placeholder="Search your evidence" aria-label="Context query"></div>
+        <label>Output ID <span class="muted">optional — save these inputs for replay</span><input name="output_id" maxlength="200" placeholder="pricing-answer-1"></label>
         <div class="actions"><button class="secondary">${icon('quote')}Retrieve context</button></div>
       </form>
       <section class="panel">
@@ -130,6 +131,7 @@ async function renderAgents() {
       </section>
     </div>
     <div id="context-results"></div>
+    <section class="panel"><h3>Recorded agent inputs</h3><p>Replay exactly what you supplied to an output, compare it with your current library, or export a portable manifest. Checks do not fetch live websites.</p><button id="evidence-runs-refresh" class="secondary">Load saved runs</button><div id="evidence-runs-list"></div><div id="evidence-run-report" role="status"></div></section>
     <div class="section-label">Bounded collection jobs · ${workState.jobs.length}</div>
     <div class="toolbar"><div class="actions"><button type="button" id="new-crawl" class="primary">${icon('layers')}Collect multiple pages</button><button type="button" id="jobs-refresh">${icon('refresh')}Refresh results</button></div></div>
     ${workState.jobs.length ? `<div class="rows">${workState.jobs.map(job => `<div class="row"><div><h3>${escape(state.sources.find(source => source.id === job.source_id)?.name || 'Source')}</h3><p>${escape(job.detail || 'Waiting to start.')} · updated ${escape(relativeTime(job.updated_at))}</p></div><div class="actions">${statusPill(job.state)}<button type="button" class="small" data-job="${escape(job.id)}">Page outcomes</button>${['queued', 'running'].includes(job.state) ? `<button type="button" class="small danger-text" data-cancel-job="${escape(job.id)}">Cancel</button>` : ''}</div></div>`).join('')}</div>`
@@ -176,11 +178,30 @@ async function renderAgents() {
     $('copy-mcp-config').disabled = true;
     $('mcp-copy-status').textContent = 'For hosted access, create a scoped key in Account and follow the hosted connection guide. Never paste that key into a prompt.';
   }
+  $('evidence-runs-refresh').onclick = () => action(async () => {
+    const runs = await api('evidence-runs');
+    $('evidence-runs-list').innerHTML = runs.length ? runs.map(run => `<article class="panel"><h4>${escape(run.name)}</h4><p>${escape(date(run.created_at))}</p><code>${escape(run.sha256)}</code><div class="actions"><button data-evidence-replay="${escape(run.id)}">Replay inputs</button><button data-evidence-check="${escape(run.id)}">Check for changes</button><button data-evidence-export="${escape(run.id)}">Export manifest</button></div></article>`).join('') : '<p>No recorded inputs yet. Enter an output ID when retrieving context above.</p>';
+  }, $('evidence-runs-refresh'));
+  $('evidence-runs-list').onclick = event => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    const id = button.dataset.evidenceReplay || button.dataset.evidenceCheck || button.dataset.evidenceExport;
+    if (!id) return;
+    action(async () => {
+      if (button.dataset.evidenceExport) return download('evidence-runs/' + id + '/export', 'proofpage-inputs-' + id + '.json');
+      const result = await api('evidence-runs/' + id + (button.dataset.evidenceCheck ? '/check' : ''));
+      $('evidence-run-report').innerHTML = button.dataset.evidenceCheck
+        ? `<h4>${result.ok ? 'Pinned sources are unchanged in this library.' : 'Some inputs need review.'}</h4>${result.records.map(row => `<p><strong>${escape(row.state)}</strong> · ${escape(row.location)}</p><p>Affected outputs: ${escape(row.affected_outputs.join(', ') || 'None')}</p>`).join('')}`
+        : `<h4>Recorded inputs</h4>${result.excerpts.map(excerpt => `<p>${escape(excerpt.output_id)} · ${escape(excerpt.revision_id)}</p><blockquote>${escape(excerpt.quote)}</blockquote>`).join('')}`;
+    }, button);
+  };
   $('context-form').onsubmit = event => {
     event.preventDefault();
     const text = new FormData(event.target).get('query');
     action(async () => {
-      const result = await api('context', {query: text});
+      const outputId = new FormData(event.target).get('output_id').trim();
+      const result = await api(outputId ? 'record-context' : 'context', {query: text, output_id: outputId, name: outputId});
+      if (result.recording) notice('Inputs saved for ' + outputId + '. Load saved runs to replay or export.');
       const terms = text.toLowerCase().split(/\s+/);
       $('context-results').innerHTML = result.excerpts.length
         ? `<div class="section-label">Cited context · ${pluralize(result.excerpts.length, 'excerpt')} · ${result.characters} characters</div>

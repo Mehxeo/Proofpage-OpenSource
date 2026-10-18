@@ -25,6 +25,7 @@ with tempfile.TemporaryDirectory(prefix='proofpage-desktop-') as directory:
         raise RuntimeError(f'Desktop failed: {result.returncode}\n{result.stdout}\n{result.stderr}')
     data = json.loads(report.read_text())
     assert data['ready'] and data['gui'], data
+    assert data['google_oauth'], data
     assert (report.parent / 'workspace/data/proofpage.sqlite3').exists()
     print('Packaged native GUI, bundled Python, SQLite, HTTP API, and shutdown passed.')
 
@@ -36,7 +37,9 @@ with tempfile.TemporaryDirectory(prefix='proofpage-desktop-') as directory:
     replies = [json.loads(line) for line in rpc.stdout.splitlines()]
     assert len(replies) == 3, replies
     tool_names = {tool['name'] for tool in replies[1]['result']['tools']}
-    assert {'proofpage_verify_quotes', 'proofpage_check_answer', 'proofpage_get_receipt', 'proofpage_get_rights', 'proofpage_diff_revisions'} <= tool_names, replies
+    assert {'proofpage_verify_quotes', 'proofpage_check_answer', 'proofpage_get_receipt', 'proofpage_get_rights', 'proofpage_diff_revisions',
+            'proofpage_record_context', 'proofpage_replay_context', 'proofpage_check_evidence_run', 'proofpage_affected_outputs',
+            'proofpage_business_profiles', 'proofpage_business_context'} <= tool_names, replies
     assert replies[2]['result']['isError'] is False, replies
     print('Copied MCP configuration launches the bundled helper and verifies real tools.')
 
