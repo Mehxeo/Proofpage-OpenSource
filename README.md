@@ -10,7 +10,7 @@
 
 Proofpage turns public web pages and your own exported files into **traceable evidence for AI**. Collect material, inspect the original source, review training examples, and export datasets—or let an existing AI assistant search your evidence through MCP.
 
-**Free to run on your own computer. MIT licensed. No account, subscription, or model API key required for core features.** Desktop downloads include Python: no Python installation or terminal is needed. This is an early, unsigned release; publisher signing and Apple notarization are not configured yet.
+**Free to run on your own computer. MIT licensed. No account, subscription, or model API key required for core features.** Desktop downloads include Python: no Python installation or terminal is needed. This is an early release. The Mac downloads are Developer ID signed and Apple-notarized; Windows signing is still pending.
 
 ![Proofpage training workspace](docs/training-workbench.png)
 
@@ -43,7 +43,7 @@ The small Proofpage window opens your workspace in your default browser. Click *
 
 **No terminal. No Python setup. No account.** Keep all extracted files together on Windows and Linux. The app chooses an available local port automatically. Linux requires a graphical desktop and system libraries compatible with Ubuntu 22.04 or newer; not every distribution has been tested. On Mac, use About This Mac to find your processor type.
 
-**Unsigned preview:** Windows or macOS may warn about an unknown publisher or block opening the app. The downloads are not yet publisher-signed or Apple-notarized. Do not disable system security protections. Signing remains necessary before we can promise a frictionless public launch.
+**Mac downloads are signed and notarized:** both Apple silicon and Intel archives include stapled Apple tickets and pass Gatekeeper assessment. macOS may still show its normal first-download confirmation. **Windows remains an unsigned preview** and may warn about an unknown publisher or block launch. Do not disable system security protections. [Mac verification record](docs/MAC_NOTARIZATION.md).
 
 ### Your files stay separate from the app
 
