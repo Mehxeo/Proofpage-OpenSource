@@ -37,7 +37,7 @@ py -3 scripts/install.py --directory "$HOME\Proofpage-New"
 Create and activate a Python virtual environment, then install the wheel from this repository's release:
 
 ```sh
-python -m pip install /path/to/proofpage-0.1.2-py3-none-any.whl
+python -m pip install /path/to/proofpage-0.1.3-py3-none-any.whl
 proofpage doctor
 proofpage serve --open
 ```

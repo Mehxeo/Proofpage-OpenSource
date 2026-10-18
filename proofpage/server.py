@@ -71,6 +71,9 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                     return self.send(200, {'token': token})
                 if self.headers.get('Authorization') != 'Bearer ' + token:
                     return self.send(401, {'error': 'Local session required.'})
+                if path == '/api/mcp-setup':
+                    from .mcp_setup import setup
+                    return self.send(200, setup(store))
                 query = urllib.parse.parse_qs(url.query)
                 from .service import get
                 return self.send(*get(store, path, query))

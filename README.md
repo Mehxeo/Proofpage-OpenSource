@@ -1,7 +1,7 @@
 <p align="center"><img src="docs/assets/banner.svg" alt="Proofpage — Evidence for your next model" width="100%"></p>
 
 <p align="center">
-<a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.2">Download</a> ·
+<a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.3">Download</a> ·
 <a href="#install-and-run">Install & run</a> ·
 <a href="docs/CLI.md">CLI guide</a> ·
 <a href="docs/TRAINING_AND_AGENTS.md">Training & agents</a> ·
@@ -30,14 +30,14 @@ Proofpage **prepares data; it does not train a model**. Collection respects robo
 
 ### Download, extract, open
 
-Choose your computer from the [v0.1.2 downloads](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.2):
+Choose your computer from the [v0.1.3 downloads](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.3):
 
 | Computer | Download | Open it |
 | --- | --- | --- |
-| Mac with Apple silicon (M1 or newer) | **Proofpage-0.1.2-darwin-arm64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
-| Mac with Intel processor | **Proofpage-0.1.2-darwin-x86_64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
-| Windows 10/11, 64-bit Intel/AMD | **Proofpage-0.1.2-windows-x86_64.zip** | Extract the entire ZIP, then double-click **Proofpage.exe** |
-| Linux, 64-bit Intel/AMD desktop | **Proofpage-0.1.2-linux-x86_64.tar.gz** | Extract with your archive manager, then open the **Proofpage** executable |
+| Mac with Apple silicon (M1 or newer) | **Proofpage-0.1.3-darwin-arm64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
+| Mac with Intel processor | **Proofpage-0.1.3-darwin-x86_64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
+| Windows 10/11, 64-bit Intel/AMD | **Proofpage-0.1.3-windows-x86_64.zip** | Extract the entire ZIP, then double-click **Proofpage.exe** |
+| Linux, 64-bit Intel/AMD desktop | **Proofpage-0.1.3-linux-x86_64.tar.gz** | Extract with your archive manager, then open the **Proofpage** executable |
 
 The small Proofpage window opens your workspace in your default browser. Click **Open workspace** to return to it or **Show data folder** to find your files. Keep the app open while you work; closing its window stops the local server. Active captures may take a little time to finish.
 
@@ -59,7 +59,7 @@ Backups and exports are saved where you choose. Updating or replacing the applic
 <details>
 <summary><strong>Python installation and CLI setup (optional)</strong></summary>
 
-For developers and terminal users, download **proofpage-0.1.2-local.zip** instead. This source-oriented bundle requires Python 3.11+. Extract it and run:
+For developers and terminal users, download **proofpage-0.1.3-local.zip** instead. This source-oriented bundle requires Python 3.11+. Extract it and run:
 
 ```sh
 python3 scripts/install.py
@@ -78,6 +78,12 @@ On Windows use `py -3 scripts/install.py`. It creates an isolated runtime and CL
 5. Open **Agent access** to connect an AI assistant to your local evidence.
 
 For archives, choose **Import files**, create an account-specific profile, preview the file, and select what to keep. [Read the full workflow guide →](docs/TRAINING_AND_AGENTS.md)
+
+## Connect your AI assistant
+
+Open **Agent access → Copy setup prompt** and paste it into your assistant. Proofpage fills in the correct executable and data-folder paths. The prompt asks the assistant to preserve existing integrations, configure this local MCP server, and verify it by listing sources. **Copy MCP configuration** gives you the JSON directly.
+
+Desktop downloads include the MCP helper, so this does not require installing Python. Your assistant must support local MCP and have permission to configure integrations; regular web chats may only be able to provide instructions. [Connection guide](docs/TRAINING_AND_AGENTS.md#connect-by-copying-a-prompt).
 
 ## Prefer the terminal?
 
@@ -128,3 +134,5 @@ On Windows, use `py -3` and `.venv\Scripts\python.exe` / `.venv\Scripts\proofpag
 [MIT license](LICENSE) · [Contributing](CONTRIBUTING.md) · [Implementation status](docs/IMPLEMENTATION_STATUS.md) · [CI checks](https://github.com/Mehxeo/Proofpage-OpenSource/actions)
 
 The repository also includes an optional [self-hosted edition](docs/HOSTING.md) with isolated accounts and billing integration. A managed paid service is **not live**. Local use remains free and independent of hosted accounts.
+
+Signing and notarization workflows are available for maintainers: [secure setup guide](docs/SIGNING.md). Signing status is stated per release; adding workflows alone does not make existing downloads signed.

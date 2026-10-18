@@ -1,0 +1,42 @@
+name: sign-and-notarize-macos
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sign:
+    environment: release-signing
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r desktop/requirements-build.txt
+      - name: Prepare ephemeral signing credentials
+        run: python scripts/prepare_apple_ci.py
+        env:
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          APPLE_SIGN_IDENTITY: ${{ vars.APPLE_SIGN_IDENTITY }}
+      - name: Build, sign, notarize, staple, and assess
+        run: python scripts/build_desktop.py
+        env:
+          PROOFPAGE_SIGN_IDENTITY: ${{ vars.APPLE_SIGN_IDENTITY }}
+          PROOFPAGE_NOTARY_PROFILE: proofpage-ci
+          PROOFPAGE_NOTARY_KEYCHAIN: ${{ runner.temp }}/proofpage-signing.keychain-db
+      - run: python scripts/desktop_smoke.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-${{ matrix.os }}
+          path: dist/Proofpage-*-darwin-*.zip
+      - name: Remove ephemeral credentials
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/proofpage-signing.keychain-db" || true

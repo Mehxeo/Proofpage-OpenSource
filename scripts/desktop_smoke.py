@@ -27,3 +27,13 @@ with tempfile.TemporaryDirectory(prefix='proofpage-desktop-') as directory:
     assert data['ready'] and data['gui'], data
     assert (report.parent / 'workspace/data/proofpage.sqlite3').exists()
     print('Packaged native GUI, bundled Python, SQLite, HTTP API, and shutdown passed.')
+
+    entry = data['mcp']
+    requests = [{'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-06-18'}},
+                {'jsonrpc':'2.0','id':2,'method':'tools/list'},
+                {'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'proofpage_list_sources','arguments':{}}}]
+    rpc = subprocess.run([entry['command'], *entry['args']], input=''.join(json.dumps(r)+'\n' for r in requests), capture_output=True, text=True, timeout=30, check=True)
+    replies = [json.loads(line) for line in rpc.stdout.splitlines()]
+    assert len(replies) == 3 and len(replies[1]['result']['tools']) == 18, replies
+    assert replies[2]['result']['isError'] is False, replies
+    print('Copied MCP configuration launches the bundled helper and verifies real tools.')

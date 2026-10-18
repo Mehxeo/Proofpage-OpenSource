@@ -63,3 +63,11 @@ python3 -m venv .venv
 ```
 
 Enable rendering in a crawl. Chromium executes captured inline JavaScript with external resources, network calls, service workers, and WebSockets blocked. Original HTML is retained in provenance. Pages requiring external scripts or API data remain incomplete; this is deliberately not a general authenticated browser crawler. Each capture records blocked-request coverage. Missing Chromium produces a failed run, never a successful capture.
+
+## Connect by copying a prompt
+
+In the local workspace, open **Agent access → Copy setup prompt**, then paste it into an MCP-capable AI assistant. The prompt includes the actual executable and workspace paths. **Copy MCP configuration** provides the raw JSON instead. If clipboard access is denied, Proofpage displays selectable text for manual copying.
+
+Desktop downloads include a separate console MCP helper, so the assistant does not need a system Python installation. Keep the app's support files together and recopy settings after moving the app. The assistant must support local stdio MCP and be permitted to configure integrations; a prompt cannot add support to clients that lack it. It should preserve existing configuration and verify the connection with `proofpage_list_sources`. A normal web-chat model may only be able to explain the setup.
+
+The prompt contains local filesystem paths, but no API keys or session token. Hosted users should create scoped keys in Account and configure them through the client's secure credential settings, never paste secrets into a prompt.

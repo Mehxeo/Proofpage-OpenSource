@@ -11,16 +11,22 @@ root = Path(__file__).resolve().parents[1]
 version = tomllib.loads((root / 'pyproject.toml').read_text())['project']['version']
 system = platform.system().lower()
 arch = platform.machine().lower().replace('amd64', 'x86_64').replace('aarch64', 'arm64')
-args = [sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--windowed',
-        '--name', 'Proofpage', '--paths', str(root), '--collect-data', 'certifi',
-        '--hidden-import', 'certifi', '--add-data', f'{root / "proofpage/static"}:proofpage/static',
-        '--distpath', str(root / 'build/desktop'), '--workpath', str(root / 'build/pyinstaller'),
-        '--specpath', str(root / 'build'), '--icon', str(root / 'desktop/icon.png')]
-if system == 'darwin':
-    args += ['--osx-bundle-identifier', 'app.proofpage.desktop']
-args += [str(root / 'desktop/entry.py')]
-build_env = dict(os.environ, PYINSTALLER_CONFIG_DIR=str(root / 'build/pyinstaller-cache'))
-subprocess.run(args, check=True, cwd=root, env=build_env)
+if '--package-only' not in sys.argv:
+    args = [sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean',
+            '--distpath', str(root / 'build/desktop'), '--workpath', str(root / 'build/pyinstaller'),
+            str(root / 'desktop/Proofpage.spec')]
+    build_env = dict(os.environ, PYINSTALLER_CONFIG_DIR=str(root / 'build/pyinstaller-cache'))
+    subprocess.run(args, check=True, cwd=root, env=build_env)
+    if system == 'darwin':
+        identity = os.environ.get('PROOFPAGE_SIGN_IDENTITY')
+        profile = os.environ.get('PROOFPAGE_NOTARY_PROFILE')
+        if bool(identity) != bool(profile):
+            raise SystemExit('Both PROOFPAGE_SIGN_IDENTITY and PROOFPAGE_NOTARY_PROFILE are required for signed builds.')
+        if identity:
+            subprocess.run([sys.executable, str(root / 'scripts/sign_macos.py'), str(root / 'build/desktop/Proofpage.app'), '--identity', identity, '--profile', profile], check=True)
+        else:
+            subprocess.run(['xattr', '-cr', str(root / 'build/desktop/Proofpage.app')], check=True)
+        subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(root / 'build/desktop/Proofpage.app')], check=True)
 output = root / 'dist'
 output.mkdir(exist_ok=True)
 name = f'Proofpage-{version}-{system}-{arch}'

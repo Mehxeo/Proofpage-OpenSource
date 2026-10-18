@@ -146,7 +146,9 @@ def main():
                             state = json.load(response)
                         with urlopen(address, timeout=5) as response:
                             assert b'Proofpage' in response.read()
-                        report.write_text(json.dumps({'ready': True, 'gui': True, 'records': len(state['items'])}))
+                        with urlopen(Request(address + '/api/mcp-setup', headers={'Authorization': 'Bearer ' + token}), timeout=5) as response:
+                            connection = json.load(response)
+                        report.write_text(json.dumps({'ready': True, 'gui': True, 'records': len(state['items']), 'mcp': connection['config']['mcpServers']['proofpage']}))
                         stop()
                     else:
                         open_workspace()
