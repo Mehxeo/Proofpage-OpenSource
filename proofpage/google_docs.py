@@ -32,7 +32,8 @@ def client_file():
     configured = os.environ.get('PROOFPAGE_GOOGLE_CLIENT_FILE')
     if configured:
         return Path(configured).expanduser()
-    custom = Path.home() / '.config' / 'proofpage' / 'google-oauth.json'
+    config_directory = os.environ.get('PROOFPAGE_CONFIG_DIRECTORY')
+    custom = (Path(config_directory).expanduser() if config_directory else Path.home() / '.config' / 'proofpage') / 'google-oauth.json'
     if custom.is_file() or not BUNDLED_CLIENT_FILE.is_file():
         return custom
     return BUNDLED_CLIENT_FILE

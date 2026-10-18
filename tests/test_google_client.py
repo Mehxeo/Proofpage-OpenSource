@@ -38,6 +38,8 @@ class GoogleClientTests(unittest.TestCase):
             custom.parent.mkdir(parents=True)
             custom.write_text(json.dumps(CLIENT))
             self.assertEqual(google_docs.client_file(), custom)
+            with patch.dict(os.environ, {'PROOFPAGE_CONFIG_DIRECTORY': str(self.root / 'separate-profile')}):
+                self.assertEqual(google_docs.client_file(), bundled)
             with patch.dict(os.environ, {'PROOFPAGE_GOOGLE_CLIENT_FILE': str(self.root / 'explicit-missing.json')}):
                 self.assertEqual(google_docs.client_file(), self.root / 'explicit-missing.json')
 

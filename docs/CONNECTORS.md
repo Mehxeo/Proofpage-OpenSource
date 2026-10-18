@@ -68,6 +68,9 @@ proofpage --home ./workspace google-docs disconnect
 Google auth is local-only. Hosted workspace routes cannot trigger desktop consent
 or access the host's OS vault. A custom client selected through the environment
 or the existing home-folder configuration takes precedence over bundled metadata.
+`PROOFPAGE_CONFIG_DIRECTORY` can select a separate configuration directory for a
+portable profile; the default remains `~/.config/proofpage`. User authorization
+is still tied to the workspace path in the OS vault.
 Moving the OAuth project to Production does not retrofit a client into existing
 0.5.0 downloads. Shared sign-in needs the updated desktop build as well as Google's
 scope approval.
