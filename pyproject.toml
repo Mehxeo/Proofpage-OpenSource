@@ -24,4 +24,4 @@ include-package-data = false
 packages = ["proofpage"]
 
 [tool.setuptools.package-data]
-proofpage = ["static/*"]
+proofpage = ["static/*", "static/fonts/*"]

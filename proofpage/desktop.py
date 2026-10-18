@@ -30,7 +30,7 @@ def run(store):
     listing.heading('kind', text='Kind')
     listing.column('#0', width=260)
     listing.column('kind', width=100)
-    detail = tk.Text(panes, wrap='word', padx=18, pady=16, background='#f6f7f3', foreground='#202a25', relief='flat')
+    detail = tk.Text(panes, wrap='word', padx=18, pady=16, background='#f5f2ea', foreground='#1c201e', relief='flat')
     panes.add(listing, weight=1)
     panes.add(detail, weight=2)
     ttk.Label(frame, textvariable=status, wraplength=1000).pack(anchor='w')

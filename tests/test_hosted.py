@@ -68,6 +68,19 @@ class HostedTests(unittest.TestCase):
         r=self.client.get('/',follow_redirects=False)
         self.assertEqual(r.headers['location'],'/login')
 
+    def test_workspace_page_and_assets(self):
+        self.use(self.a)
+        page=self.client.get('/')
+        self.assertEqual(page.status_code,200)
+        self.assertIn('>Hosted workspace<',page.text)
+        self.assertNotIn('>Local storage<',page.text)
+        self.assertIn('/hosted.js',page.text)
+        for path,kind in (('/hosted.js','text/javascript'),('/icons.svg','image/svg+xml'),('/style.css','text/css'),('/fonts/newsreader-latin-opsz-normal.woff2','font/woff2')):
+            r=self.client.get(path)
+            self.assertEqual(r.status_code,200,path)
+            self.assertTrue(r.headers['content-type'].startswith(kind),path)
+        self.assertEqual(self.client.get('/hosted.py').status_code,404)
+
     def test_invites_single_use_and_password_recovery_revokes_credentials(self):
         self.use(self.a)
         key=self.post('/api/keys',{'name':'Fixture','scope':'read'}).json()['key']

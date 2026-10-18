@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 
 from .accounts import Accounts, PLANS, hashed
+from .assets import read_asset
 from .core import Store, MAX_BYTES
 from . import service, crawl, mcp
 from .billing import Billing
@@ -213,7 +214,7 @@ def create_app(root=None, origin=None, development=False, scheduler=True, billin
 
     @app.get('/login')
     def login_page():
-        return Response((STATIC/'login.html').read_text(),media_type='text/html')
+        return Response((STATIC/'login.html').read_text(encoding='utf-8'),media_type='text/html')
 
     @app.post('/auth/{operation}')
     async def authentication(operation: str, request: Request):
@@ -358,13 +359,13 @@ def create_app(root=None, origin=None, development=False, scheduler=True, billin
 
     @app.get('/{path:path}')
     def static(path: str, request: Request):
-        assets={'app.js':'text/javascript','workbench.js':'text/javascript','hosted.js':'text/javascript','login.js':'text/javascript','style.css':'text/css'}
-        if path in assets:
-            return Response((STATIC/path).read_text(),media_type=assets[path])
+        asset=read_asset(path)
+        if asset:
+            return Response(asset[0],media_type=asset[1])
         if path=='':
             try:identity(request)
             except PermissionError:return RedirectResponse('/login',status_code=303)
-            html=(STATIC/'index.html').read_text().replace('</head>','<script src="/hosted.js" defer></script></head>').replace('● Local storage','● Hosted workspace').replace('LOCAL WORKSPACE','HOSTED WORKSPACE').replace('Stored on this computer.','Stored in your hosted account.')
+            html=(STATIC/'index.html').read_text(encoding='utf-8').replace('</head>','<script src="/hosted.js" defer></script></head>').replace('>Local storage<','>Hosted workspace<').replace('>Local workspace<','>Hosted workspace<').replace('Stored on this computer.','Stored in your hosted account.')
             return Response(html,media_type='text/html')
         return JSONResponse({'error':'Not found.'},status_code=404)
     return app

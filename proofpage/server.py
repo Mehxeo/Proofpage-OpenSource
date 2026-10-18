@@ -7,14 +7,11 @@ import time
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
-
+from .assets import STATIC, read_asset
 from .core import MAX_BYTES, Store, import_file, preview
 from .imports import create_profile
 from .watch import create_watch, scan_watch
 from . import training, crawl, models, agent
-
-STATIC = Path(__file__).resolve().parent / 'static'
 
 
 class LocalHTTPServer(ThreadingHTTPServer):
@@ -36,7 +33,8 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
         def send(self, status, value, content_type='application/json'):
             body = value if isinstance(value, bytes) else json.dumps(value).encode() if content_type == 'application/json' else value.encode()
             self.send_response(status)
-            self.send_header('Content-Type', content_type + '; charset=utf-8')
+            textual = content_type.startswith('text/') or content_type in ('application/json', 'image/svg+xml')
+            self.send_header('Content-Type', content_type + ('; charset=utf-8' if textual else ''))
             self.send_header('Content-Length', str(len(body)))
             self.send_header('Cache-Control', 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
@@ -63,10 +61,11 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
             url = urllib.parse.urlsplit(self.path)
             path = url.path
             try:
-                if path in ('/', '/app.js', '/workbench.js', '/style.css'):
-                    name = 'index.html' if path == '/' else path[1:]
-                    types = {'index.html': 'text/html', 'app.js': 'text/javascript', 'workbench.js': 'text/javascript', 'style.css': 'text/css'}
-                    return self.send(200, (STATIC / name).read_text(encoding='utf-8'), types[name])
+                if path == '/':
+                    return self.send(200, (STATIC / 'index.html').read_text(encoding='utf-8'), 'text/html')
+                if not path.startswith('/api/'):
+                    asset = read_asset(path)
+                    return self.send(200, *asset) if asset else self.send(404, {'error': 'Not found.'})
                 if path == '/api/session':
                     return self.send(200, {'token': token})
                 if self.headers.get('Authorization') != 'Bearer ' + token:

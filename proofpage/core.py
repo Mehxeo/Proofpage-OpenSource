@@ -361,11 +361,15 @@ class Store:
             result['discovered_urls'] = discovered_urls
         return result
 
-    def search(self, query='', include_traces=True):
+    def search(self, query='', include_traces=True, snippets=False):
+        columns = 'i.*,r.text,r.hash,r.captured_at,r.source_time,s.name source_name,COALESCE(v.allowed,0) allowed,COALESCE(v.approved,0) approved'
+        joins = 'JOIN revisions r ON r.id=i.current_revision JOIN sources s ON s.id=i.source_id LEFT JOIN reviews v ON v.revision_id=i.current_revision'
         if query.strip():
             terms = ' AND '.join('"' + t.replace('"', '""') + '"' for t in query.split())
-            return self.rows("SELECT i.*,r.text,r.captured_at,r.source_time,s.name source_name FROM search JOIN items i ON i.id=search.item_id JOIN revisions r ON r.id=i.current_revision JOIN sources s ON s.id=i.source_id WHERE search MATCH ? AND (? OR i.kind!='agent_trace') ORDER BY rank LIMIT 100", (terms, int(include_traces)))
-        return self.rows('SELECT i.*,r.text,r.captured_at,r.source_time,s.name source_name FROM items i JOIN revisions r ON r.id=i.current_revision JOIN sources s ON s.id=i.source_id ORDER BY r.captured_at DESC LIMIT 100')
+            # Control characters mark matches so the browser can escape text before highlighting it.
+            highlight = ",snippet(search,2,char(2),char(3),'…',24) snippet" if snippets else ''
+            return self.rows(f"SELECT {columns}{highlight} FROM search JOIN items i ON i.id=search.item_id {joins} WHERE search MATCH ? AND (? OR i.kind!='agent_trace') ORDER BY rank LIMIT 100", (terms, int(include_traces)))
+        return self.rows(f'SELECT {columns} FROM items i {joins} ORDER BY r.captured_at DESC LIMIT 100')
 
     def item(self, item_id):
         result = self.rows('SELECT i.*,r.*,s.name source_name FROM items i JOIN revisions r ON r.id=i.current_revision JOIN sources s ON s.id=i.source_id WHERE i.id=?', (item_id,))
