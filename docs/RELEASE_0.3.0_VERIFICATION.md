@@ -19,3 +19,7 @@ Both final CI packages were signed with Developer ID Application UTTAM SUBODH DA
 - Intel: `46225192-3414-4284-89c7-20a04041e664`
 
 `codesign --verify --deep --strict`, `stapler validate`, and `spctl --assess --type execute` passed on both. Both final signed apps passed local GUI startup, original-image OCR, and PDF text extraction; the Intel app ran through Rosetta. The original CI jobs also checked native Intel execution and scanned-PDF OCR.
+
+## Chrome Web Store follow-up
+
+Companion 0.3.0 replaced the prior 0.2.2 submission on October 18, 2026. The dashboard confirmed Pending review with automatic publication enabled. The user confirmed the new direct-image control is visible in Chrome; the fresh 0.3.0 popup transfer remains unverified because extension-internal browser automation is blocked.

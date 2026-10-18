@@ -1,10 +1,10 @@
 # Chrome Web Store submission
 
-Status: submitted to Google on October 18, 2026 under item `kiiobhppgpjpccapcejhnagfneopcppk`. Dashboard confirmed **Pending review**. Publisher email is verified and all three data-use certifications are saved. Automatic publication after approval is enabled. Not yet approved or publicly installable. Do not advertise an Add to Chrome link until Google provides the published listing.
+Status: companion **0.3.0** submitted to Google on October 18, 2026 under item `kiiobhppgpjpccapcejhnagfneopcppk`. Dashboard confirmed **Pending review**. Publisher email is verified and all three data-use certifications are saved. Automatic publication after approval is enabled. Not yet approved or publicly installable. Do not advertise an Add to Chrome link until Google provides the published listing.
 
 ## Listing copy
 
-Name: Proofpage — Save visible text
+Name: Proofpage — Save page evidence
 
 Summary: Review visible page text and save it directly to your local Proofpage library. Runs only when you click.
 
@@ -19,7 +19,7 @@ Keep useful pages in your own evidence library. Preview the text you can read, r
 - Download JSON when your app is offline.
 - No password collection, cookie extraction or background browsing.
 
-Requires Proofpage 0.2.2 or later for direct saving. Browser text is user-supplied evidence, not an independently verified server response. The companion does not solve CAPTCHAs. Install the desktop app from https://proofpage.app.
+Requires Proofpage 0.3.0 or later for direct saving. Browser text is user-supplied evidence, not an independently verified server response. The companion does not solve CAPTCHAs. Install the desktop app from https://proofpage.app.
 
 Category: Tools
 Language: English
@@ -38,10 +38,17 @@ No remote code is executed. The extension does not access browser cookies, passw
 
 ## Reviewer steps
 
-Install the extension package and run the open-source Proofpage 0.2.2 app. Open Settings → Connect browser. Enter the displayed port and code in the companion and grant localhost permission. Visit example.com, preview text, confirm the review checkbox, then Save to Proofpage. Open Library and see the Browser pages record. Save again to check deduplication. Disconnect browser in Settings; another Save is rejected. Download JSON remains available without the app.
+Install the extension package and run the open-source Proofpage 0.3.0 app. Open Settings → Connect browser. Enter the displayed port and code in the companion and grant localhost permission. Visit example.com, preview text, confirm the review checkbox, then Save to Proofpage. Open Library and see the Browser pages record. Save again to check deduplication. Disconnect browser in Settings; another Save is rejected. Download JSON remains available without the app.
 
 The ZIP must have manifest.json at its root. Icons (16, 48 and 128 px) are bundled. A genuine Chrome capture screenshot has been uploaded (see `assets/companion-store.png`). Complete publisher verification, contact details, fee and policy declarations in the developer dashboard. Google review and approval are external requirements.
 
-## Next package
+## Submitted package and verification
 
-The source companion is now 0.2.4, with the 0.2.3 redesign and reviewed page sections plus original PNG/JPEG/WebP/PDF upload. The submitted 0.2.2 ZIP is unchanged. Do not withdraw its pending review. Before submitting 0.2.4, update the listing purpose and privacy policy to explain optional references and user-selected original files; verify the installed Chrome package and screenshot the real UI. Installed Chrome verification now covers the 0.2.3 page flow (all optional sections, query-token filtering, consent, saves, duplicates, edited revisions and revoked access) and the 0.2.4 original-PDF flow (consent, new import and duplicate). Original PNG/PDF app imports, authenticated image preview, browser downloads and a PDF bundle passed byte/hash verification. See MEDIA_VERIFICATION.md.
+On October 18, the previous 0.2.2 review was canceled at the user's request and replaced with 0.3.0. Google accepted the ZIP and confirmed Pending review. Listing copy, purpose and permission explanations now cover reviewed page sections, selected original PNG/JPEG/WebP/PDF files, direct public-file URL saving and desktop-local OCR/PDF extraction. No new Chrome permissions were added. Automatic publication is enabled.
+
+Package: dist/Proofpage-0.3.0-browser-companion.zip
+SHA-256: 22da47514fa5cdac62e08c1997990b3c5227b0a32207bda03628d029857aa0d7
+
+The user confirmed the new direct-image control is present in installed Chrome. A fresh 0.3.0 popup-to-app transfer is **not yet verified**: browser security policy blocks automation of extension-internal pages. Automated popup-script and HTTP tests cover import controls, consent, pairing and access restrictions; they do not substitute for this manual Chrome check. Earlier real Chrome page-flow and original-PDF checks are documented in MEDIA_VERIFICATION.md.
+
+For the new direct-file reviewer check, pair with desktop 0.3.0, paste a public PNG/PDF URL in Save web file, confirm permission and save. Confirm an original file appears in Library and its downloaded bytes match the source. Also test a selected local file and a repeated save. Public URL capture does not use browser login sessions. Files are limited to 8 MiB and PDF extraction to 20 pages.
