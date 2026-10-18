@@ -4,7 +4,7 @@ from proofpage import updates
 
 
 class UpdateTests(unittest.TestCase):
-    def release(self, tag='v0.3.2', url=None):
+    def release(self, tag='v0.4.1', url=None):
         name = f'Proofpage-{tag[1:]}-darwin-arm64.zip'
         return {'tag_name': tag, 'assets': [{'name': name, 'state': 'uploaded',
                 'browser_download_url': url or f'{updates.RELEASES}/download/{tag}/{name}'}]}
@@ -12,9 +12,9 @@ class UpdateTests(unittest.TestCase):
     @patch('proofpage.updates.platform.machine', return_value='arm64')
     @patch('proofpage.updates.platform.system', return_value='Darwin')
     def test_platform_download_and_numeric_version(self, *_):
-        self.assertTrue(updates.release_info(self.release('v0.3.10'))['available'])
+        self.assertTrue(updates.release_info(self.release('v0.4.10'))['available'])
         self.assertIsNotNone(updates.release_info(self.release())['download'])
-        for tag in ('v0.3.1', 'v0.2.9'):
+        for tag in ('v0.4.0', 'v0.2.9'):
             result = updates.release_info(self.release(tag))
             self.assertFalse(result['available'])
             self.assertIsNone(result['download'])

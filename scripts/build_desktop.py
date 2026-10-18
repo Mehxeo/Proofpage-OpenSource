@@ -17,6 +17,20 @@ if '--package-only' not in sys.argv:
             str(root / 'desktop/Proofpage.spec')]
     build_env = dict(os.environ, PYINSTALLER_CONFIG_DIR=str(root / 'build/pyinstaller-cache'))
     subprocess.run(args, check=True, cwd=root, env=build_env)
+    # The existing bundle layout retains Python/OCR libraries and the stdio MCP helper.
+    # Only the interactive entry point is replaced by the native Tauri webview.
+    subprocess.run(['cargo', 'build', '--release', '--locked', '--manifest-path', str(root / 'desktop/tauri/Cargo.toml')], check=True)
+    binary = root / 'desktop/tauri/target/release' / ('proofpage-desktop.exe' if system == 'windows' else 'proofpage-desktop')
+    destination = root / 'build/desktop/Proofpage.app/Contents/MacOS' if system == 'darwin' else root / 'build/desktop/Proofpage'
+    shutil.copy2(binary, destination / ('Proofpage.exe' if system == 'windows' else 'Proofpage'))
+    if system == 'darwin':
+        import plistlib
+        plist = root / 'build/desktop/Proofpage.app/Contents/Info.plist'
+        data = plistlib.loads(plist.read_bytes())
+        data['CFBundleExecutable'] = 'Proofpage'
+        data['LSBackgroundOnly'] = False
+        data['NSHighResolutionCapable'] = True
+        plist.write_bytes(plistlib.dumps(data))
     if system == 'darwin':
         identity = os.environ.get('PROOFPAGE_SIGN_IDENTITY')
         profile = os.environ.get('PROOFPAGE_NOTARY_PROFILE')

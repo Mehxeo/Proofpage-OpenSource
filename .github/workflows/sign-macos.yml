@@ -16,6 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - uses: dtolnay/rust-toolchain@stable
       - run: python -m pip install -r desktop/requirements-build.txt
       - name: Prepare ephemeral signing credentials
         run: python scripts/prepare_apple_ci.py

@@ -14,3 +14,7 @@ build/
 *.sqlite3-shm
 
 .proofpage-hosted*/
+
+# Native Tauri build outputs
+desktop/tauri/target/
+desktop/tauri/gen/
