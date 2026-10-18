@@ -26,7 +26,7 @@ if '--package-only' not in sys.argv:
             subprocess.run([sys.executable, str(root / 'scripts/sign_macos.py'), str(root / 'build/desktop/Proofpage.app'), '--identity', identity, '--profile', profile], check=True)
         else:
             subprocess.run(['xattr', '-cr', str(root / 'build/desktop/Proofpage.app')], check=True)
-        subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(root / 'build/desktop/Proofpage.app')], check=True)
+            subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(root / 'build/desktop/Proofpage.app')], check=True)
 output = root / 'dist'
 output.mkdir(exist_ok=True)
 name = f'Proofpage-{version}-{system}-{arch}'

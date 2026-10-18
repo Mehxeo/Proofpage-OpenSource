@@ -3,6 +3,11 @@ import json
 import sys
 
 TOOLS = {
+    'proofpage_check_answer': ('Extract quotes and citations and check stored evidence only. No network. Wording matches do not establish truth. Review automatic citation pairing.', {'text': 'string'}),
+    'proofpage_verify_quotes': ('Check up to 50 explicit {url, quote} pairs. collect_missing=true explicitly authorizes public-page collection and queues a durable job; use step/get tools to advance it without the desktop server.', {'citations': 'array', 'collect_missing': 'boolean'}),
+    'proofpage_get_quote_check': ('Read a persisted quote check and its evidence references.', {'job_id': 'string'}),
+    'proofpage_step_quote_check': ('Advance one quote of an authorized check. Respects next_attempt and shared site budgets. May collect only if the original check authorized collection.', {'job_id': 'string'}),
+    'proofpage_cancel_quote_check': ('Cancel future collection in a quote check. An active request may finish.', {'job_id': 'string'}),
     'proofpage_list_sources': ('List configured sources and truthful access states.', {}),
     'proofpage_get_source_access': ('Read source access state.', {'source_id': 'string'}),
     'proofpage_collect': ('Collect an existing configured source within shared cooldowns.', {'source_id': 'string'}),
@@ -28,6 +33,12 @@ TOOLS = {
 }
 
 
+def field_schema(kind):
+    if kind == 'array':
+        return {'type': 'array', 'minItems': 1, 'maxItems': 50, 'items': {'type': 'object', 'properties': {'url': {'type': 'string'}, 'quote': {'type': 'string', 'minLength': 1, 'maxLength': 2000}}, 'required': ['url', 'quote'], 'additionalProperties': False}}
+    return {'type': kind}
+
+
 def call(store, name, args):
     if name not in TOOLS or not isinstance(args, dict):
         raise ValueError('Unknown tool or invalid arguments.')
@@ -35,9 +46,18 @@ def call(store, name, args):
     if set(args) != set(fields):
         raise ValueError('Provide exactly the fields in the tool schema.')
     for key, kind in fields.items():
-        expected = {'string': str, 'integer': int, 'object': dict}[kind]
+        expected = {'string': str, 'integer': int, 'object': dict, 'array': list, 'boolean': bool}[kind]
         if not isinstance(args[key], expected) or (kind == 'integer' and isinstance(args[key], bool)):
             raise ValueError('Invalid type for ' + key)
+    if name.startswith('proofpage_') and name in ('proofpage_check_answer', 'proofpage_verify_quotes', 'proofpage_get_quote_check', 'proofpage_step_quote_check', 'proofpage_cancel_quote_check'):
+        from . import claims
+        if name == 'proofpage_check_answer':
+            preview = claims.extract(args['text'])
+            if not preview['citations']: return preview
+            return claims.create(store, preview['citations'], args['text'])
+        if name == 'proofpage_verify_quotes':
+            return claims.create(store, args['citations'], collect_missing=args['collect_missing'])
+        return {'proofpage_get_quote_check': claims.get, 'proofpage_step_quote_check': claims.step, 'proofpage_cancel_quote_check': claims.cancel}[name](store, args['job_id'])
     if name == 'proofpage_list_sources':
         return store.rows('SELECT * FROM sources')
     if name == 'proofpage_get_source_access':
@@ -115,7 +135,7 @@ def run(store):
                 print(json.dumps({'jsonrpc': '2.0', 'id': request['id'], 'error': {'code': -32002, 'message': 'Initialize first'}}), flush=True)
                 continue
             elif method == 'tools/list':
-                result = {'tools': [{'name': name, 'description': description, 'inputSchema': {'type': 'object', 'properties': {k: {'type': t} for k, t in fields.items()}, 'required': list(fields), 'additionalProperties': False}} for name, (description, fields) in TOOLS.items()]}
+                result = {'tools': [{'name': name, 'description': description, 'inputSchema': {'type': 'object', 'properties': {k: field_schema(t) for k, t in fields.items()}, 'required': list(fields), 'additionalProperties': False}} for name, (description, fields) in TOOLS.items()]}
             elif method == 'tools/call':
                 params = request['params']
                 try:

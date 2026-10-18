@@ -707,3 +707,10 @@ dialog.palette { top: 12vh; margin: 0 auto; width: min(640px, calc(100vw - 24px)
   .onboarding { padding: 22px; }
   .auth-page { margin: 0; min-height: 100vh; border-radius: 0; border: 0; }
 }
+
+/* Quote checks */
+.claim-preview-row { border-bottom: 1px solid var(--line); padding: 16px 0; }
+.claim-results { display: grid; gap: 16px; margin: 24px 0; }
+.claim-results blockquote, .claim-preview-row blockquote { margin: 12px 0; padding: 8px 16px; border-left: 3px solid var(--accent); white-space: pre-wrap; overflow-wrap: anywhere; }
+.claim-document { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 400px; overflow: auto; }
+.claim-results .card p { display: block; overflow: visible; -webkit-line-clamp: unset; margin: 10px 0; }

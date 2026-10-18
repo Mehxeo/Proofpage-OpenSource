@@ -149,7 +149,14 @@ def main():
                             assert b'Proofpage' in response.read()
                         with urlopen(Request(address + '/api/mcp-setup', headers={'Authorization': 'Bearer ' + token}), timeout=5) as response:
                             connection = json.load(response)
-                        report.write_text(json.dumps({'ready': True, 'gui': True, 'records': len(state['items']), 'mcp': connection['config']['mcpServers']['proofpage']}))
+                        # Exercise new routes in the frozen runtime, without network collection.
+                        payload = json.dumps({'citations': [{'quote': 'Packaged fixture quote', 'url': None}], 'collect_missing': False}).encode()
+                        with urlopen(Request(address + '/api/claim-check', data=payload, headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'}), timeout=5) as response:
+                            checked = json.load(response)
+                        assert checked['state'] == 'complete' and checked['items'][0]['result']['status'] == 'no_source'
+                        from . import verify
+                        assert Path(verify.__file__).with_suffix('.py').is_file(), 'Offline verifier source missing from bundle'
+                        report.write_text(json.dumps({'ready': True, 'gui': True, 'records': len(state['items']), 'quote_check': True, 'offline_verifier': True, 'mcp': connection['config']['mcpServers']['proofpage']}))
                         stop()
                     else:
                         open_workspace()

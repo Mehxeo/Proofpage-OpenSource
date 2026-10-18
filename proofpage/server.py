@@ -11,7 +11,7 @@ from .assets import STATIC, read_asset
 from .core import MAX_BYTES, Store, import_file, preview
 from .imports import create_profile
 from .watch import create_watch, scan_watch
-from . import training, crawl, models, agent
+from . import training, crawl, models, agent, claims
 
 
 class LocalHTTPServer(ThreadingHTTPServer):
@@ -115,6 +115,7 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                         del pending[key]
                 jobs = [('web:' + s['id'], store.collect, s['id']) for s in store.rows("SELECT id FROM sources WHERE kind='web' AND interval_seconds>0 AND next_run<=? ORDER BY next_run", (time.time(),))]
                 jobs += [('crawl:' + c['id'], lambda cid: crawl.step_job(store, cid), c['id']) for c in store.rows("SELECT id FROM crawl_jobs WHERE state IN ('queued','running') AND next_attempt<=? ORDER BY updated_at", (time.time(),))]
+                jobs += [('claim:' + c['id'], lambda cid: claims.step(store, cid), c['id']) for c in store.rows("SELECT id FROM claim_checks WHERE state='queued' AND next_attempt<=? AND lease_until<=? ORDER BY created_at", (time.time(), time.time()))]
                 watches = sorted(store.rows('SELECT id FROM watches WHERE enabled=1'), key=lambda w: last_watch.get(w['id'], 0))
                 jobs += [('watch:' + w['id'], lambda wid: scan_watch(store, wid), w['id']) for w in watches]
                 if time.time() - last_anchor_check > 600 and 'anchor' not in pending:

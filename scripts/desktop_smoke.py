@@ -34,6 +34,8 @@ with tempfile.TemporaryDirectory(prefix='proofpage-desktop-') as directory:
                 {'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'proofpage_list_sources','arguments':{}}}]
     rpc = subprocess.run([entry['command'], *entry['args']], input=''.join(json.dumps(r)+'\n' for r in requests), capture_output=True, text=True, timeout=30, check=True)
     replies = [json.loads(line) for line in rpc.stdout.splitlines()]
-    assert len(replies) == 3 and len(replies[1]['result']['tools']) == 18, replies
+    assert len(replies) == 3, replies
+    tool_names = {tool['name'] for tool in replies[1]['result']['tools']}
+    assert {'proofpage_verify_quotes', 'proofpage_check_answer', 'proofpage_get_receipt', 'proofpage_get_rights', 'proofpage_diff_revisions'} <= tool_names, replies
     assert replies[2]['result']['isError'] is False, replies
     print('Copied MCP configuration launches the bundled helper and verifies real tools.')

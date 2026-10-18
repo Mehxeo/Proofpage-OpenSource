@@ -12,14 +12,14 @@ from pathlib import Path
 from .accounts import Accounts, PLANS, hashed
 from .assets import read_asset
 from .core import Store, MAX_BYTES
-from . import service, crawl, mcp
+from . import service, crawl, mcp, claims
 from .billing import Billing
 
 STATIC = Path(__file__).parent / 'static'
 READ_TOOLS = {'proofpage_list_sources','proofpage_get_source_access','proofpage_get_run','proofpage_search',
               'proofpage_get_item','proofpage_get_evidence','proofpage_list_changes','proofpage_get_context',
               'proofpage_get_crawl','proofpage_list_recipes','proofpage_get_rights',
-              'proofpage_diff_revisions','proofpage_list_changes_since','proofpage_get_receipt'}
+              'proofpage_diff_revisions','proofpage_list_changes_since','proofpage_get_receipt','proofpage_get_quote_check'}
 
 
 class HostedStore(Store):
@@ -94,6 +94,9 @@ def create_app(root=None, origin=None, development=False, scheduler=True, billin
             try:
                 store = HostedStore(accounts,uid)
                 jobs = store.rows("SELECT id FROM crawl_jobs WHERE state IN ('queued','running') AND next_attempt<=? LIMIT 1",(time.time(),))
+                checks = store.rows("SELECT id FROM claim_checks WHERE state='queued' AND next_attempt<=? AND lease_until<=? LIMIT 1", (time.time(), time.time()))
+                if checks:
+                    claims.step(store, checks[0]['id'])
                 if jobs:
                     crawl.step_job(store,jobs[0]['id'])
                 else:
@@ -317,7 +320,7 @@ def create_app(root=None, origin=None, development=False, scheduler=True, billin
             if method=='initialize':
                 response={'protocolVersion':'2025-06-18','capabilities':{'tools':{}},'serverInfo':{'name':'proofpage-hosted','version':'0.1.0'}}
             elif method=='tools/list':
-                response={'tools':[{'name':name,'description':desc,'inputSchema':{'type':'object','properties':{k:{'type':v} for k,v in fields.items()},'required':list(fields),'additionalProperties':False}} for name,(desc,fields) in mcp.TOOLS.items() if principal['scope']=='collect' or name in READ_TOOLS]}
+                response={'tools':[{'name':name,'description':desc,'inputSchema':{'type':'object','properties':{k:mcp.field_schema(v) for k,v in fields.items()},'required':list(fields),'additionalProperties':False}} for name,(desc,fields) in mcp.TOOLS.items() if principal['scope']=='collect' or name in READ_TOOLS]}
             elif method=='tools/call':
                 params=payload.get('params',{});name=params.get('name')
                 if principal['scope']=='read' and name not in READ_TOOLS:
@@ -354,7 +357,7 @@ def create_app(root=None, origin=None, development=False, scheduler=True, billin
                     return value
                 accounts.consume(uid,'writes')
                 if payload.get('render'): raise ValueError('Browser rendering is local-only.')
-                if path in ('model-assist','change-summary'): accounts.consume(uid,'models')
+                if path in ('model-assist','change-summary','claim-model-review'): accounts.consume(uid,'models')
                 value=service.post(store,'/api/'+path,payload)
                 if value[0]==200: accounts.audit(uid,'workspace.'+path.split('/')[0])
                 return value

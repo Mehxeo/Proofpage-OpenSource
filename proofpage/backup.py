@@ -50,6 +50,10 @@ def restore(backup_path, directory):
                 target.execute("UPDATE watches SET enabled=0,state='paused',detail='Restored; explicitly resume this folder watch.'")
             if 'crawl_jobs' in tables:
                 target.execute("UPDATE crawl_jobs SET state='cancelled',lease_until=0,detail='Restored; create a new crawl to resume collection.' WHERE state IN ('queued','running')")
+            if 'claim_checks' in tables:
+                target.execute("UPDATE claim_checks SET state='cancelled',lease_until=0,detail='Restored; create a new check to authorize collection.' WHERE state='queued'")
+            if 'settings' in tables:
+                target.execute("DELETE FROM settings WHERE key IN ('anchor_tsa_url','anchor_ots')")
             if 'watch_leases' in tables:
                 target.execute('DELETE FROM watch_leases')
             target.execute("UPDATE runs SET state='interrupted' WHERE state='running'")

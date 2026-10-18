@@ -4,6 +4,7 @@ const filters = {kind: '', source: '', review: '', rights: ''};
 let layout = (() => { try { return localStorage.getItem('proofpage-layout') || 'grid'; } catch { return 'grid'; } })();
 
 const VIEWS = {
+  verify: ['Verify', 'Does the source say that?', 'Check quoted passages against captured evidence. Review the source before trusting the answer.'],
   library: ['Library', 'A library you can trace.', 'Collect useful material. Keep the evidence behind it.'],
   sources: ['Sources', 'Every source, accounted for.', 'Set up collection and see exactly what each site allowed and returned.'],
   activity: ['Activity', 'The collection record.', 'Completed captures, access conditions, and unfinished work, newest first.'],
@@ -58,6 +59,7 @@ function render() {
     renderedView = view;
     window.scrollTo(0, 0);
   }
+  if (view === 'verify') { setHeading(...VIEWS.verify); action(renderClaims); return; }
   if (view === 'training' || view === 'agents') {
     action(() => renderWorkbench(view));
     return;
@@ -92,7 +94,7 @@ function onboarding() {
       <div class="actions">
         <button type="button" class="primary" id="try-example">${icon('collect')}Try with example.com</button>
         <button type="button" class="secondary" data-open="source-dialog">${icon('plus')}Add your own page</button>
-        <button type="button" data-open-import>${icon('upload')}Import files</button>
+        <button type="button" data-open-import>${icon('upload')}Import files</button><button type="button" class="secondary" data-go="verify">${icon('check')}Check a quoted answer</button>
       </div>
     </div>
     <ol class="steps">

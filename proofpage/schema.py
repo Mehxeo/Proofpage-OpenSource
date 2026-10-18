@@ -44,6 +44,11 @@ MIGRATIONS = [
         "ALTER TABLE captures ADD COLUMN http_version TEXT",
         "ALTER TABLE captures ADD COLUMN reason TEXT",
     ]),
+    (5, [
+        "CREATE TABLE claim_checks(id TEXT PRIMARY KEY,text TEXT NOT NULL,created_at TEXT NOT NULL,state TEXT NOT NULL,collect_missing INTEGER NOT NULL,max_age INTEGER NOT NULL,next_attempt REAL NOT NULL DEFAULT 0,lease_until REAL NOT NULL DEFAULT 0,detail TEXT NOT NULL DEFAULT '')",
+        "CREATE TABLE claim_items(job_id TEXT NOT NULL,position INTEGER NOT NULL,url TEXT,quote TEXT NOT NULL,start INTEGER,end INTEGER,result TEXT,state TEXT NOT NULL DEFAULT 'queued',PRIMARY KEY(job_id,position))",
+    ]),
+
 ]
 
 

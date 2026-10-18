@@ -23,6 +23,17 @@ def main():
     search.add_argument('query')
     rights = sub.add_parser('rights', help='Show the AI-usage signals recorded for a source; returns JSON')
     rights.add_argument('source', help='Source ID or its exact URL')
+    claim = sub.add_parser('check-answer', help='Preview or check quoted citations in a UTF-8 document')
+    claim.add_argument('path')
+    claim.add_argument('--preview', action='store_true', help='Show citation pairing without saving or fetching')
+    claim.add_argument('--collect', action='store_true', help='Authorize collection of missing/stale public pages')
+    claim.add_argument('--max-age', type=int, default=86400)
+    job = sub.add_parser('quote-check', help='Read, advance, cancel, or export a saved quote check')
+    job.add_argument('job_id')
+    operation = job.add_mutually_exclusive_group()
+    operation.add_argument('--step', action='store_true')
+    operation.add_argument('--cancel', action='store_true')
+    operation.add_argument('--format', choices=['json', 'markdown', 'html'])
     checker = sub.add_parser('verify', help='Verify a proof bundle (.zip) or web archive (.wacz) offline')
     checker.add_argument('path')
     archive = sub.add_parser('export-wacz', help='Export a source as a WACZ web archive with signed receipts')
@@ -124,7 +135,19 @@ def main():
         from .mcp import run
         run(store)
         return
-    if args.command == 'profile':
+    if args.command == 'check-answer':
+        from . import claims
+        with Path(args.path).open(encoding='utf-8') as handle:
+            text = handle.read(claims.MAX_TEXT + 1)
+        previewed = claims.extract(text)
+        result = previewed if args.preview else claims.create(store, previewed['citations'], text, args.collect, args.max_age)
+    elif args.command == 'quote-check':
+        from . import claims
+        if args.format:
+            print(claims.export(store, args.job_id, args.format)[0])
+            return
+        result = claims.step(store, args.job_id) if args.step else claims.cancel(store, args.job_id) if args.cancel else claims.get(store, args.job_id)
+    elif args.command == 'profile':
         from .imports import create_profile
         result = create_profile(store, args.name, args.provider, args.account, args.adapter)
     elif args.command == 'watch':

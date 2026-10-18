@@ -30,12 +30,12 @@ function proofPanel(proof, item) {
     return `<p class="callout">${icon('info')}<span>${web ? 'No signed receipt for this revision yet. Proofpage signs a receipt for every capture made with Proof Receipts; collect the source again to get one.' : 'Receipts cover web captures. This record came from an archive you supplied.'}</span></p>${wacz ? `<div class="actions">${wacz}</div>` : ''}`;
   }
   return `<div class="proof-head">${proofPill(proof.state)}<span class="muted">Workspace key</span><button type="button" class="seal" data-copy="${escape(proof.fingerprint)}" title="Key fingerprint ${escape(proof.fingerprint)} · click to copy">${icon('key')}${escape(proof.fingerprint.slice(0, 4))}·${escape(proof.fingerprint.slice(4, 8))}</button></div>
-    <p>Every capture gets a receipt signed with this workspace’s Ed25519 key and chained to the receipt before it, so receipts cannot be edited, reordered, or removed unnoticed.${proof.state === 'signed' ? ' Turn on timestamp anchoring in Settings to add independent evidence of when receipts existed.' : ''}</p>
+    <p>Every capture gets a receipt signed with this workspace’s Ed25519 key and chained to the receipt before it, so signature and chain checks can detect edits and missing links. Detecting a truncated tail requires a previously trusted chain head or external anchor.${proof.state === 'signed' ? ' Turn on timestamp anchoring in Settings to add independent evidence of when receipts existed.' : ''}</p>
     <div class="section-label">Receipts · ${proof.receipts.length}</div>
     <div class="rows">${proof.receipts.map(receipt => `<div class="row"><div><h3>Receipt ${receipt.seq} · ${escape(date(receipt.requested_at))}</h3>
       <p class="mono-ish">${escape(receipt.url)}</p><div class="chips start">${statusPill(receipt.status === 200 ? 'available' : 'http_error').replace(/>[^<]*</, `>HTTP ${receipt.status}<`)}${receipt.exact_bytes ? '<span class="pill tone-ok">Exact bytes</span>' : '<span class="pill">Reconstructed text</span>'}${anchorSummary(receipt.anchor)}</div></div>${seal(receipt.hash, 'Receipt SHA-256')}</div>`).join('')}</div>
     <div class="actions"><button type="button" class="primary small" data-proof-bundle="${escape(item.current_revision)}">${icon('download')}Download proof bundle</button>${wacz}</div>
-    <p class="muted">Check a bundle anywhere with <code>python3 verify_proof.py</code> — no installation needed. A receipt attests what this workspace observed; TLS cannot prove what a server sent.</p>`;
+    <p class="muted">Check a bundle anywhere with <code>python3 verify_proof.py</code> — Python 3 is required, with no extra packages. A receipt attests what this workspace observed; TLS cannot prove what a server sent.</p>`;
 }
 
 // ---------- Settings ----------

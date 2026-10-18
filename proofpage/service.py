@@ -5,7 +5,7 @@ import time
 from .core import import_file, preview
 from .imports import create_profile
 from .watch import create_watch, scan_watch
-from . import training, crawl, models, agent, history, receipts
+from . import training, crawl, models, agent, history, receipts, claims
 from .mcp import TOOLS
 
 def response(status, value, content_type='application/json'):
@@ -20,6 +20,14 @@ def with_blockers(store, datasets):
 
 
 def get(store, path, query):
+    if path == '/api/claim-checks':
+        return response(200, store.rows('SELECT id,created_at,state,detail FROM claim_checks ORDER BY created_at DESC LIMIT 50'))
+    if path.startswith('/api/claim-checks/'):
+        job = path.rsplit('/', 1)[1]
+        if query.get('format'):
+            body, mime = claims.export(store, job, query['format'][0])
+            return response(200, body.encode(), mime)
+        return response(200, claims.get(store, job))
     if path == '/api/state':
         return response(200, {'sources': store.rows('SELECT s.*,(SELECT o.verdict FROM rights_observations o WHERE o.source_id=s.id ORDER BY o.observed_at DESC LIMIT 1) rights FROM sources s'), 'profiles': store.rows('SELECT * FROM import_profiles'), 'watches': store.rows('SELECT * FROM watches'), 'runs': store.rows('SELECT * FROM runs ORDER BY started_at DESC LIMIT 30'), 'datasets': with_blockers(store, store.rows('SELECT d.id,d.name,d.created_at,d.hash,d.revision_ids,m.format,(SELECT COUNT(*) FROM dataset_rights x WHERE x.dataset_id=d.id AND x.drifted=1) rights_changed FROM datasets d LEFT JOIN dataset_manifests m ON m.dataset_id=d.id ORDER BY d.created_at DESC')), 'items': store.search(query.get('q', [''])[0], snippets=True),
                                 'unread': history.unread_counts(store)['total'], 'total': store.rows('SELECT COUNT(*) n FROM items')[0]['n'], 'approved': store.rows('SELECT COUNT(*) n FROM items i JOIN reviews v ON v.revision_id=i.current_revision WHERE v.approved=1')[0]['n']})
@@ -75,7 +83,17 @@ def get(store, path, query):
 
 
 def post(store, path, data):
-    if path == '/api/sources':
+    if path == '/api/claim-preview':
+        result = claims.extract(data.get('text'))
+    elif path == '/api/claim-check':
+        result = claims.create(store, data.get('citations'), data.get('text', ''), data.get('collect_missing', False), data.get('max_age', 86400))
+    elif path == '/api/claim-step':
+        result = claims.step(store, data['job_id'])
+    elif path == '/api/claim-model-review':
+        result = claims.model_review(store, data['job_id'], data['position'])
+    elif path == '/api/claim-cancel':
+        result = claims.cancel(store, data['job_id'])
+    elif path == '/api/sources':
         result = store.source(data['name'], 'web', data['url'])
     elif path == '/api/profiles':
         result = create_profile(store, data['name'], data['provider'], data['account'], data.get('adapter', 'auto'), data.get('mapping'))
