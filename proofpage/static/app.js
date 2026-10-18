@@ -10,7 +10,7 @@ const VIEWS = {
   activity: ['Activity', 'The collection record.', 'Completed captures, access conditions, and unfinished work, newest first.'],
   datasets: ['Datasets', 'From evidence to a corpus.', 'Review individual revisions, confirm permission, then freeze an export.'],
   timeline: ['Timeline', 'What changed, and when.', 'Content edits, publisher rights changes, broken links, and collection problems across your sources.'],
-  settings: ['Settings', 'Proof you can hand to anyone.', 'Your receipt-signing key, chain integrity, and optional timestamp anchoring.'],
+  settings: ['Settings', 'Your workspace, connected.', 'Browser capture, AI assistants and evidence you control.'],
 };
 let evidenceContext = {};
 

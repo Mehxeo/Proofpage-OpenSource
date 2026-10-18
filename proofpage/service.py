@@ -137,12 +137,8 @@ def post(store, path, data):
     elif path == '/api/model-assist':
         result = models.assist(store, data['revision_id'], data['purpose'], data.get('recipe_id'))
     elif path == '/api/schedule':
-        interval = int(data['interval_seconds'])
-        if interval != 0 and interval < 300:
-            raise ValueError('Schedules must be at least five minutes apart.')
-        with store.db() as db:
-            db.execute('UPDATE sources SET interval_seconds=?,next_run=? WHERE id=? AND kind=\'web\'', (interval, time.time() + interval, data['source_id']))
-        result = {'saved': True}
+        from .scheduling import configure
+        result = configure(store, data['source_id'], int(data['interval_seconds']))
     elif path in ('/api/preview', '/api/import'):
         content = base64.b64decode(data['data'], validate=True)
         if path == '/api/import' and not data.get('profile_id'):

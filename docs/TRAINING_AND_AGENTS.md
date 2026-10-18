@@ -25,7 +25,7 @@ Exact payload duplicates are removed. Source groups and near duplicates (0.85 Ja
 
 ## Existing models through MCP
 
-Configure your MCP-capable assistant with the command in README. Twenty-seven tools support source inspection, collection, cited retrieval, freshness checks, durable bounded crawls, extraction submissions, and training drafts. No approval/export tool is exposed. Configure source URLs in Proofpage first.
+Configure your MCP-capable assistant with the command in README. Twenty-nine tools support source inspection, collection, cited retrieval, freshness checks, durable bounded crawls, extraction submissions, and training drafts. No approval/export tool is exposed. Configure source URLs in Proofpage or authorize your agent to add them with proofpage_add_source.
 
 Typical sequence:
 
@@ -77,3 +77,18 @@ The prompt contains local filesystem paths, but no API keys or session token. Ho
 Rights, history and receipts: `proofpage_get_rights`, `proofpage_diff_revisions`, `proofpage_list_changes_since`, `proofpage_get_receipt`.
 
 Quote checks: `proofpage_check_answer`, `proofpage_verify_quotes`, `proofpage_get_quote_check`, `proofpage_step_quote_check`, `proofpage_cancel_quote_check`. [Schemas and consent](VERIFY.md). Mechanical matches and model-written reviews never approve training data.
+
+
+## Collection and training workflows
+
+Agent access includes copyable collection, research and training prompts. An authorized agent can now add a public page, image or PDF with `proofpage_add_source(name, url)`, collect it, and configure recurring collection with `proofpage_schedule_source(source_id, interval_seconds)`. Use 0 to pause, or 300–31536000 seconds. Source registration validates the public destination but does not collect content. Duplicate URLs reuse the existing source.
+
+Keep the Proofpage app/server running for scheduled work. A local stdio MCP process alone does not run the scheduler. Multi-page jobs can be advanced with the existing step-crawl tool, respecting next_attempt. Rights signals, robots rules, shared site budgets and access restrictions still apply.
+
+For custom-model work, choose SFT conversations, preference pairs, corrections or evaluation examples. The agent can propose drafts tied to exact source quotes, including extracted PDF/OCR text. Review extraction accuracy, permission and privacy findings, approve in Training, then freeze and export the trainer bundle. Proofpage prepares datasets; it does not train model weights. Original media remains available as evidence; native image/audio/video training formats are not implemented.
+
+### Client compatibility
+
+Local stdio configuration is for clients supporting local MCP, such as Claude Desktop and coding assistants. It cannot be pasted as a remote URL into ChatGPT web or Claude web. ChatGPT requires a compatible remote MCP connection; Proofpage's hosted bridge is not yet a ChatGPT-ready OAuth/Streamable HTTP connector. Do not expose the local app or credentials to work around this. Export evidence for manual upload when a local MCP client is unavailable.
+
+References checked October 18, 2026: [Claude local MCP setup](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop), [ChatGPT MCP requirements](https://help.openai.com/en/articles/12584461-developer-mode-and-full-mcp-apps-in-chatgpt-beta).

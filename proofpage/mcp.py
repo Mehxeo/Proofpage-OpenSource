@@ -8,6 +8,8 @@ TOOLS = {
     'proofpage_get_quote_check': ('Read a persisted quote check and its evidence references.', {'job_id': 'string'}),
     'proofpage_step_quote_check': ('Advance one quote of an authorized check. Respects next_attempt and shared site budgets. May collect only if the original check authorized collection.', {'job_id': 'string'}),
     'proofpage_cancel_quote_check': ('Cancel future collection in a quote check. An active request may finish.', {'job_id': 'string'}),
+    'proofpage_add_source': ('Add a public web page, image or PDF URL after user authorization. Validates public destinations; does not fetch the page until collect is called.', {'name': 'string', 'url': 'string'}),
+    'proofpage_schedule_source': ('Schedule a configured web source after user authorization. interval_seconds=0 pauses; otherwise 300 to 31536000. Requires the app/server to remain running; respects robots and budgets.', {'source_id': 'string', 'interval_seconds': 'integer'}),
     'proofpage_list_sources': ('List configured sources and truthful access states.', {}),
     'proofpage_get_source_access': ('Read source access state.', {'source_id': 'string'}),
     'proofpage_collect': ('Collect an existing configured source within shared cooldowns.', {'source_id': 'string'}),
@@ -58,6 +60,13 @@ def call(store, name, args):
         if name == 'proofpage_verify_quotes':
             return claims.create(store, args['citations'], collect_missing=args['collect_missing'])
         return {'proofpage_get_quote_check': claims.get, 'proofpage_step_quote_check': claims.step, 'proofpage_cancel_quote_check': claims.cancel}[name](store, args['job_id'])
+    if name == 'proofpage_add_source':
+        if not args['name'].strip() or len(args['name']) > 200:
+            raise ValueError('Give the source a name of 1–200 characters.')
+        return store.source(args['name'].strip(), 'web', args['url'])
+    if name == 'proofpage_schedule_source':
+        from .scheduling import configure
+        return configure(store, args['source_id'], args['interval_seconds'])
     if name == 'proofpage_list_sources':
         return store.rows('SELECT * FROM sources')
     if name == 'proofpage_get_source_access':

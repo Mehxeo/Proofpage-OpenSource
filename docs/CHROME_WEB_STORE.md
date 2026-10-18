@@ -52,3 +52,7 @@ SHA-256: 22da47514fa5cdac62e08c1997990b3c5227b0a32207bda03628d029857aa0d7
 The user confirmed the new direct-image control is present in installed Chrome. A fresh 0.3.0 popup-to-app transfer is **not yet verified**: browser security policy blocks automation of extension-internal pages. Automated popup-script and HTTP tests cover import controls, consent, pairing and access restrictions; they do not substitute for this manual Chrome check. Earlier real Chrome page-flow and original-PDF checks are documented in MEDIA_VERIFICATION.md.
 
 For the new direct-file reviewer check, pair with desktop 0.3.0, paste a public PNG/PDF URL in Save web file, confirm permission and save. Confirm an original file appears in Library and its downloaded bytes match the source. Also test a selected local file and a repeated save. Public URL capture does not use browser login sessions. Files are limited to 8 MiB and PDF extraction to 20 pages.
+
+## Next UI update
+
+Companion source 0.3.1 improves capture choices, field spacing and connection guidance. It has not replaced the pending 0.3.0 submission. No new permissions. The store package and source version must not be confused.

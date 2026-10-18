@@ -732,3 +732,33 @@ button.primary{box-shadow:0 3px 8px #0001}button.primary:hover{transform:transla
 .file-evidence { padding: 16px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 16px; }
 .original-image { display: block; max-width: 100%; max-height: 420px; object-fit: contain; margin: 12px auto; }
 .file-evidence code { overflow-wrap: anywhere; }
+
+/* Settings: everyday connections first, proof controls on demand. */
+.settings-home { max-width: 980px; margin: 0 auto; }
+.settings-intro { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:12px 0 32px; }
+.settings-intro h2 { margin:0 0 8px; font-size:30px; }
+.settings-intro p { margin:0; color:var(--muted); }
+.settings-grid { display:grid; grid-template-columns:1.1fr 1fr; gap:22px; }
+.settings-grid .panel { padding:28px; }
+.settings-symbol { display:grid; place-items:center; width:44px; height:44px; margin-bottom:24px; border-radius:12px; background:var(--accent-soft); color:var(--accent); }
+.connection-card { border-top:3px solid var(--accent); }
+.connection-steps { padding-left:22px; color:var(--muted); line-height:1.7; margin:22px 0; }
+.connection-steps li { padding:4px 0 4px 6px; }
+.connection-steps li::marker { color:var(--accent); font-weight:700; }
+.connection-help { margin-top:18px; }
+.settings-link { display:block; color:var(--ink); text-decoration:none; padding:18px 0; border-bottom:1px solid var(--line); }
+.settings-link:last-child { border-bottom:0; }
+.settings-link b { display:flex; justify-content:space-between; gap:16px; }
+.settings-link small { display:block; margin-top:7px; color:var(--muted); line-height:1.5; }
+.settings-link:hover b { color:var(--accent); }
+.settings-notifications { display:flex; align-items:center; justify-content:space-between; gap:24px; }
+.settings-notifications p { margin-bottom:0; }
+.advanced-settings > summary { padding:8px 0; font-weight:650; }
+.advanced-settings > summary span { display:block; font-size:13px; font-weight:400; color:var(--muted); margin:6px 0 12px; }
+.advanced-settings .panel { box-shadow:none; margin-top:20px; }
+.pairing-ticket { display:flex; flex-wrap:wrap; align-items:center; gap:20px; padding:18px; margin-top:20px; background:var(--accent-soft); border-radius:12px; }
+.pairing-ticket span { color:var(--muted); font-size:12px; }
+.pairing-ticket strong { display:block; font:600 18px var(--font-mono); color:var(--ink); margin-top:6px; overflow-wrap:anywhere; }
+.workflow-prompts { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:20px 0; }
+.workflow-prompts article { border:1px solid var(--line); padding:20px; border-radius:12px; background:var(--surface); }
+@media(max-width:760px) { .settings-grid,.workflow-prompts { grid-template-columns:1fr; } .settings-intro,.settings-notifications { align-items:flex-start; flex-direction:column; } .settings-grid .panel { padding:22px; } }
