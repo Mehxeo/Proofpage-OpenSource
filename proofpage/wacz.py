@@ -28,6 +28,13 @@ def _timestamp14(value):
     return value[:19].replace('-', '').replace('T', '').replace(':', '')
 
 
+def replay_url(url):
+    # Browsers request the root as '/', even when the capture URL omitted it.
+    # Normalize archive lookup URLs only; signed capture receipts stay unchanged.
+    parts = urllib.parse.urlsplit(url)
+    return parts._replace(path='/').geturl() if parts.scheme in ('http', 'https') and parts.netloc and not parts.path else url
+
+
 def surt(url):
     parts = urllib.parse.urlsplit(url)
     host = (parts.hostname or '').lower()
@@ -72,7 +79,7 @@ def export_wacz(store, source_id):
 
     for capture in captures:
         payload = zlib.decompress(capture['payload'])
-        url, date = capture['final_url'], _warc_date(capture['requested_at'])
+        url, date = replay_url(capture['final_url']), _warc_date(capture['requested_at'])
         headers = json.loads(capture['headers'])
         mime = next((value.split(';')[0].strip() for name, value in headers if name.lower() == 'content-type'), 'application/octet-stream')
         digest = 'sha256:' + sha256(payload)
@@ -97,7 +104,7 @@ def export_wacz(store, source_id):
         pages.append({'id': capture['id'], 'url': url, 'ts': date, 'title': capture['title'] or source['name']})
 
     for revision in legacy:
-        url = json.loads(revision['metadata'] or '{}').get('url') or revision['external_id']
+        url = replay_url(json.loads(revision['metadata'] or '{}').get('url') or revision['external_id'])
         payload, date = revision['raw'].encode('utf-8'), _warc_date(revision['captured_at'])
         digest = 'sha256:' + sha256(payload)
         record, _ = _record('resource', url, date, 'text/html; charset=utf-8', payload, [('WARC-Payload-Digest', digest), ('WARC-Proofpage-Reconstructed', 'decoded text captured before exact bytes were stored')])
@@ -121,7 +128,7 @@ def export_wacz(store, source_id):
         files['proofpage/README.md'] = (b'Signed Proofpage receipts for the captures in this archive. Run `python3 proofpage/verify_proof.py <this file>.wacz` '
                                         b'to check the archive digests, the receipt signatures, and that each receipt\'s response body is in the index.\n')
     package = {'profile': 'data-package', 'wacz_version': '1.1.1', 'title': source['name'], 'description': f"Captures of {source['location']} exported by Proofpage.",
-               'created': created, 'software': 'Proofpage ' + __version__, 'mainPageURL': source['location'], 'mainPageDate': pages[-1]['ts'] if pages else _warc_date(created),
+               'created': created, 'software': 'Proofpage ' + __version__, 'mainPageURL': replay_url(source['location']), 'mainPageDate': pages[-1]['ts'] if pages else _warc_date(created),
                'resources': [{'name': Path(name).name, 'path': name, 'hash': 'sha256:' + sha256(data), 'bytes': len(data)} for name, data in sorted(files.items())]}
     files['datapackage.json'] = json.dumps(package, indent=2).encode('utf-8')
     files['datapackage-digest.json'] = json.dumps({'path': 'datapackage.json', 'hash': 'sha256:' + sha256(files['datapackage.json'])}, indent=2).encode('utf-8')

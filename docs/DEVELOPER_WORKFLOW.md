@@ -1,6 +1,6 @@
 # Reproducible evidence for developers
 
-Source implementation (not yet included in a published desktop release). Install
+Desktop 0.5.0 includes the saved-input UI and MCP tools. For CLI and SDK use, install
 this checkout with `python -m pip install -e .`. Python 3.11+ is required.
 
 ## Record and replay

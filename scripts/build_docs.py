@@ -17,22 +17,47 @@ def inline(text):
     return re.sub(r'\[([^\]]+)\]\(([^)]+)\)', link, text)
 
 def render(text):
-    result=[]; code=[]; fenced=False; table=False
+    result=[]; code=[]; paragraph=[]; fenced=False; table=False; listing=None
+    def flush_paragraph():
+        if paragraph:
+            result.append('<p>'+inline(' '.join(paragraph))+'</p>'); paragraph.clear()
+    def close_list():
+        nonlocal listing
+        if listing:
+            result.append('</'+listing+'>'); listing=None
     for line in text.splitlines():
         if line.startswith(('<details', '</details', '![')): continue
         if line.startswith('```'):
+            flush_paragraph(); close_list()
             if fenced: result.append('<pre><code>'+html.escape('\n'.join(code))+'</code></pre>'); code=[]
             fenced=not fenced; continue
         if fenced: code.append(line); continue
         if line.startswith('|'):
+            flush_paragraph(); close_list()
             if not table: result.append('<div class="table-scroll"><table>');table=True
             if re.fullmatch(r'[| :\-]+',line):continue
             result.append('<tr>'+''.join('<td>'+inline(c.strip())+'</td>' for c in line.strip('|').split('|'))+'</tr>');continue
         if table: result.append('</table></div>');table=False
         match=re.match(r'^(#{1,3}) (.*)',line)
         if match:
+            flush_paragraph(); close_list()
             level=min(len(match[1])+1,4);result.append(f'<h{level}>{inline(match[2])}</h{level}>')
-        elif line.strip(): result.append('<p>'+inline(line)+'</p>')
+            continue
+        entry=re.match(r'^\s*(?:([-*])|\d+\.)\s+(.*)',line)
+        if entry:
+            flush_paragraph()
+            kind='ul' if entry[1] else 'ol'
+            if listing!=kind:
+                close_list(); listing=kind; result.append('<'+kind+'>')
+            result.append('<li>'+inline(entry[2])+'</li>')
+        elif not line.strip():
+            flush_paragraph(); close_list()
+        elif listing and line.startswith(' '):
+            # Wrapped list text belongs to the previous entry.
+            result[-1]=result[-1][:-5]+' '+inline(line.strip())+'</li>'
+        else:
+            close_list(); paragraph.append(line.strip())
+    flush_paragraph(); close_list()
     if table:result.append('</table></div>')
     return '\n'.join(result)
 

@@ -100,8 +100,9 @@ edited statements, before sharing.
 
 ## Connector update
 
-The source edition now includes an optional selected-document Google Docs sync
-connector and OAuth-protected self-hostable remote MCP. See [connector setup](CONNECTORS.md).
+Desktop 0.5.0 includes selected-document Google Docs connection support; client
+configuration is required. The source/CLI edition also provides OAuth-protected
+self-hostable remote MCP. See [connector setup](CONNECTORS.md).
 The earlier manual-export workflow remains available without OAuth setup. These
 connectors require external account configuration and are not activated in the
 published desktop downloads.

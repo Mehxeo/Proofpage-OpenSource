@@ -262,6 +262,25 @@ class ReceiptTests(unittest.TestCase):
             self.assertEqual(report.failures, 0, report.lines)
             self.assertTrue(any('in the archive index' in line for line in report.lines))
 
+    def test_wacz_root_urls_match_browser_lookup_without_changing_receipts(self):
+        with patch('proofpage.core.validate_url'):
+            self.source = self.store.source('Root', 'web', 'https://example.org')
+        self.collect()
+        original_receipts = self.store.rows('SELECT body FROM receipts ORDER BY seq')
+        data, _ = wacz.export_wacz(self.store, self.source['id'])
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            for line in archive.read('indexes/index.cdx').decode().splitlines():
+                fields = json.loads(line.split(' ', 2)[2])
+                self.assertEqual(fields['url'], 'https://example.org/')
+                warc = archive.read('archive/data.warc.gz')
+                record = gzip.decompress(warc[int(fields['offset']):int(fields['offset'])+int(fields['length'])])
+                self.assertIn(b'WARC-Target-URI: https://example.org/\r\n', record)
+            page = json.loads(archive.read('pages/pages.jsonl').decode().splitlines()[1])
+            self.assertEqual(page['url'], 'https://example.org/')
+        self.assertEqual(self.store.rows('SELECT body FROM receipts ORDER BY seq'), original_receipts)
+        self.assertEqual(wacz.replay_url('https://example.org?version=2'), 'https://example.org/?version=2')
+        self.assertEqual(wacz.replay_url('https://example.org/Case'), 'https://example.org/Case')
+
     def test_backup_warns_that_it_contains_the_signing_key(self):
         self.collect()
         with tempfile.TemporaryDirectory() as directory:

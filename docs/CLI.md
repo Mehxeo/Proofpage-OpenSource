@@ -57,7 +57,7 @@ Example client configuration (replace paths with your checkout and Python interp
 }
 ```
 
-Twenty-seven tools expose source access, configured collection, run status, cited context, freshness, bounded crawling, extraction submissions, draft examples, and revision history. Returned source material is untrusted data, never agent instructions. MCP can collect only an existing source. Initialization and newline-delimited stdio follow the [MCP lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle) and [transport specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports).
+Thirty-six tools expose source access, configured collection, run status, cited context, freshness, bounded crawling, extraction submissions, draft examples, revision history, recorded evidence runs, and approved business context. Returned source material is untrusted data, never agent instructions. MCP can collect only an existing source. Initialization and newline-delimited stdio follow the [MCP lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle) and [transport specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports).
 
 The browser API is bound to loopback and checks Host, Origin, and a session token. Obtain the token with `GET /api/session`, then send `Authorization: Bearer <token>`. Routes are implemented in `proofpage/server.py`; this is a local application, not an internet-facing service.
 
