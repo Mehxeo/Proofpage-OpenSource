@@ -44,7 +44,7 @@ async function renderSettings() {
   const s = data.settings;
   const local = hostingMode === 'local';
   $('content').innerHTML = `
-    ${local ? `<section class="panel"><h3>Browser companion</h3><p>Save reviewed pages directly from Chrome. Open the companion, enter this app’s port and a pairing code once. Reconnect after restarting Proofpage. The connection can only import pages.</p><div class="actions"><button id="companion-code">Connect browser</button><button id="companion-revoke" class="secondary">Disconnect browser</button></div><button type="button" id="attention-notifications" class="secondary">Toggle attention notifications</button><p id="companion-result" role="status"></p></section>` : ''}
+    ${local ? `<section class="panel"><h3>Browser companion</h3><p>Save reviewed pages directly from Chrome. Open the companion, enter this app’s port and a pairing code once. Reconnect after restarting Proofpage. The connection can import reviewed pages/files and collect public file URLs. It cannot read your existing library.</p><div class="actions"><button id="companion-code">Connect browser</button><button id="companion-revoke" class="secondary">Disconnect browser</button></div><button type="button" id="attention-notifications" class="secondary">Toggle attention notifications</button><p id="companion-result" role="status"></p></section>` : ''}
     <section class="panel">
       <div class="panel-head"><div><h3>Receipt signing key</h3><p>Proofpage signs a receipt for every capture with this Ed25519 key. It stays in this workspace’s database and is included in backups — keep backups private.</p></div><span class="pill tone-ok">${pluralize(data.receipts, 'receipt')}</span></div>
       <dl class="meta-grid">

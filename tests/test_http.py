@@ -97,6 +97,17 @@ class HttpTests(unittest.TestCase):
         self.request('/api/companion-revoke', {})
         self.assertEqual(self.request('/api/companion/import-file', payload, headers)[0], 401)
 
+    def test_companion_url_review_auth_and_private_address_guards(self):
+        code = self.request('/api/companion-code', {})[1]['code']
+        headers = {'Origin': 'chrome-extension://' + 'a' * 32}
+        paired = self.request('/api/companion/pair', {'code': code}, headers)[1]
+        headers['Authorization'] = 'Bearer ' + paired['token']
+        payload = {'reviewed': True, 'url': 'http://127.0.0.1/private.png'}
+        self.assertEqual(self.request('/api/companion/import-url', dict(payload, reviewed=False), headers)[0], 400)
+        self.assertEqual(self.request('/api/companion/import-url', payload, headers)[0], 400)
+        self.request('/api/companion-revoke', {})
+        self.assertEqual(self.request('/api/companion/import-url', payload, headers)[0], 401)
+
     def test_companion_pair_attempt_limit(self):
         code = self.request('/api/companion-code', {})[1]['code']
         headers = {'Origin': 'chrome-extension://' + 'c' * 32}
