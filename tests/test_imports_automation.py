@@ -9,6 +9,7 @@ from unittest.mock import patch
 from proofpage.adapters import parse_entry
 from proofpage.backup import backup, restore
 from proofpage.core import Store, archive_entries, import_file
+from proofpage.schema import MIGRATIONS
 from proofpage.imports import create_profile
 from proofpage.watch import create_watch, scan_watch
 
@@ -171,7 +172,7 @@ class ImportAutomationTests(unittest.TestCase):
         self.store.save(source['id'], 'id', 'document', 'Legacy', 'Existing data', 'Existing data')
         Store(self.root / 'data')
         Store(self.root / 'data')
-        self.assertEqual(len(self.store.rows('SELECT * FROM schema_versions')), 2)
+        self.assertEqual(len(self.store.rows('SELECT * FROM schema_versions')), len(MIGRATIONS))
         self.assertEqual(len(self.store.search('Existing')), 1)
 
     def test_old_revision_review_does_not_change_current_record(self):

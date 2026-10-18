@@ -1,81 +1,544 @@
-let hostingMode='local';
-let token, state, view = 'library', query = '', pendingFile = null;
-const $ = id => document.getElementById(id);
-const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const date = value => value ? new Date(value).toLocaleString() : 'Not supplied';
-async function api(path, data) {
-  const response = await fetch('/api/' + path, {method:data === undefined ? 'GET' : 'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:data === undefined ? undefined : JSON.stringify(data)});
-  const value = await response.json();
-  if (!response.ok) throw new Error(value.error || 'Request failed.');
-  return value;
+// Workspace views: library, sources, activity, datasets, and the evidence drawer.
+let state, view = 'library', query = '', pendingFile = null, pollTimer;
+const filters = {kind: '', source: '', review: '', rights: ''};
+let layout = (() => { try { return localStorage.getItem('proofpage-layout') || 'grid'; } catch { return 'grid'; } })();
+
+const VIEWS = {
+  verify: ['Verify', 'Does the source say that?', 'Check quoted passages against captured evidence. Review the source before trusting the answer.'],
+  library: ['Library', 'A library you can trace.', 'Collect useful material. Keep the evidence behind it.'],
+  sources: ['Sources', 'Every source, accounted for.', 'Set up collection and see exactly what each site allowed and returned.'],
+  activity: ['Activity', 'The collection record.', 'Completed captures, access conditions, and unfinished work, newest first.'],
+  datasets: ['Datasets', 'From evidence to a corpus.', 'Review individual revisions, confirm permission, then freeze an export.'],
+  timeline: ['Timeline', 'What changed, and when.', 'Content edits, publisher rights changes, broken links, and collection problems across your sources.'],
+  settings: ['Settings', 'Proof you can hand to anyone.', 'Your receipt-signing key, chain integrity, and optional timestamp anchoring.'],
+};
+let evidenceContext = {};
+
+const KIND_ICONS = {document: 'file', conversation: 'message', human_message: 'message', message: 'message', agent_trace: 'plug'};
+const kindIcon = kind => KIND_ICONS[kind] || 'file';
+const kindLabel = kind => String(kind || 'record').replaceAll('_', ' ');
+const locationLabel = url => { try { const parsed = new URL(url); return parsed.hostname.replace(/^www\./, '') + (parsed.pathname === '/' ? '' : parsed.pathname); } catch { return url; } };
+const itemRights = item => item.source_kind && item.source_kind !== 'web' ? 'user_supplied' : (item.rights?.train || 'not_recorded');
+const snippetHtml = text => escape(text).replaceAll('\u0002', '<mark>').replaceAll('\u0003', '</mark>');
+
+async function refresh() {
+  state = await api('state?q=' + encodeURIComponent(query));
+  render();
+  schedulePoll();
 }
-function notice(text, error=false) { $('notice').hidden=false; $('notice').textContent=text; $('notice').className=error?'error':''; }
-async function action(fn, button) { if(button) button.disabled=true; document.querySelectorAll('.dialog-error').forEach(e=>e.remove()); try {await fn();} catch(error){notice(error.message,true);const dialogs=[...document.querySelectorAll('dialog[open]')];const dialog=dialogs.at(-1);if(dialog){const p=document.createElement('p');p.className='dialog-error';p.setAttribute('role','alert');p.textContent=error.message;dialog.append(p);}} finally {if(button) button.disabled=false;} }
-async function refresh() { state=await api('state?q='+encodeURIComponent(query)); render(); }
-function empty(title, description) { return `<div class="empty"><div class="mark">▤</div><h2>${title}</h2><p>${description}</p></div>`; }
-function render() {
-  $('count').textContent=state.items.length;
-  if(view==='training'||view==='agents'){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));action(()=>renderWorkbench(view));return;}
-  const titles={library:['A library you can trace.','Collect useful material. Keep the evidence behind it.'],sources:['Every source, accounted for.','Set up collection and see exactly what is available.'],activity:['The collection record.','Completed captures, access conditions, and unfinished work.'],datasets:['From evidence to a corpus.','Review individual revisions, confirm permission, then freeze an export.']};
-  $('title').textContent=titles[view][0]; $('subtitle').textContent=titles[view][1]; $('breadcrumb').textContent='Workspace / '+view[0].toUpperCase()+view.slice(1);
-  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
-  if(view==='library') {
-    $('content').innerHTML=`<div class="metrics"><div class="metric"><b>${state.items.length}</b><span>${query?'Matching':'Recent'} records · up to 100</span></div><div class="metric"><b>${state.sources.length}</b><span>Configured sources</span></div><div class="metric"><b>${state.sources.filter(s=>!['ready','available'].includes(s.state)).length}</b><span>Need attention</span></div></div><input id="search" class="search" aria-label="Search evidence" placeholder="Search your evidence…" value="${escape(query)}"><div class="section-label">${query?'SEARCH RESULTS':'RECENT EVIDENCE'}</div>`+(state.items.length?`<div class="cards">${state.items.map(item=>`<button class="card" data-item="${item.id}"><span class="tag">${escape(item.kind.replaceAll('_',' '))}</span><h3>${escape(item.title)}</h3><p>${escape(item.text.slice(0,240))}</p><small>${escape(item.source_name)}<br>Captured ${escape(date(item.captured_at))}</small></button>`).join('')}</div>`:empty(query?'No matching evidence.':'Start with something worth keeping.',query?'Try a different word or add another source.':'Add a public page or import an archive. Each record will carry its source, capture time, and original evidence.'));
-    $('search').addEventListener('keydown',event=>{if(event.key==='Enter'){query=event.target.value;action(refresh);}});
-  } else if(view==='sources') {
-    $('content').innerHTML=state.sources.length?`<div class="rows">${state.sources.map(s=>`<div class="row"><div><h3>${escape(s.name)}</h3><p>${escape(s.location)}</p><p>${s.kind==='web'?(s.interval_seconds?'Automatic refresh every '+s.interval_seconds/60+' minutes while Proofpage runs.':'Manual refresh. Public page collection.'):'Supplied archive · source fields preserved'}</p></div><div class="actions"><span class="state">${escape(s.state.replaceAll('_',' '))}</span>${s.kind==='web'?`<button class="secondary" data-collect="${s.id}">Collect</button><button data-schedule="${s.id}" data-interval="${s.interval_seconds?0:3600}">${s.interval_seconds?'Stop schedule':'Refresh hourly'}</button>`:''}</div></div>`).join('')}</div>`:empty('Connect your first source.','Add a page or choose an archive to begin.');
-    $('content').insertAdjacentHTML('beforeend', `<div class="section-label">IMPORT PROFILES</div><div class="actions"><button class="secondary" data-new-profile>Create profile</button><button class="secondary" id="watch-open">Watch an export folder</button></div><div class="rows">${state.profiles.map(p=>`<div class="row"><div><h3>${escape(p.name)}</h3><p>${escape(p.provider)} · ${escape(p.account)} · ${escape(p.adapter)}</p></div><span class="state">Local import profile</span></div>`).join('')}</div><div class="section-label">WATCHED FOLDERS</div><div class="rows">${state.watches.map(w=>`<div class="row"><div><h3>${escape(state.profiles.find(p=>p.id===w.profile_id)?.name)}</h3><p>${escape(w.directory)}</p><p>${escape(JSON.parse(w.categories).join(', '))}</p><p>${escape(w.detail)}</p></div><div class="actions"><span class="state">${escape(w.state)}</span><button data-watch-toggle="${w.id}" data-enabled="${w.enabled?'false':'true'}">${w.enabled?'Pause':'Resume'}</button><button data-watch-scan="${w.id}">Check now</button><button data-watch-detail="${w.id}">File outcomes</button></div></div>`).join('')}</div>`);
-    $('watch-open').onclick=()=>{profileOptions();$('watch-dialog').showModal();};
-    $('content').insertAdjacentHTML('afterbegin','<button class="secondary" id="crawl-open">Collect multiple pages</button>');
-    $('crawl-open').onclick=()=>openCrawl();
-  } else if(view==='activity') {
-    $('content').innerHTML=state.runs.length?`<div class="rows">${state.runs.map(r=>`<div class="row"><div><h3>${escape(state.sources.find(s=>s.id===r.source_id)?.name||r.source_id)}</h3><p>${escape(r.detail||'Collection in progress')}</p><p>${escape(date(r.started_at))} · ${r.added} new revisions</p></div><span class="state">${escape(r.state.replaceAll('_',' '))}</span></div>`).join('')}</div>`:empty('No collection runs yet.','When you collect a source, its outcome appears here.');
-  } else {
-    $('content').innerHTML=`<button class="primary" id="freeze">Freeze reviewed corpus</button><p class="muted">Clean corpus JSONL only. Human messages retain their kind. This does not train a model or create assistant targets.</p>`+(state.datasets.length?`<div class="rows">${state.datasets.map(d=>`<div class="row"><div><h3>${escape(d.name)}</h3><p>${escape(date(d.created_at))}</p><p>SHA-256 ${escape(d.hash.slice(0,20))}…</p></div><button class="secondary" data-export="${d.id}">Export JSONL</button></div>`).join('')}</div>`:empty('Review before you export.','Open a library record to review its evidence and confirm permission. Frozen exports use exactly the approved revisions.'));
-    $('freeze').onclick=()=>action(async()=>{const result=await api('freeze',{name:'Reviewed corpus · '+new Date().toLocaleDateString()});notice(`Frozen ${result.records} reviewed records.`);await refresh();},$('freeze'));
+
+function schedulePoll() {
+  clearTimeout(pollTimer);
+  const busy = state.runs.some(run => run.state === 'running');
+  if (busy && ['activity', 'sources'].includes(view)) {
+    pollTimer = setTimeout(() => { if (!document.querySelector('dialog[open]')) refresh().catch(() => {}); else schedulePoll(); }, 3000);
   }
 }
+
+function setHeading(label, title, subtitle) {
+  $('title').textContent = title;
+  $('subtitle').textContent = subtitle;
+  $('breadcrumb').textContent = 'Workspace / ' + label;
+  document.title = label + ' · Proofpage';
+}
+
+function markNav() {
+  document.querySelectorAll('[data-view]').forEach(button => {
+    const active = button.dataset.view === view;
+    button.classList.toggle('active', active);
+    if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
+  });
+}
+
+let renderedView;
+function render() {
+  $('count').textContent = state.total ?? state.items.length;
+  updateUnreadBadge(state.unread || 0);
+  markNav();
+  if (renderedView !== view) {
+    renderedView = view;
+    window.scrollTo(0, 0);
+  }
+  if (view === 'verify') { setHeading(...VIEWS.verify); action(renderClaims); return; }
+  if (view === 'training' || view === 'agents') {
+    action(() => renderWorkbench(view));
+    return;
+  }
+  if (view === 'timeline' || view === 'settings') {
+    setHeading(...VIEWS[view]);
+    action(view === 'timeline' ? renderTimeline : renderSettings);
+    return;
+  }
+  const [label, title, subtitle] = VIEWS[view] || VIEWS.library;
+  setHeading(label, title, subtitle);
+  ({library: renderLibrary, sources: renderSources, activity: renderActivity, datasets: renderDatasets}[view] || renderLibrary)();
+}
+
+// ---------- Library ----------
+function itemCard(item) {
+  const excerpt = item.snippet ? snippetHtml(item.snippet) : escape((item.text || '').slice(0, 260));
+  return `<article class="card">
+    <div class="card-top"><span class="tag">${icon(kindIcon(item.kind))}${escape(kindLabel(item.kind))}</span><span class="chips">${item.approved ? '<span class="pill tone-ok">Approved</span>' : item.allowed ? '<span class="pill tone-accent">Permission given</span>' : ''}${item.source_kind === 'web' ? rightsChip(itemRights(item), 'train', true, item.rights?.summary) : ''}</span></div>
+    <h3><button type="button" class="card-link" data-item="${escape(item.id)}">${escape(item.title || 'Untitled record')}</button></h3>
+    <p>${excerpt || '<span class="muted">No text captured.</span>'}</p>
+    <div class="card-meta"><span>${icon('globe')}${escape(item.source_name)}</span><span title="${escape(date(item.captured_at))}">${icon('clock')}${escape(relativeTime(item.captured_at))}</span>${seal(item.hash, 'Revision SHA-256')}</div>
+  </article>`;
+}
+
+function onboarding() {
+  return `<section class="panel onboarding">
+    <div>
+      <span class="tag">${icon('seal')}Welcome</span>
+      <h2>Start a library you can trace.</h2>
+      <p>Every record keeps its source, capture time, original response, and a SHA-256 revision hash, so you, your reviewers, and your AI tools can check where it came from.</p>
+      <div class="actions">
+        <button type="button" class="primary" id="try-example">${icon('collect')}Try with example.com</button>
+        <button type="button" class="secondary" data-open="source-dialog">${icon('plus')}Add your own page</button>
+        <button type="button" data-open-import>${icon('upload')}Import files</button><button type="button" class="secondary" data-go="verify">${icon('check')}Check a quoted answer</button>
+      </div>
+    </div>
+    <ol class="steps">
+      <li><b>Add a public page</b><span>Paste a URL. Robots rules, cooldowns, and daily budgets are respected.</span></li>
+      <li><b>Collect it</b><span>Proofpage stores the readable text, the original response, and the publisher’s AI-usage signals.</span></li>
+      <li><b>Inspect the evidence</b><span>Read it, confirm permission, and turn it into reviewed training data.</span></li>
+    </ol>
+  </section>`;
+}
+
+function renderLibrary() {
+  const items = state.items;
+  if (!items.length && !state.sources.length && !query) {
+    $('content').innerHTML = onboarding();
+    return;
+  }
+  const attention = state.sources.filter(source => !['ready', 'available'].includes(source.state)).length;
+  const kinds = Object.entries(items.reduce((counts, item) => ({...counts, [item.kind]: (counts[item.kind] || 0) + 1}), {}));
+  if (filters.kind && !kinds.some(([kind]) => kind === filters.kind)) filters.kind = '';
+  const sources = state.sources.filter(source => items.some(item => item.source_id === source.id));
+  const shown = items.filter(item => (!filters.kind || item.kind === filters.kind)
+    && (!filters.source || item.source_id === filters.source)
+    && (!filters.review || (filters.review === 'approved' ? item.approved : !item.approved))
+    && (!filters.rights || itemRights(item) === filters.rights));
+  const rightsPresent = [...new Set(items.filter(item => item.source_kind === 'web').map(itemRights))];
+  if (filters.rights && !rightsPresent.includes(filters.rights)) filters.rights = '';
+  const chip = (group, value, label, count) => `<button type="button" class="chip" data-filter="${group}" data-value="${escape(value)}" aria-pressed="${filters[group] === value}">${escape(label)}${count === undefined ? '' : ` <span class="count">${count}</span>`}</button>`;
+
+  $('content').innerHTML = `
+    <div class="metrics">
+      <div class="metric"><b>${state.total ?? items.length}</b><span>Records in your library</span></div>
+      <div class="metric"><b>${state.sources.length}</b><span>Configured sources</span></div>
+      <div class="metric"><b>${state.approved ?? items.filter(item => item.approved).length}</b><span>Approved for datasets</span></div>
+      <div class="metric"><b>${attention}</b><span>Sources needing attention</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="searchbox">${icon('search')}<input id="search" type="search" aria-label="Search evidence" placeholder="Search your evidence and press Enter…" value="${escape(query)}"></div>
+      <div class="segmented" role="group" aria-label="Layout">
+        <button type="button" data-layout="grid" aria-pressed="${layout === 'grid'}" aria-label="Grid layout" title="Grid">${icon('grid')}</button>
+        <button type="button" data-layout="list" aria-pressed="${layout === 'list'}" aria-label="List layout" title="List">${icon('list')}</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="filters" role="group" aria-label="Filter by kind">${chip('kind', '', 'All kinds')}${kinds.map(([kind, count]) => chip('kind', kind, kindLabel(kind), count)).join('')}</div>
+      <div class="filters" role="group" aria-label="Filter by review">${chip('review', '', 'Any review')}${chip('review', 'approved', 'Approved')}${chip('review', 'pending', 'Not approved')}</div>
+      ${rightsPresent.length ? `<div class="filters" role="group" aria-label="Filter by AI-training rights">${chip('rights', '', 'Any rights')}${['allowed', 'conditional', 'unknown', 'reserved', 'not_recorded'].filter(v => rightsPresent.includes(v)).map(v => chip('rights', v, 'Training ' + RIGHTS[v][0].toLowerCase())).join('')}</div>` : ''}
+      ${sources.length > 1 ? `<select id="source-filter" aria-label="Filter by source" class="small"><option value="">All sources</option>${sources.map(source => `<option value="${escape(source.id)}"${filters.source === source.id ? ' selected' : ''}>${escape(source.name)}</option>`).join('')}</select>` : ''}
+    </div>
+    <div class="section-label">${query ? `Results for “${escape(query)}” · ${shown.length}` : `Recent evidence · ${shown.length}`}</div>
+    ${shown.length ? `<div class="cards${layout === 'list' ? ' list-mode' : ''}">${shown.map(itemCard).join('')}</div>`
+      : query || filters.kind || filters.review || filters.source || filters.rights
+        ? empty('No matching evidence.', 'Try a different word, clear a filter, or add another source.', `<button type="button" class="secondary" id="clear-search">${icon('x')}Clear search and filters</button>`, 'search')
+        : empty('Collect your first source.', 'Your sources are set up. Collect one to capture its text and original evidence.', `<button type="button" class="primary" data-go="sources">${icon('globe')}Go to sources</button>`, 'collect')}`;
+
+  $('search').addEventListener('keydown', event => {
+    if (event.key === 'Enter') { query = event.target.value.trim(); action(refresh); }
+    if (event.key === 'Escape' && event.target.value) { event.target.value = ''; query = ''; action(refresh); }
+  });
+  $('search').addEventListener('search', event => { if (!event.target.value && query) { query = ''; action(refresh); } });
+  if ($('source-filter')) $('source-filter').onchange = event => { filters.source = event.target.value; renderLibrary(); };
+}
+
+// ---------- Sources ----------
+function sourceCard(source) {
+  const run = state.runs.find(r => r.source_id === source.id);
+  const web = source.kind === 'web';
+  const schedule = web ? (source.interval_seconds ? `Watching every ${source.interval_seconds >= 3600 ? (source.interval_seconds === 3600 ? 'hour' : pluralize(source.interval_seconds / 3600, 'hour')) : pluralize(source.interval_seconds / 60, 'minute')} · changes go to Timeline` : 'Not watched · manual refresh') : 'Supplied archive · source fields preserved';
+  const letter = (hostname(source.location) || source.name || '?').replace(/[^a-z0-9]/gi, '')[0] || '?';
+  const live = web && /^https?:\/\//i.test(source.location);
+  return `<article class="card source-card">
+    <div class="card-top"><span class="monogram" aria-hidden="true">${escape(letter)}</span><div><h3>${escape(source.name)}</h3><span class="location" title="${escape(source.location)}">${escape(web ? locationLabel(source.location) : source.location)}</span></div>${statusPill(source.state)}</div>
+    <p class="help">${escape(run?.detail || stateInfo(source.state).help || 'Configured.')}</p>
+    ${web ? (() => { const verdict = source.rights ? JSON.parse(source.rights) : null; return `<div class="chips">${verdict ? Object.keys(RIGHTS_USES).map(use => rightsChip(verdict[use], use, true, verdict.summary)).join('') : rightsChip('not_recorded')}</div>`; })() : ''}
+    <div class="card-meta"><span>${icon(web ? 'clock' : 'folder')}${escape(schedule)}${run ? ' · last run ' + escape(relativeTime(run.finished_at || run.started_at)) : ''}</span>
+      ${web ? `<div class="actions">
+        ${live ? `<a class="button icon-button small" href="${escape(source.location)}" target="_blank" rel="noopener noreferrer" aria-label="Open live page" title="Open live page">${icon('external')}</a>` : ''}
+        <button type="button" class="icon-button small" data-wacz="${escape(source.id)}" data-wacz-name="${escape(hostname(source.location))}" aria-label="Export as a WACZ web archive" title="Export as a WACZ web archive with signed receipts">${icon('download')}</button>
+        <button type="button" class="small" data-schedule="${escape(source.id)}" data-interval="${source.interval_seconds ? 0 : 3600}" title="${source.interval_seconds ? 'Stop re-collecting this page' : 'Re-collect every hour while Proofpage runs and record changes in Timeline'}">${icon(source.interval_seconds ? 'pause' : 'eye')}${source.interval_seconds ? 'Stop watching' : 'Watch hourly'}</button>
+        <button type="button" class="secondary small" data-collect="${escape(source.id)}">${icon('collect')}Collect</button>
+      </div>` : ''}
+    </div>
+  </article>`;
+}
+
+function renderSources() {
+  const profileName = id => state.profiles.find(profile => profile.id === id)?.name || 'Unknown profile';
+  $('content').innerHTML = `
+    <div class="toolbar"><div class="actions">
+      <button type="button" class="secondary" id="crawl-open">${icon('layers')}Collect multiple pages</button>
+      <button type="button" data-new-profile>${icon('user')}Create import profile</button>
+      <button type="button" id="watch-open">${icon('folder')}Watch an export folder</button>
+    </div></div>
+    ${state.sources.length ? `<div class="cards">${state.sources.map(sourceCard).join('')}</div>`
+      : empty('Connect your first source.', 'Add a public page or choose an archive to begin.', `<button type="button" class="primary" data-open="source-dialog">${icon('plus')}Add source</button><button type="button" class="secondary" data-open-import>${icon('upload')}Import files</button>`, 'globe')}
+    <div class="section-label">Import profiles · ${state.profiles.length}</div>
+    ${state.profiles.length ? `<div class="rows">${state.profiles.map(profile => `<div class="row"><div><h3>${escape(profile.name)}</h3><p>${escape(profile.provider)} · ${escape(profile.account)} · ${escape(profile.adapter)}</p></div><span class="pill">Local import profile</span></div>`).join('')}</div>`
+      : '<p class="muted">Profiles keep each exported account separate. Create one before importing an archive.</p>'}
+    <div class="section-label">Watched folders · ${state.watches.length}</div>
+    ${state.watches.length ? `<div class="rows">${state.watches.map(watch => `<div class="row"><div><h3>${escape(profileName(watch.profile_id))}</h3><p class="mono">${escape(watch.directory)}</p><p>${escape(JSON.parse(watch.categories).join(', '))}${watch.detail ? ' · ' + escape(watch.detail) : ''}</p></div><div class="actions">${statusPill(watch.state)}<button type="button" class="small" data-watch-toggle="${escape(watch.id)}" data-enabled="${watch.enabled ? 'false' : 'true'}">${watch.enabled ? 'Pause' : 'Resume'}</button><button type="button" class="small" data-watch-scan="${escape(watch.id)}">Check now</button><button type="button" class="small" data-watch-detail="${escape(watch.id)}">File outcomes</button></div></div>`).join('')}</div>`
+      : '<p class="muted">Watch a folder to import new exports automatically while Proofpage is open.</p>'}`;
+  $('watch-open').onclick = () => { profileOptions(); $('watch-dialog').showModal(); };
+  $('crawl-open').onclick = () => openCrawl();
+}
+
+// ---------- Activity ----------
+function renderActivity() {
+  if (!state.runs.length) {
+    $('content').innerHTML = empty('No collection runs yet.', 'When you collect a source, each outcome appears here — including pages that were blocked, rate limited, or unchanged.', `<button type="button" class="primary" data-go="sources">${icon('globe')}Go to sources</button>`, 'activity');
+    return;
+  }
+  const days = new Map();
+  for (const run of state.runs) {
+    const day = new Date(run.started_at).toLocaleDateString(undefined, {weekday: 'long', month: 'long', day: 'numeric'});
+    days.set(day, [...(days.get(day) || []), run]);
+  }
+  $('content').innerHTML = `<div class="timeline">${[...days].map(([day, runs]) => `<section class="day"><h4>${escape(day)}</h4><ol>${runs.map(run => {
+    const source = state.sources.find(s => s.id === run.source_id);
+    const tone = stateInfo(run.state).tone.split(' ')[0];
+    return `<li class="event"${tone ? ` data-tone="${tone}"` : ''}><div><h3>${escape(source?.name || run.source_id)}</h3><p>${escape(run.detail || 'Collection in progress')}</p><p class="muted">${pluralize(run.added, 'new revision')}</p></div><div class="actions">${statusPill(run.state)}<time datetime="${escape(run.started_at)}" title="${escape(date(run.started_at))}">${escape(new Date(run.started_at).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'}))}</time></div></li>`;
+  }).join('')}</ol></section>`).join('')}</div>`;
+}
+
+// ---------- Datasets ----------
+function renderDatasets() {
+  $('content').innerHTML = `
+    <div class="panel panel-head"><div><h3>Freeze a reviewed corpus</h3><p>Exports clean corpus JSONL from revisions you approved and have permission to use. Human messages keep their kind. This does not train a model or create assistant targets.</p></div><button type="button" class="primary" id="freeze">${icon('layers')}Freeze reviewed corpus</button></div>
+    <div class="section-label">Frozen datasets · ${state.datasets.length}</div>
+    ${state.datasets.length ? `<div class="cards">${state.datasets.map(dataset => `<article class="card dataset-card">
+      <div class="card-top"><span class="tag">${icon(dataset.format ? 'training' : 'database')}${dataset.format ? escape(kinds[dataset.format] || dataset.format) : 'Corpus JSONL'}</span>${seal(dataset.hash, 'Dataset SHA-256')}</div>
+      ${datasetRightsFlag(dataset)}
+      <h3>${escape(dataset.name)}</h3>
+      <p>Frozen ${escape(relativeTime(dataset.created_at))}. ${dataset.format ? 'Training examples as JSONL; download the full bundle from Training.' : 'Every export re-checks permission, publisher rights, and integrity.'}</p>
+      <div class="card-meta"><span title="${escape(date(dataset.created_at))}">${icon('clock')}${escape(date(dataset.created_at))}</span><span class="actions"><button type="button" class="small" data-docs="${escape(dataset.id)}" data-docs-name="${escape(dataset.name)}">${icon('file')}Documentation</button><button type="button" class="secondary small" data-export="${escape(dataset.id)}">${icon('download')}Export JSONL</button></span></div>
+    </article>`).join('')}</div>`
+      : empty('Review before you export.', 'Open a library record, review its evidence, and confirm permission. Frozen exports use exactly the approved revisions.', `<button type="button" class="secondary" data-go="library">${icon('library')}Open the library</button>`, 'database')}`;
+  $('freeze').onclick = () => action(async () => {
+    const result = await api('freeze', {name: 'Reviewed corpus · ' + new Date().toLocaleDateString()});
+    notice(`Frozen ${pluralize(result.records, 'reviewed record')}.` + rightsCounts(result.rights));
+    await refresh();
+  }, $('freeze'));
+}
+
+// ---------- Evidence drawer ----------
 function conversationView(metadata) {
-  const normalized=metadata.normalized;
-  if(!normalized?.messages)return '';
-  const labels=new Map(normalized.messages.map((m,i)=>[m.id,'Message '+(i+1)]));
-  return `<details open><summary>Source conversation · ${normalized.messages.length} messages</summary><p class="muted">${escape(normalized.branching)}</p>${normalized.messages.map((m,i)=>`<article class="message"><div class="tag">${escape(m.role||'Unknown source role')}</div><strong> Message ${i+1}</strong><p class="muted">${m.parent?'Replies to '+escape(labels.get(m.parent)||'a missing source message'):'Parent relationship not supplied'}${m.children?.length>1?' · '+m.children.length+' source branches':''}</p><pre>${escape(m.text||'No text supplied for this node.')}</pre></article>`).join('')}</details>`;
+  const normalized = metadata.normalized;
+  if (!normalized?.messages) return '';
+  const labels = new Map(normalized.messages.map((message, index) => [message.id, 'Message ' + (index + 1)]));
+  return `<details open><summary>Source conversation · ${pluralize(normalized.messages.length, 'message')}</summary><p class="muted">${escape(normalized.branching)}</p>${normalized.messages.map((message, index) => `<article class="message"><div class="message-head"><span class="tag">${escape(message.role || 'Unknown source role')}</span><strong>Message ${index + 1}</strong></div><p class="muted">${message.parent ? 'Replies to ' + escape(labels.get(message.parent) || 'a missing source message') : 'Parent relationship not supplied'}${message.children?.length > 1 ? ' · ' + message.children.length + ' source branches' : ''}</p><pre>${escape(message.text || 'No text supplied for this node.')}</pre></article>`).join('')}</details>`;
 }
-async function showEvidence(id, revision) {
-  const item=await api(revision?'revisions/'+revision:'items/'+id); $('evidence-title').textContent=item.title;
-  $('evidence').innerHTML=`<p>${escape(item.kind)} · ${escape(item.source_name)}</p><p class="muted">Captured: ${escape(date(item.captured_at))}<br>Source timestamp: ${escape(item.source_time||'Not supplied — capture time is not source freshness.')}<br>Revision SHA-256: ${escape(item.hash)}</p><pre>${escape(item.text)}</pre><details><summary>Original evidence</summary><pre>${escape(item.raw)}</pre></details><details><summary>Coverage and provenance</summary><pre>${escape(item.metadata)}</pre></details><details><summary>${item.revisions.length} immutable revisions</summary>${item.revisions.map(r=>`<p class="muted">${escape(date(r.captured_at))} · ${escape(r.hash)}</p>`).join('')}</details><label><input id="permission" type="checkbox"> I have permission to include this revision in a dataset.</label><label><input id="approved" type="checkbox"> I reviewed and approve this revision for a clean corpus.</label><button id="review" class="primary">Save review</button><button id="revoke">Revoke dataset permission</button>`;
-  $('review').onclick=()=>action(async()=>{await api('review',{revision_id:item.current_revision,allowed:$('permission').checked,approved:$('approved').checked});$('evidence-dialog').close();notice('Review saved for this revision.');});
-  $('permission').checked=!!item.review.allowed;
-  $('approved').checked=!!item.review.approved;
-  const metadata=JSON.parse(item.metadata);
-  $('evidence').insertAdjacentHTML('afterbegin',`<div class="actions"><button class="primary" data-draft-revision="${item.current_revision}">Create training example</button><button data-model-revision="${item.current_revision}">Draft with my model</button></div>${item.findings?.length?'<p class="screening">Screening: '+escape(item.findings.map(f=>f.code+' ('+f.severity+')').join(', '))+'</p>':''}`);
-  $('evidence').insertAdjacentHTML('afterbegin', (item.is_current===false?'<p class="state">Viewing an earlier revision. Review and revocation apply to this version.</p>':'')+conversationView(metadata));
-  if(metadata.normalized?.messages){const targets=metadata.normalized.messages.filter(m=>m.role==='assistant'&&m.id);if(targets.length)$('evidence').insertAdjacentHTML('beforeend','<details><summary>Create an SFT draft from one supplied branch</summary>'+targets.map(m=>`<button class="secondary" data-branch-target="${escape(m.id)}" data-branch-revision="${item.current_revision}">${escape(m.text.slice(0,80)||m.id)}</button>`).join('')+'</details>');}
-  const history=document.createElement('div');history.innerHTML='<p class="muted">Inspect or revoke an earlier version:</p>'+item.revisions.map(r=>`<button class="secondary" data-revision="${r.id}" data-record="${id}">${escape(date(r.captured_at))} · ${escape(r.hash.slice(0,8))}</button>`).join(' ');$('evidence').append(history);
-  $('revoke').onclick=()=>action(async()=>{await api('review',{revision_id:item.current_revision,allowed:false,approved:false});$('evidence-dialog').close();notice('Permission revoked. Managed exports containing this revision are blocked.');});
-  if(!$('evidence-dialog').open)$('evidence-dialog').showModal();
+
+function signalRow(signal) {
+  return `<div class="signal"><div class="signal-head"><b>${escape(signal.label)}</b>${Object.entries(signal.effects).map(([use, value]) => rightsChip(value, use)).join('')}</div>
+    <code>${escape(signal.raw)}</code><small>${escape(signal.source)} · ${escape(signal.status)}${signal.note ? ' · ' + escape(signal.note) : ''}</small></div>`;
 }
-document.addEventListener('click',event=>{
-  const b=event.target.closest('button'); if(!b)return;
-  if(b.dataset.view){view=b.dataset.view;action(refresh);}
-  if(b.dataset.close)$(b.dataset.close).close();
-  if(b.hasAttribute('data-new-profile'))$('profile-dialog').showModal();
-  if(b.dataset.watchToggle)action(async()=>{await api('watch-toggle',{watch_id:b.dataset.watchToggle,enabled:b.dataset.enabled==='true'});await refresh();},b);
-  if(b.dataset.watchScan)action(async()=>{const r=await api('watch-scan',{watch_id:b.dataset.watchScan});notice(r.detail||r.state);await refresh();},b);
-  if(b.dataset.watchDetail)action(async()=>{const files=await api('watches/'+b.dataset.watchDetail);$('evidence-title').textContent='Folder processing outcomes';$('evidence').innerHTML=files.map(f=>`<h3>${escape(f.path)}</h3><p>${escape(f.state)}</p><pre>${escape(f.detail)}</pre>`).join('')||'<p>No files have been observed yet.</p>';$('evidence-dialog').showModal();},b);
-  if(b.dataset.item)action(()=>showEvidence(b.dataset.item));
-  if(b.dataset.revision)action(()=>showEvidence(b.dataset.record,b.dataset.revision));
-  if(b.dataset.collect)action(async()=>{notice('Collecting the requested page…');const result=await api('collect',{source_id:b.dataset.collect});notice(result.detail,result.state!=='available');await refresh();},b);
-  if(b.dataset.schedule)action(async()=>{await api('schedule',{source_id:b.dataset.schedule,interval_seconds:Number(b.dataset.interval)});await refresh();},b);
-  if(b.dataset.export)action(async()=>{const response=await fetch('/api/export/'+b.dataset.export,{headers:{Authorization:'Bearer '+token}});if(!response.ok)throw new Error((await response.json()).error);const url=URL.createObjectURL(await response.blob());const a=document.createElement('a');a.href=url;a.download='proofpage-'+b.dataset.export+'.jsonl';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},b);
+
+function rightsPanel(rights, review) {
+  if (rights.state !== 'observed') {
+    return `<p class="callout">${icon('info')}<span>${escape(rights.summary)}</span></p>`;
+  }
+  const current = rights.current, capture = rights.at_capture;
+  return `<div class="rights-grid">${Object.keys(RIGHTS_USES).map(use => `<div class="rights-use"><span class="muted">${RIGHTS_USES[use]}</span>${rightsChip(rights[use], use, false)}</div>`).join('')}</div>
+    <p>${escape(rights.summary)}</p>
+    ${rights.drifted ? `<p class="screening">${icon('alert')}<span>Signals changed after this revision was captured. At capture, AI training was ${escape((RIGHTS[capture.verdict.train] || RIGHTS.unknown)[0].toLowerCase())}; now it is ${escape((RIGHTS[current.verdict.train] || RIGHTS.unknown)[0].toLowerCase())}. Proofpage uses the stricter of the two.</span></p>` : ''}
+    ${review.rights_basis ? `<p class="screening clear">${icon('shield')}<span>Recorded rights basis: ${escape(RIGHTS_BASES[review.rights_basis] || review.rights_basis)}${review.rights_note ? ' — ' + escape(review.rights_note) : ''}</span></p>` : ''}
+    <div class="section-label">Publisher signals · ${current.signals.length}</div>
+    ${current.signals.length ? current.signals.map(signalRow).join('') : '<p class="muted">No machine-readable AI-usage signals were published for this page.</p>'}
+    <div class="section-label">What Proofpage checked</div>
+    <dl class="meta-grid">${Object.entries(current.checked).map(([where, outcome]) => `<dt>${escape(where)}</dt><dd>${escape(outcome)}</dd>`).join('')}</dl>
+    <p class="muted">Observed ${escape(relativeTime(current.observed_at))} for ${escape(rights.url)}. Signals are advisory; several are drafts or vendor conventions. This is not legal advice.</p>`;
+}
+
+function basisFields(rights, review) {
+  if (rights?.train !== 'reserved') return '';
+  return `<div class="basis"><label>Rights basis — required because the publisher reserved AI training<select id="rights-basis"><option value="">Choose a basis…</option>${Object.entries(RIGHTS_BASES).map(([key, label]) => `<option value="${key}"${review.rights_basis === key ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
+    <label>Basis note<input id="rights-note" maxlength="1000" placeholder="License reference, agreement date, or other evidence" value="${escape(review.rights_note || '')}"></label></div>`;
+}
+
+function basisPayload() {
+  return $('rights-basis') ? {rights_basis: $('rights-basis').value, rights_note: $('rights-note').value} : {};
+}
+
+function evidenceTabs(tabs) {
+  $('evidence-tabs').innerHTML = tabs.map(([id, label], index) => `<button type="button" role="tab" id="tab-${id}" aria-controls="panel-${id}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${label}</button>`).join('');
+}
+
+async function showEvidence(id, revision, options = {}) {
+  const item = await api(revision ? 'revisions/' + revision : 'items/' + id);
+  evidenceContext = {id, revision, options};
+  const metadata = JSON.parse(item.metadata || '{}');
+  const findings = item.findings || [];
+  const branchTargets = (metadata.normalized?.messages || []).filter(message => message.role === 'assistant' && message.id);
+  $('evidence-title').textContent = item.title || 'Untitled record';
+  $('evidence-kicker').innerHTML = `<span class="tag">${icon(kindIcon(item.kind))}${escape(kindLabel(item.kind))}</span>${item.rights?.state === 'observed' || item.rights?.state === 'not_recorded' ? rightsChip(item.rights.train, 'train', true, item.rights.summary) : ''}${item.is_current === false ? '<span class="pill tone-warn">Earlier revision</span>' : ''}`;
+  $('evidence-meta').innerHTML = `<span>${icon('globe', 'icon-sm')}${escape(item.source_name)}</span><span title="${escape(date(item.captured_at))}">${icon('clock', 'icon-sm')}Captured ${escape(relativeTime(item.captured_at))}</span>${seal(item.hash, 'Revision SHA-256')}${item.proof && item.proof.state !== 'none' ? proofPill(item.proof.state) : ''}${/^https?:\/\//i.test(metadata.url || '') ? `<a href="${escape(metadata.url)}" target="_blank" rel="noopener noreferrer">${icon('external', 'icon-sm')}Live page</a>` : ''}`;
+  evidenceTabs([['reader', 'Reader'], ['rights', 'Rights'], ['original', 'Original evidence'], ['provenance', 'Provenance'], ['proof', 'Proof'], ['versions', `Versions <span class="count">${item.revisions.length}</span>`]]);
+  const provenance = [
+    ['Source', escape(item.source_name)],
+    ['Kind', escape(kindLabel(item.kind))],
+    ['Captured', escape(date(item.captured_at))],
+    ['Source timestamp', escape(item.source_time || 'Not supplied — capture time is not source freshness.')],
+    ['Revision SHA-256', `<code>${escape(item.hash)}</code> ${seal(item.hash, 'Revision SHA-256')}`],
+    ['Revision ID', `<code>${escape(item.current_revision)}</code>`],
+    ...(metadata.url ? [['URL', escape(metadata.url)]] : []),
+    ...(metadata.status ? [['HTTP status', escape(metadata.status)]] : []),
+    ...(metadata.coverage ? [['Coverage', escape(metadata.coverage)]] : []),
+    ...(metadata.rendered ? [['Rendering', `Offline render · ${escape(metadata.requests)} requests, ${escape(metadata.blocked_requests)} blocked`]] : []),
+  ];
+  $('evidence').innerHTML = `
+    <section role="tabpanel" id="panel-reader" aria-labelledby="tab-reader">
+      ${item.is_current === false ? `<p class="callout">${icon('info')}<span>You are viewing an earlier revision. Review and revocation apply to this version.</span></p>` : ''}
+      ${findings.length ? `<p class="screening">${icon('alert')}<span>Screening: ${escape(findings.map(f => f.code + ' (' + f.severity + ')').join(', '))}. Original evidence is never changed; redact in a training draft.</span></p>` : ''}
+      ${conversationView(metadata)}
+      <div class="reader">${escape(item.text) || '<span class="muted">No readable text was captured.</span>'}</div>
+      ${branchTargets.length ? `<details><summary>Create an SFT draft from one supplied branch</summary><div class="actions">${branchTargets.map(message => `<button type="button" class="secondary small" data-branch-target="${escape(message.id)}" data-branch-revision="${escape(item.current_revision)}">${icon('branch')}${escape(message.text.slice(0, 80) || message.id)}</button>`).join('')}</div></details>` : ''}
+    </section>
+    <section role="tabpanel" id="panel-rights" aria-labelledby="tab-rights" hidden>${rightsPanel(item.rights, item.review)}</section>
+    <section role="tabpanel" id="panel-original" aria-labelledby="tab-original" hidden>
+      <p class="muted">The response exactly as captured. Proofpage never edits original evidence.</p>
+      <pre>${escape(item.raw)}</pre>
+    </section>
+    <section role="tabpanel" id="panel-provenance" aria-labelledby="tab-provenance" hidden>
+      <dl class="meta-grid">${provenance.map(([term, value]) => `<dt>${term}</dt><dd>${value}</dd>`).join('')}</dl>
+      <details><summary>Full capture metadata</summary><pre>${escape(JSON.stringify(metadata, null, 2))}</pre></details>
+    </section>
+    <section role="tabpanel" id="panel-proof" aria-labelledby="tab-proof" hidden>${proofPanel(item.proof, item)}</section>
+    <section role="tabpanel" id="panel-versions" aria-labelledby="tab-versions" hidden><div class="skeleton"></div></section>`;
+  $('evidence-foot').innerHTML = `${basisFields(item.rights, item.review)}
+    <label><input id="permission" type="checkbox"${item.review.allowed ? ' checked' : ''}> I have permission to include this revision in a dataset.</label>
+    <label><input id="approved" type="checkbox"${item.review.approved ? ' checked' : ''}> I reviewed and approve it for a clean corpus.</label>
+    <div class="actions">
+      <button type="button" class="small" data-model-revision="${escape(item.current_revision)}">${icon('sparkle')}Draft with my model</button>
+      <button type="button" class="secondary small" data-draft-revision="${escape(item.current_revision)}">${icon('training')}Create training example</button>
+      <button type="button" class="small danger-text" id="revoke">Revoke permission</button>
+      <button type="button" class="primary small" id="review">${icon('check')}Save review</button>
+    </div>`;
+  $('review').onclick = () => action(async () => {
+    await api('review', {revision_id: item.current_revision, allowed: $('permission').checked, approved: $('approved').checked, ...basisPayload()});
+    $('evidence-dialog').close();
+    notice('Review saved for this revision.');
+    await refresh();
+  }, $('review'));
+  $('revoke').onclick = () => action(async () => {
+    await api('review', {revision_id: item.current_revision, allowed: false, approved: false});
+    $('evidence-dialog').close();
+    notice('Permission revoked. Managed exports containing this revision are blocked.');
+    await refresh();
+  }, $('revoke'));
+  $('evidence').scrollTop = 0;
+  if (!$('evidence-dialog').open) $('evidence-dialog').showModal();
+  if (options.tab) selectTab($('tab-' + options.tab));
+}
+
+function selectTab(tab) {
+  tab.closest('[role=tablist]').querySelectorAll('[role=tab]').forEach(other => {
+    const selected = other === tab;
+    other.setAttribute('aria-selected', String(selected));
+    other.tabIndex = selected ? 0 : -1;
+    const panel = $(other.getAttribute('aria-controls'));
+    if (panel) panel.hidden = !selected;
+  });
+  tab.focus();
+  if (tab.id === 'tab-versions' && !tab.dataset.loaded) {
+    tab.dataset.loaded = '1';
+    action(() => loadVersions(evidenceContext.options || {}));
+  }
+}
+
+document.addEventListener('keydown', event => {
+  const tab = event.target.closest('[role=tab]');
+  if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  const tabs = [...tab.closest('[role=tablist]').querySelectorAll('[role=tab]')];
+  const index = tabs.indexOf(tab);
+  const next = {ArrowLeft: index - 1, ArrowRight: index + 1, Home: 0, End: tabs.length - 1}[event.key];
+  event.preventDefault();
+  selectTab(tabs[(next + tabs.length) % tabs.length]);
 });
-$('source-open').onclick=()=>$('source-dialog').showModal();
-$('import-open').onclick=()=>{profileOptions();$('import-dialog').showModal();};
-function profileOptions(selected) { for(const id of ['import-profile','watch-profile']) {const select=$(id);const previous=selected||select.value;select.innerHTML='<option value="">Choose an account profile</option>'+state.profiles.map(p=>`<option value="${p.id}">${escape(p.name)} · ${escape(p.account)}</option>`).join('');select.value=previous;} }
-$('adapter').onchange=()=>{$('mapping-fields').hidden=$('adapter').value!=='mapping';};
-$('profile-form').onsubmit=event=>{event.preventDefault();const form=new FormData(event.target);const mapping={};for(const key of ['text','id','title','role','timestamp'])if(form.get('map_'+key))mapping[key]=form.get('map_'+key);action(async()=>{const profile=await api('profiles',{name:form.get('name'),provider:form.get('provider'),account:form.get('account'),adapter:form.get('adapter'),mapping});$('profile-dialog').close();event.target.reset();$('mapping-fields').hidden=true;await refresh();profileOptions(profile.id);notice('Account-specific import profile created.');},event.submitter);};
-$('watch-form').onsubmit=event=>{event.preventDefault();const form=new FormData(event.target);action(async()=>{await api('watches',{profile_id:form.get('profile_id'),directory:form.get('directory'),categories:form.get('categories').split(',').map(s=>s.trim()).filter(Boolean)});$('watch-dialog').close();event.target.reset();view='sources';await refresh();notice('Folder watch created. Existing and future matching files will be imported after they settle.');},event.submitter);};
-$('source-form').onsubmit=event=>{event.preventDefault();const form=new FormData(event.target);action(async()=>{await api('sources',{name:form.get('name'),url:form.get('url')});$('source-dialog').close();event.target.reset();view='sources';await refresh();notice('Source added. Choose Collect to capture it.');},event.submitter);};
-$('file').onchange=()=>action(async()=>{pendingFile=null;$('import-confirm').disabled=true;const file=$('file').files[0];if(!file)return;if(file.size>8*1024*1024)throw new Error('Choose a file smaller than 8 MiB.');const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));pendingFile={filename:file.name,data:btoa(binary)};const entries=await api('preview',pendingFile);$('preview').innerHTML=entries.map(e=>`<label><input type="checkbox" name="entry" value="${escape(e.name)}"> ${escape(e.name)} · ${Math.ceil(e.bytes/1024)} KB · ${e.records} records${e.error ? ' · '+escape(e.error) : ''}</label>`).join('')||'<p>No supported files found.</p>';$('import-confirm').disabled=!entries.length;});
-$('import-confirm').onclick=()=>action(async()=>{const selected=[...document.querySelectorAll('[name=entry]:checked')].map(e=>e.value);const result=await api('import',{...pendingFile,selected,profile_id:$('import-profile').value});$('import-dialog').close();view='library';query='';await refresh();notice(`Imported ${result.added} new revisions from ${result.processed} records.`+(result.errors.length?' Some entries could not be imported: '+JSON.stringify(result.errors):''),!!result.errors.length);},$('import-confirm'));
-action(async()=>{const response=await fetch('/api/session');if(response.status===401){location.href='/login';return;}const session=await response.json();token=session.token;hostingMode=session.mode||'local';await refresh();});
+
+// ---------- Documentation drafts ----------
+let documentationDrafts;
+async function openDocs(datasetId, name) {
+  const docs = await api('compliance/' + datasetId);
+  documentationDrafts = {docs, slug: String(name || 'dataset').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'dataset'};
+  openModal('Documentation drafts', `
+    <p class="callout">${icon('info')}<span>Built only from what Proofpage recorded for “${escape(name)}”. These are drafts, not legal advice; review and complete them before publishing.</span></p>
+    <div class="tabs" role="tablist" aria-label="Documents">
+      <button type="button" role="tab" id="tab-doc-summary" aria-controls="panel-doc-summary" aria-selected="true">EU AI Act summary</button>
+      <button type="button" role="tab" id="tab-doc-card" aria-controls="panel-doc-card" aria-selected="false" tabindex="-1">Dataset card</button>
+      <button type="button" role="tab" id="tab-doc-croissant" aria-controls="panel-doc-croissant" aria-selected="false" tabindex="-1">Croissant</button>
+    </div>
+    <section role="tabpanel" id="panel-doc-summary" aria-labelledby="tab-doc-summary"><pre>${escape(docs.summary_markdown)}</pre></section>
+    <section role="tabpanel" id="panel-doc-card" aria-labelledby="tab-doc-card" hidden><pre>${escape(docs.dataset_card)}</pre></section>
+    <section role="tabpanel" id="panel-doc-croissant" aria-labelledby="tab-doc-croissant" hidden><pre>${escape(JSON.stringify(docs.croissant, null, 2))}</pre></section>
+    <div class="actions">
+      <button type="button" class="primary small" data-save-doc="summary">${icon('download')}Summary (.md)</button>
+      <button type="button" class="secondary small" data-save-doc="json">Summary (.json)</button>
+      <button type="button" class="secondary small" data-save-doc="card">Dataset card (.md)</button>
+      <button type="button" class="secondary small" data-save-doc="croissant">croissant.json</button>
+    </div>`);
+}
+
+// ---------- Actions ----------
+async function tryExample(button) {
+  await action(async () => {
+    const source = await api('sources', {name: 'Example Domain', url: 'https://example.com/'});
+    notice('Collecting example.com… robots rules are checked first.');
+    const result = await api('collect', {source_id: source.id});
+    notice(result.detail + rightsNote(result.rights), result.state !== 'available');
+    await refresh();
+  }, button);
+}
+
+document.addEventListener('click', event => {
+  const b = event.target.closest('button');
+  if (!b) return;
+  if (b.dataset.view) { navigate(b.dataset.view); action(refresh); }
+  if (b.dataset.go) { navigate(b.dataset.go); action(refresh); }
+  if (b.dataset.close) $(b.dataset.close).close();
+  if (b.dataset.open) $(b.dataset.open).showModal();
+  if (b.hasAttribute('data-open-import')) $('import-open').click();
+  if (b.hasAttribute('data-new-profile')) $('profile-dialog').showModal();
+  if (b.id === 'try-example') tryExample(b);
+  if (b.id === 'clear-search') { query = ''; Object.keys(filters).forEach(key => { filters[key] = ''; }); action(refresh); }
+  if (b.dataset.filter) { filters[b.dataset.filter] = b.dataset.value; renderLibrary(); }
+  if (b.dataset.layout) { layout = b.dataset.layout; try { localStorage.setItem('proofpage-layout', layout); } catch {} renderLibrary(); }
+  if (b.getAttribute('role') === 'tab' && b.closest('[role=tablist]')) selectTab(b);
+  if (b.dataset.docs) action(() => openDocs(b.dataset.docs, b.dataset.docsName), b);
+  if (b.dataset.saveDoc && documentationDrafts) {
+    const {docs, slug} = documentationDrafts;
+    const files = {summary: [`${slug}-training-content-summary.md`, docs.summary_markdown], json: [`${slug}-training-content-summary.json`, JSON.stringify(docs.summary, null, 2), 'application/json'],
+      card: [`${slug}-dataset-card.md`, docs.dataset_card], croissant: [`${slug}-croissant.json`, JSON.stringify(docs.croissant, null, 2), 'application/ld+json']};
+    saveText(...files[b.dataset.saveDoc]);
+  }
+  if (b.dataset.watchToggle) action(async () => { await api('watch-toggle', {watch_id: b.dataset.watchToggle, enabled: b.dataset.enabled === 'true'}); await refresh(); }, b);
+  if (b.dataset.watchScan) action(async () => { const result = await api('watch-scan', {watch_id: b.dataset.watchScan}); notice(result.detail || result.state); await refresh(); }, b);
+  if (b.dataset.watchDetail) action(async () => {
+    const files = await api('watches/' + b.dataset.watchDetail);
+    openModal('Folder processing outcomes', files.length ? `<div class="rows">${files.map(file => `<div class="row"><div><h3 class="mono">${escape(file.path)}</h3><p>${escape(file.detail)}</p></div>${statusPill(file.state)}</div>`).join('')}</div>` : '<p>No files have been observed yet.</p>');
+  }, b);
+  if (b.dataset.item) openItem(b.dataset.item);
+  if (b.dataset.revision) action(() => showEvidence(b.dataset.record, b.dataset.revision));
+  if (b.dataset.collect) action(async () => {
+    notice('Collecting the requested page… robots rules are checked first.');
+    const result = await api('collect', {source_id: b.dataset.collect});
+    notice(result.detail + rightsNote(result.rights), result.state !== 'available');
+    await refresh();
+  }, b);
+  if (b.dataset.schedule) action(async () => { await api('schedule', {source_id: b.dataset.schedule, interval_seconds: Number(b.dataset.interval)}); await refresh(); notice(Number(b.dataset.interval) ? 'Watching hourly while Proofpage runs. Changes will appear in Timeline.' : 'Stopped watching this source.'); }, b);
+  if (b.dataset.export) action(() => download('export/' + b.dataset.export, 'proofpage-' + b.dataset.export + '.jsonl'), b);
+});
+
+$('evidence-dialog').addEventListener('close', () => {
+  if (view === 'timeline') action(refresh);
+  if (!location.hash.startsWith('#/item/')) return;
+  if (openedItemFromApp) { openedItemFromApp = false; history.back(); }
+  else history.replaceState(null, '', '#/' + view);
+});
+
+$('source-open').onclick = () => $('source-dialog').showModal();
+$('import-open').onclick = () => { profileOptions(); $('import-dialog').showModal(); };
+
+function profileOptions(selected) {
+  for (const id of ['import-profile', 'watch-profile']) {
+    const select = $(id);
+    const previous = selected || select.value;
+    select.innerHTML = '<option value="">Choose an account profile</option>' + state.profiles.map(profile => `<option value="${escape(profile.id)}">${escape(profile.name)} · ${escape(profile.account)}</option>`).join('');
+    select.value = previous;
+  }
+}
+
+$('adapter').onchange = () => { $('mapping-fields').hidden = $('adapter').value !== 'mapping'; };
+
+$('profile-form').onsubmit = event => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const mapping = {};
+  for (const key of ['text', 'id', 'title', 'role', 'timestamp']) if (form.get('map_' + key)) mapping[key] = form.get('map_' + key);
+  action(async () => {
+    const profile = await api('profiles', {name: form.get('name'), provider: form.get('provider'), account: form.get('account'), adapter: form.get('adapter'), mapping});
+    $('profile-dialog').close();
+    event.target.reset();
+    $('mapping-fields').hidden = true;
+    await refresh();
+    profileOptions(profile.id);
+    notice('Account-specific import profile created.');
+  }, event.submitter);
+};
+
+$('watch-form').onsubmit = event => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  action(async () => {
+    await api('watches', {profile_id: form.get('profile_id'), directory: form.get('directory'), categories: form.get('categories').split(',').map(s => s.trim()).filter(Boolean)});
+    $('watch-dialog').close();
+    event.target.reset();
+    navigate('sources');
+    await refresh();
+    notice('Folder watch created. Existing and future matching files will be imported after they settle.');
+  }, event.submitter);
+};
+
+$('source-form').onsubmit = event => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  action(async () => {
+    await api('sources', {name: form.get('name'), url: form.get('url')});
+    $('source-dialog').close();
+    event.target.reset();
+    navigate('sources');
+    await refresh();
+    notice('Source added. Choose Collect to capture it.');
+  }, event.submitter);
+};
+
+$('file').onchange = () => action(async () => {
+  pendingFile = null;
+  $('import-confirm').disabled = true;
+  const file = $('file').files[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) throw new Error('Choose a file smaller than 8 MiB.');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  pendingFile = {filename: file.name, data: btoa(binary)};
+  const entries = await api('preview', pendingFile);
+  $('preview').innerHTML = entries.map(entry => `<label><input type="checkbox" name="entry" value="${escape(entry.name)}"> <span><b>${escape(entry.name)}</b><br><span class="muted">${Math.ceil(entry.bytes / 1024)} KB · ${pluralize(entry.records, 'record')}${entry.error ? ' · ' + escape(entry.error) : ''}</span></span></label>`).join('') || '<p>No supported files found.</p>';
+  $('import-confirm').disabled = !entries.length;
+});
+
+$('import-confirm').onclick = () => action(async () => {
+  const selected = [...document.querySelectorAll('[name=entry]:checked')].map(entry => entry.value);
+  const result = await api('import', {...pendingFile, selected, profile_id: $('import-profile').value});
+  $('import-dialog').close();
+  navigate('library');
+  query = '';
+  await refresh();
+  notice(`Imported ${pluralize(result.added, 'new revision')} from ${pluralize(result.processed, 'record')}.` + (result.errors.length ? ' Some entries could not be imported: ' + JSON.stringify(result.errors) : ''), !!result.errors.length);
+}, $('import-confirm'));
+
+action(async () => {
+  const response = await fetch('/api/session');
+  if (response.status === 401) { location.href = '/login'; return; }
+  const session = await response.json();
+  token = session.token;
+  hostingMode = session.mode || 'local';
+  await applyRoute(true);
+  startNotifications();
+});

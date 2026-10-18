@@ -21,7 +21,11 @@ def backup(store, destination):
     except Exception:
         destination.unlink(missing_ok=True)
         raise
-    return {'path': str(destination), 'integrity': 'ok'}
+    result = {'path': str(destination), 'integrity': 'ok'}
+    with store.db() as db:
+        if 'signing_keys' in {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")} and db.execute('SELECT 1 FROM signing_keys').fetchone():
+            result['note'] = 'This backup contains your receipt-signing key. Keep it private; anyone with it can sign receipts as this workspace.'
+    return result
 
 
 def restore(backup_path, directory):
@@ -46,6 +50,10 @@ def restore(backup_path, directory):
                 target.execute("UPDATE watches SET enabled=0,state='paused',detail='Restored; explicitly resume this folder watch.'")
             if 'crawl_jobs' in tables:
                 target.execute("UPDATE crawl_jobs SET state='cancelled',lease_until=0,detail='Restored; create a new crawl to resume collection.' WHERE state IN ('queued','running')")
+            if 'claim_checks' in tables:
+                target.execute("UPDATE claim_checks SET state='cancelled',lease_until=0,detail='Restored; create a new check to authorize collection.' WHERE state='queued'")
+            if 'settings' in tables:
+                target.execute("DELETE FROM settings WHERE key IN ('anchor_tsa_url','anchor_ots')")
             if 'watch_leases' in tables:
                 target.execute('DELETE FROM watch_leases')
             target.execute("UPDATE runs SET state='interrupted' WHERE state='running'")

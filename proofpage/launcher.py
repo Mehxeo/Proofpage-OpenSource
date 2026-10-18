@@ -61,7 +61,8 @@ def main():
     root.title('Proofpage')
     root.geometry('540x360')
     root.minsize(480, 340)
-    root.configure(bg='#f2f5ed')
+    paper, ink, muted, accent = '#f5f2ea', '#1c201e', '#5f665f', '#1e5b43'  # Archival ink palette (static/style.css).
+    root.configure(bg=paper)
     try:
         lock = WorkspaceLock(folder / 'data')
     except RuntimeError as exc:
@@ -74,12 +75,12 @@ def main():
     stopping = False
     status = tk.StringVar(value='Starting your private workspace…')
     url = tk.StringVar(value='Everything stays on this computer.')
-    frame = tk.Frame(root, bg='#f2f5ed', padx=30, pady=26)
+    frame = tk.Frame(root, bg=paper, padx=30, pady=26)
     frame.pack(fill='both', expand=True)
-    tk.Label(frame, text='Proofpage', font=('Helvetica', 30, 'bold'), fg='#245e44', bg='#f2f5ed').pack(anchor='w')
-    tk.Label(frame, text='Your sources. Your evidence.', font=('Helvetica', 14), fg='#59665c', bg='#f2f5ed').pack(anchor='w', pady=(6, 22))
-    tk.Label(frame, textvariable=status, font=('Helvetica', 13), fg='#202a25', bg='#f2f5ed', wraplength=460, justify='left').pack(anchor='w')
-    tk.Label(frame, textvariable=url, font=('Helvetica', 11), fg='#59665c', bg='#f2f5ed').pack(anchor='w', pady=(6, 18))
+    tk.Label(frame, text='Proofpage', font=('Georgia', 30, 'bold'), fg=accent, bg=paper).pack(anchor='w')
+    tk.Label(frame, text='Your sources. Your evidence.', font=('Helvetica', 14), fg=muted, bg=paper).pack(anchor='w', pady=(6, 22))
+    tk.Label(frame, textvariable=status, font=('Helvetica', 13), fg=ink, bg=paper, wraplength=460, justify='left').pack(anchor='w')
+    tk.Label(frame, textvariable=url, font=('Helvetica', 11), fg=muted, bg=paper).pack(anchor='w', pady=(6, 18))
 
     def open_workspace():
         if server:
@@ -93,12 +94,12 @@ def main():
         else:
             subprocess.Popen(['xdg-open', str(folder)])
 
-    buttons = tk.Frame(frame, bg='#f2f5ed')
+    buttons = tk.Frame(frame, bg=paper)
     buttons.pack(anchor='w', pady=8)
     launch = tk.Button(buttons, text='Open workspace', command=open_workspace, state='disabled', padx=14, pady=8)
     launch.pack(side='left', padx=(0, 10))
     tk.Button(buttons, text='Show data folder', command=open_folder, padx=10, pady=8).pack(side='left')
-    tk.Label(frame, text='Keep this window open while you work.\nClosing it stops collection; your saved evidence stays safe.', font=('Helvetica', 11), fg='#59665c', bg='#f2f5ed', justify='left').pack(anchor='w', pady=(18, 0))
+    tk.Label(frame, text='Keep this window open while you work.\nClosing it stops collection; your saved evidence stays safe.', font=('Helvetica', 11), fg=muted, bg=paper, justify='left').pack(anchor='w', pady=(18, 0))
 
     def worker():
         try:
@@ -148,7 +149,14 @@ def main():
                             assert b'Proofpage' in response.read()
                         with urlopen(Request(address + '/api/mcp-setup', headers={'Authorization': 'Bearer ' + token}), timeout=5) as response:
                             connection = json.load(response)
-                        report.write_text(json.dumps({'ready': True, 'gui': True, 'records': len(state['items']), 'mcp': connection['config']['mcpServers']['proofpage']}))
+                        # Exercise new routes in the frozen runtime, without network collection.
+                        payload = json.dumps({'citations': [{'quote': 'Packaged fixture quote', 'url': None}], 'collect_missing': False}).encode()
+                        with urlopen(Request(address + '/api/claim-check', data=payload, headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'}), timeout=5) as response:
+                            checked = json.load(response)
+                        assert checked['state'] == 'complete' and checked['items'][0]['result']['status'] == 'no_source'
+                        from . import verify
+                        assert Path(verify.__file__).with_suffix('.py').is_file(), 'Offline verifier source missing from bundle'
+                        report.write_text(json.dumps({'ready': True, 'gui': True, 'records': len(state['items']), 'quote_check': True, 'offline_verifier': True, 'mcp': connection['config']['mcpServers']['proofpage']}))
                         stop()
                     else:
                         open_workspace()

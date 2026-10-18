@@ -55,6 +55,19 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(self.request('/api/session', headers={'Host': 'untrusted.example'})[0], 403)
         self.assertEqual(self.request('/api/session', headers={'Sec-Fetch-Site': 'cross-site'})[0], 403)
 
+    def test_static_assets_typed_and_contained(self):
+        for path, kind in (('/', 'text/html'), ('/ui.js', 'text/javascript'), ('/style.css', 'text/css'), ('/icons.svg', 'image/svg+xml'), ('/favicon.svg', 'image/svg+xml'),
+                           ('/fonts/newsreader-latin-opsz-normal.woff2', 'font/woff2'), ('/fonts/jetbrains-mono-latin-wght-normal.woff2', 'font/woff2')):
+            with urllib.request.urlopen(self.base + path, timeout=5) as response:
+                self.assertEqual(response.headers.get_content_type(), kind, path)
+                self.assertIn("default-src 'self'", response.headers['Content-Security-Policy'])
+                self.assertIn("style-src 'self';", response.headers['Content-Security-Policy'])
+                if kind == 'font/woff2':
+                    self.assertEqual(response.headers['Content-Type'], 'font/woff2')
+                    self.assertEqual(response.read(4), b'wOF2')
+        for path in ('/../core.py', '/%2e%2e/core.py', '/static/../core.py', '/index.html', '/.hidden.js', '/missing.js', '/assets.py', '/fonts/OFL-Newsreader.txt', '/fonts/README.md'):
+            self.assertEqual(self.request(path)[0], 404, path)
+
     def test_full_import_review_freeze_export_revoke_flow(self):
         status, profile = self.request('/api/profiles', {'name': 'HTTP test', 'provider': 'fixture', 'account': 'test', 'adapter': 'generic'})
         self.assertEqual(status, 200)

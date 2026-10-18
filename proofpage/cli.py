@@ -10,7 +10,7 @@ from .core import Store, import_file, preview
 
 def main():
     parser = argparse.ArgumentParser(description='Proofpage local evidence workspace')
-    parser.add_argument('--version', action='version', version='Proofpage 0.1.3')
+    parser.add_argument('--version', action='version', version='Proofpage 0.2.0')
     parser.add_argument('--home', help='Local data directory (default: PROOFPAGE_HOME or ~/.proofpage)')
     sub = parser.add_subparsers(dest='command')
     sub.add_parser('doctor', help='Check Python, SQLite search, and the workspace path')
@@ -21,6 +21,29 @@ def main():
     collect.add_argument('url')
     search = sub.add_parser('search', help='Search saved evidence; returns JSON')
     search.add_argument('query')
+    rights = sub.add_parser('rights', help='Show the AI-usage signals recorded for a source; returns JSON')
+    rights.add_argument('source', help='Source ID or its exact URL')
+    claim = sub.add_parser('check-answer', help='Preview or check quoted citations in a UTF-8 document')
+    claim.add_argument('path')
+    claim.add_argument('--preview', action='store_true', help='Show citation pairing without saving or fetching')
+    claim.add_argument('--collect', action='store_true', help='Authorize collection of missing/stale public pages')
+    claim.add_argument('--max-age', type=int, default=86400)
+    job = sub.add_parser('quote-check', help='Read, advance, cancel, or export a saved quote check')
+    job.add_argument('job_id')
+    operation = job.add_mutually_exclusive_group()
+    operation.add_argument('--step', action='store_true')
+    operation.add_argument('--cancel', action='store_true')
+    operation.add_argument('--format', choices=['json', 'markdown', 'html'])
+    checker = sub.add_parser('verify', help='Verify a proof bundle (.zip) or web archive (.wacz) offline')
+    checker.add_argument('path')
+    archive = sub.add_parser('export-wacz', help='Export a source as a WACZ web archive with signed receipts')
+    archive.add_argument('source', help='Source ID or its exact URL')
+    archive.add_argument('--output', required=True, help='New file to create, for example ~/Proofpage/exports/site.wacz')
+    proof = sub.add_parser('proof-bundle', help='Write a proof bundle for one revision')
+    proof.add_argument('revision')
+    proof.add_argument('--output', required=True, help='New ZIP file to create')
+    sub.add_parser('receipts', help='Show the signing key and re-check the receipt chain; returns JSON')
+    sub.add_parser('anchor', help='Timestamp receipts issued since the last anchor (requires anchoring settings)')
     imp = sub.add_parser('import', help='Preview an archive or import selected entries')
     imp.add_argument('path')
     imp.add_argument('--select', action='append', help='Exact entry name from preview; repeat for multiple entries')
@@ -84,6 +107,12 @@ def main():
         from .remote import run
         run()
         return
+    if args.command == 'verify':
+        from .verify import verify_path
+        report = verify_path(args.path)
+        print('\n'.join(report.lines))
+        print(f"\n{'VERIFIED' if not report.failures else 'NOT VERIFIED'}: {report.failures} failed check(s).")
+        raise SystemExit(1 if report.failures else 0)
     if args.command == 'validate-dataset':
         from .datasets import load_corpus
         records = load_corpus(args.path, args.sha256)
@@ -106,7 +135,19 @@ def main():
         from .mcp import run
         run(store)
         return
-    if args.command == 'profile':
+    if args.command == 'check-answer':
+        from . import claims
+        with Path(args.path).open(encoding='utf-8') as handle:
+            text = handle.read(claims.MAX_TEXT + 1)
+        previewed = claims.extract(text)
+        result = previewed if args.preview else claims.create(store, previewed['citations'], text, args.collect, args.max_age)
+    elif args.command == 'quote-check':
+        from . import claims
+        if args.format:
+            print(claims.export(store, args.job_id, args.format)[0])
+            return
+        result = claims.step(store, args.job_id) if args.step else claims.cancel(store, args.job_id) if args.cancel else claims.get(store, args.job_id)
+    elif args.command == 'profile':
         from .imports import create_profile
         result = create_profile(store, args.name, args.provider, args.account, args.adapter)
     elif args.command == 'watch':
@@ -123,6 +164,37 @@ def main():
         result = store.collect(source['id'])
     elif args.command == 'search':
         result = store.search(args.query)
+    elif args.command in ('export-wacz', 'proof-bundle'):
+        target = Path(args.output).expanduser()
+        if target.exists():
+            parser.error('Choose a new output file; existing files are never overwritten.')
+        if args.command == 'export-wacz':
+            from .wacz import export_wacz
+            sources = store.rows('SELECT id FROM sources WHERE id=? OR location=?', (args.source, args.source))
+            if not sources:
+                parser.error('Source not found. Use a source ID or its exact URL.')
+            data, summary = export_wacz(store, sources[0]['id'])
+        else:
+            from .receipts import proof_bundle
+            data, summary = proof_bundle(store, args.revision), {}
+        with open(target, 'xb') as handle:
+            handle.write(data)
+        result = {'path': str(target.resolve()), 'bytes': len(data), **summary}
+    elif args.command == 'receipts':
+        from .receipts import key_info, verify_chain
+        result = {'key': key_info(store), 'chain': verify_chain(store)}
+    elif args.command == 'anchor':
+        from .receipts import anchor
+        result = anchor(store, force=True)
+    elif args.command == 'rights':
+        sources = store.rows('SELECT * FROM sources WHERE id=? OR location=?', (args.source, args.source))
+        if not sources:
+            parser.error('Source not found. Use a source ID or its exact URL.')
+        rows = store.rows('SELECT o.* FROM rights_observations o WHERE o.source_id=? AND o.rowid=(SELECT x.rowid FROM rights_observations x WHERE x.url=o.url ORDER BY x.observed_at DESC, x.rowid DESC LIMIT 1) ORDER BY o.url', (sources[0]['id'],))
+        result = {'source': sources[0]['name'], 'location': sources[0]['location'], 'pages': [
+            {'url': r['url'], 'observed_at': r['observed_at'], 'verdict': json.loads(r['verdict']), 'signals': json.loads(r['signals']), 'checked': json.loads(r['checked'])} for r in rows]}
+        if not rows:
+            result['note'] = 'No rights observations yet. Collect the source to record publisher signals.'
     else:
         path = Path(args.path)
         with path.open('rb') as handle:

@@ -9,6 +9,7 @@ import zipfile
 from unittest.mock import patch
 
 from proofpage.core import Store, classify, import_file, preview, retry_seconds, validate_url
+from proofpage.mcp import TOOLS
 
 
 ARTICLE = '<title>Authentication documentation</title><main><h1>Sign in</h1>' + '<p>Use an API token to authenticate your application securely.</p>' * 8 + '</main><input type="password">'
@@ -117,7 +118,8 @@ class EvidenceTests(unittest.TestCase):
         rows = [json.loads(line) for line in result.stdout.splitlines()]
         self.assertEqual(len(rows), 3)
         self.assertEqual(rows[0]['result']['protocolVersion'], '2025-06-18')
-        self.assertEqual(len(rows[1]['result']['tools']), 18)
+        self.assertEqual(len(rows[1]['result']['tools']), len(TOOLS))
+        self.assertIn('proofpage_get_rights', {tool['name'] for tool in rows[1]['result']['tools']})
         self.assertFalse(rows[2]['result']['isError'])
 
     def test_retry_after(self):

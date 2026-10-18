@@ -1,1 +1,39 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Proofpage — Sign in</title><link rel="stylesheet" href="/style.css"><script src="/login.js" defer></script></head><body><main class="auth-page"><a class="brand" href="/">Proofpage</a><h1>Your evidence. Your workspace.</h1><p>Collect sources, build reviewed datasets, and connect your models.</p><div class="actions"><button data-auth="login">Sign in</button><button data-auth="register">Accept invitation</button><button data-auth="recover">Recover account</button></div><form id="auth-form" class="panel"><label>Email<input name="email" type="email" autocomplete="email" required></label><label>Password (12–256 characters)<input name="password" type="password" minlength="12" maxlength="256" autocomplete="current-password" required></label><label id="invite-field" hidden>Invitation code<input name="invite" autocomplete="off"></label><label id="recovery-field" hidden>Recovery code<input name="recovery" autocomplete="off"></label><button class="primary" id="auth-submit">Sign in</button></form><p id="auth-error" role="alert"></p><section id="recovery-result" class="panel" hidden><h2>Save your recovery code</h2><p>This code can reset your password. Keep it somewhere private. It will not be shown again.</p><pre id="recovery-code"></pre><a href="/">I saved my code — continue</a></section><p class="muted">Prefer your own computer? The open-source edition runs locally without a subscription.</p></main></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Proofpage — Sign in</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/newsreader-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<script src="/login.js" defer></script>
+</head>
+<body>
+<main class="auth-page">
+  <a class="brand" href="/">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="ring" cx="16" cy="16" r="15"/><circle class="perforation" cx="16" cy="16" r="12.2"/><text class="letter" x="16" y="21.6" text-anchor="middle">p</text></svg>
+    <span class="brand-name">Proofpage</span>
+  </a>
+  <h1>Your evidence. Your workspace.</h1>
+  <p>Collect sources, build reviewed datasets, and connect your models.</p>
+  <div class="actions"><button type="button" class="secondary" data-auth="login">Sign in</button><button type="button" data-auth="register">Accept invitation</button><button type="button" data-auth="recover">Recover account</button></div>
+  <form id="auth-form" class="panel">
+    <label>Email<input name="email" type="email" autocomplete="email" required></label>
+    <label>Password (12–256 characters)<input name="password" type="password" minlength="12" maxlength="256" autocomplete="current-password" required></label>
+    <label id="invite-field" hidden>Invitation code<input name="invite" autocomplete="off"></label>
+    <label id="recovery-field" hidden>Recovery code<input name="recovery" autocomplete="off"></label>
+    <div class="actions"><button class="primary" id="auth-submit">Sign in</button></div>
+  </form>
+  <p id="auth-error" role="alert"></p>
+  <section id="recovery-result" class="panel" hidden>
+    <h2>Save your recovery code</h2>
+    <p>This code can reset your password. Keep it somewhere private. It will not be shown again.</p>
+    <pre id="recovery-code"></pre>
+    <a href="/">I saved my code — continue</a>
+  </section>
+  <p class="muted">Prefer your own computer? The open-source edition runs locally without a subscription.</p>
+</main>
+</body>
+</html>

@@ -5,18 +5,55 @@ import time
 from .core import import_file, preview
 from .imports import create_profile
 from .watch import create_watch, scan_watch
-from . import training, crawl, models, agent
+from . import training, crawl, models, agent, history, receipts, claims
+from .mcp import TOOLS
 
 def response(status, value, content_type='application/json'):
     return status, value, content_type
 
+def with_blockers(store, datasets):
+    """Count revisions that currently block each dataset's download (see rights.export_blockers)."""
+    from .rights import export_blockers
+    for dataset in datasets:
+        dataset['rights_blocked'] = len(export_blockers(store, dataset['id'], json.loads(dataset.pop('revision_ids'))))
+    return datasets
+
+
 def get(store, path, query):
+    if path == '/api/claim-checks':
+        return response(200, store.rows('SELECT id,created_at,state,detail FROM claim_checks ORDER BY created_at DESC LIMIT 50'))
+    if path.startswith('/api/claim-checks/'):
+        job = path.rsplit('/', 1)[1]
+        if query.get('format'):
+            body, mime = claims.export(store, job, query['format'][0])
+            return response(200, body.encode(), mime)
+        return response(200, claims.get(store, job))
     if path == '/api/state':
-        return response(200, {'sources': store.rows('SELECT * FROM sources'), 'profiles': store.rows('SELECT * FROM import_profiles'), 'watches': store.rows('SELECT * FROM watches'), 'runs': store.rows('SELECT * FROM runs ORDER BY started_at DESC LIMIT 30'), 'datasets': store.rows('SELECT id,name,created_at,hash FROM datasets ORDER BY created_at DESC'), 'items': store.search(query.get('q', [''])[0])})
+        return response(200, {'sources': store.rows('SELECT s.*,(SELECT o.verdict FROM rights_observations o WHERE o.source_id=s.id ORDER BY o.observed_at DESC LIMIT 1) rights FROM sources s'), 'profiles': store.rows('SELECT * FROM import_profiles'), 'watches': store.rows('SELECT * FROM watches'), 'runs': store.rows('SELECT * FROM runs ORDER BY started_at DESC LIMIT 30'), 'datasets': with_blockers(store, store.rows('SELECT d.id,d.name,d.created_at,d.hash,d.revision_ids,m.format,(SELECT COUNT(*) FROM dataset_rights x WHERE x.dataset_id=d.id AND x.drifted=1) rights_changed FROM datasets d LEFT JOIN dataset_manifests m ON m.dataset_id=d.id ORDER BY d.created_at DESC')), 'items': store.search(query.get('q', [''])[0], snippets=True),
+                                'unread': history.unread_counts(store)['total'], 'total': store.rows('SELECT COUNT(*) n FROM items')[0]['n'], 'approved': store.rows('SELECT COUNT(*) n FROM items i JOIN reviews v ON v.revision_id=i.current_revision WHERE v.approved=1')[0]['n']})
     if path.startswith('/api/watches/'):
         return response(200, store.rows('SELECT path,state,detail FROM watch_files WHERE watch_id=?', (path.rsplit('/', 1)[1],)))
+    if path.startswith('/api/items/') and path.endswith('/timeline'):
+        try:
+            config = models.configuration()
+        except ValueError as exc:
+            config = {'configured': False, 'detail': str(exc)}
+        # The endpoint URL is never sent to the browser here; hosted operators keep theirs private.
+        model = {'configured': config['configured'], 'model': config.get('model', ''), 'detail': config['detail']}
+        return response(200, dict(history.timeline(store, path.split('/')[3]), model=model))
     if path.startswith('/api/items/'):
         return response(200, store.item(path.rsplit('/', 1)[1]))
+    if path.startswith('/api/proof-bundle/'):
+        return response(200, receipts.proof_bundle(store, path.rsplit('/', 1)[1]), 'application/zip')
+    if path.startswith('/api/proof/'):
+        return response(200, receipts.revision_proof(store, path.rsplit('/', 1)[1]))
+    if path.startswith('/api/wacz/'):
+        from .wacz import export_wacz
+        return response(200, export_wacz(store, path.rsplit('/', 1)[1])[0], 'application/zip')
+    if path == '/api/receipts':
+        return response(200, receipts.overview(store))
+    if path == '/api/diff':
+        return response(200, history.compare(store, query.get('from', [''])[0], query.get('to', [''])[0]))
     if path.startswith('/api/revisions/'):
         return response(200, store.revision(path.rsplit('/', 1)[1]))
     if path == '/api/workbench':
@@ -25,9 +62,15 @@ def get(store, path, query):
         except ValueError as exc:
             config = {'configured': False, 'detail': str(exc)}
         return response(200, {'candidates': store.rows('SELECT id,revision_id,kind,status,origin,notes,findings,created_at FROM candidates ORDER BY created_at DESC LIMIT 500'),
-                              'datasets': store.rows('SELECT d.id,d.name,d.created_at,d.hash,m.format,m.manifest FROM datasets d JOIN dataset_manifests m ON m.dataset_id=d.id ORDER BY d.created_at DESC'),
+                              'datasets': with_blockers(store, store.rows('SELECT d.id,d.name,d.created_at,d.hash,d.revision_ids,m.format,m.manifest,(SELECT COUNT(*) FROM dataset_rights x WHERE x.dataset_id=d.id AND x.drifted=1) rights_changed FROM datasets d JOIN dataset_manifests m ON m.dataset_id=d.id ORDER BY d.created_at DESC')),
                               'jobs': store.rows('SELECT * FROM crawl_jobs ORDER BY created_at DESC LIMIT 30'), 'model': config,
-                              'recipes': store.rows('SELECT * FROM extraction_recipes'), 'extractions': store.rows('SELECT * FROM extractions ORDER BY created_at DESC LIMIT 30')})
+                              'recipes': store.rows('SELECT * FROM extraction_recipes'), 'extractions': store.rows('SELECT * FROM extractions ORDER BY created_at DESC LIMIT 30'),
+                              'tools': [{'name': name, 'description': description} for name, (description, _) in TOOLS.items()]})
+    if path.startswith('/api/compliance/'):
+        from .compliance import build
+        return response(200, build(store, path.rsplit('/', 1)[1]))
+    if path == '/api/inbox':
+        return response(200, {'events': history.inbox(store, query.get('kind', [''])[0] or None, query.get('unseen', [''])[0] == '1'), 'unread': history.unread_counts(store)})
     if path.startswith('/api/candidates/'):
         return response(200, training.get_candidate(store, path.rsplit('/', 1)[1]))
     if path.startswith('/api/crawls/'):
@@ -40,7 +83,17 @@ def get(store, path, query):
 
 
 def post(store, path, data):
-    if path == '/api/sources':
+    if path == '/api/claim-preview':
+        result = claims.extract(data.get('text'))
+    elif path == '/api/claim-check':
+        result = claims.create(store, data.get('citations'), data.get('text', ''), data.get('collect_missing', False), data.get('max_age', 86400))
+    elif path == '/api/claim-step':
+        result = claims.step(store, data['job_id'])
+    elif path == '/api/claim-model-review':
+        result = claims.model_review(store, data['job_id'], data['position'])
+    elif path == '/api/claim-cancel':
+        result = claims.cancel(store, data['job_id'])
+    elif path == '/api/sources':
         result = store.source(data['name'], 'web', data['url'])
     elif path == '/api/profiles':
         result = create_profile(store, data['name'], data['provider'], data['account'], data.get('adapter', 'auto'), data.get('mapping'))
@@ -87,8 +140,18 @@ def post(store, path, data):
             raise ValueError('Choose an account-specific import profile.')
         result = preview(data['filename'], content) if path == '/api/preview' else import_file(store, data['filename'], content, data['selected'], data['profile_id'])
     elif path == '/api/review':
-        store.review(data['revision_id'], data['allowed'] is True, data['approved'] is True)
+        store.review(data['revision_id'], data['allowed'] is True, data['approved'] is True, data.get('rights_basis'), data.get('rights_note'))
         result = {'saved': True}
+    elif path == '/api/change-summary':
+        result = history.model_summary(store, data['from_revision'], data['to_revision'])
+    elif path == '/api/receipts-verify':
+        result = receipts.verify_chain(store)
+    elif path == '/api/anchor-settings':
+        result = receipts.save_settings(store, data)
+    elif path == '/api/anchor-now':
+        result = receipts.anchor(store, force=True)
+    elif path == '/api/inbox-seen':
+        result = history.mark_seen(store, None if data.get('all') is True else data.get('ids'))
     elif path == '/api/freeze':
         result = store.freeze(data['name'])
     else:

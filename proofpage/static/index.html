@@ -1,11 +1,146 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Proofpage — Evidence workspace</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script><script src="/workbench.js" defer></script></head>
-<body><aside><a class="brand" href="/">p<span>Proofpage</span></a><div class="workspace">LOCAL WORKSPACE<span class="dot"></span></div><nav><button class="active" data-view="library">▤ &nbsp; Library <span id="count">0</span></button><button data-view="sources">◎ &nbsp; Sources</button><button data-view="training">◇ &nbsp; Training</button><button data-view="agents">⌘ &nbsp; Agent access</button><button data-view="activity">↻ &nbsp; Activity</button><button data-view="datasets">▦ &nbsp; Datasets</button></nav><div class="aside-bottom">Your sources. Your evidence.<br><span>Stored on this computer.</span></div></aside>
-<main><header><span id="breadcrumb">Workspace / Library</span><span class="local">● Local storage</span></header><section class="heading"><div><h1 id="title">A library you can trace.</h1><p id="subtitle">Collect useful material. Keep the evidence behind it.</p></div><div class="actions"><button id="import-open" class="secondary">Import files</button><button id="source-open" class="primary">+ Add source</button></div></section><div id="notice" role="status" hidden></div><section id="content"></section><footer>Proofpage 0.1 · Static pages & supplied archives · <span>Coverage is recorded with every capture.</span></footer></main>
-<dialog id="source-dialog"><form id="source-form"><div class="dialog-top"><h2>Add a web source</h2><button type="button" data-close="source-dialog" aria-label="Close">×</button></div><p>Capture one public page and preserve its original response.</p><label>Name<input name="name" required placeholder="Project documentation"></label><label>Page URL<input name="url" type="url" required placeholder="https://example.org/docs"></label><p class="muted">Static HTML and plain text. Login, browser rendering, and LinkedIn website collection are not enabled.</p><button class="primary">Add source</button></form></dialog>
-<dialog id="import-dialog"><div class="dialog-top"><h2>Import an archive</h2><button data-close="import-dialog" aria-label="Close">×</button></div><p>Choose the account these records belong to, then preview what to keep.</p><label>Import profile<select id="import-profile" required></select></label><button class="secondary" data-new-profile>Create an account profile</button><label class="file-label">Choose ZIP, CSV, JSON, JSONL, Markdown, text, or HTML<input id="file" type="file" accept=".zip,.csv,.json,.jsonl,.md,.txt,.html"></label><div id="preview"></div><p class="muted">8 MiB upload limit. Source roles and branches stay intact. Attachment links remain references. Importing a newer archive under the same profile updates matching records.</p><button id="import-confirm" class="primary" disabled>Import selected</button></dialog>
-<dialog id="profile-dialog"><form id="profile-form"><div class="dialog-top"><h2>Create an import profile</h2><button type="button" data-close="profile-dialog" aria-label="Close">×</button></div><p>Keep each account separate. These are local labels, not login credentials.</p><label>Profile name<input name="name" placeholder="Personal conversations" required></label><label>Provider<input name="provider" placeholder="ChatGPT, Claude, LinkedIn, or another source" required></label><label>Account label<input name="account" placeholder="Personal account" required></label><label>Import format<select name="adapter" id="adapter"><option value="auto">Detect supported conversation formats</option><option value="chatgpt">ChatGPT export with conversation mapping</option><option value="claude">Claude export with chat_messages</option><option value="linkedin">LinkedIn CSV archive</option><option value="generic">Preserve generic source fields</option><option value="mapping">Map fields from another app</option></select></label><fieldset id="mapping-fields" hidden><legend>Source field names</legend><p class="muted">Enter the field name used by your file. Unmapped fields remain in original evidence.</p><label>Text field<input name="map_text" placeholder="content"></label><label>Stable ID field<input name="map_id" placeholder="id"></label><label>Title field<input name="map_title" placeholder="title"></label><label>Role field<input name="map_role" placeholder="role"></label><label>Timestamp field<input name="map_timestamp" placeholder="created_at"></label></fieldset><button class="primary">Save profile</button></form></dialog>
-<dialog id="watch-dialog"><form id="watch-form"><div class="dialog-top"><h2>Watch an export folder</h2><button type="button" data-close="watch-dialog" aria-label="Close">×</button></div><p>Import selected categories when files arrive or change. Proofpage does not request archives from the provider.</p><label>Import profile<select id="watch-profile" name="profile_id" required></select></label><label>Folder on this computer<input name="directory" placeholder="/Users/you/Downloads/Exports" required></label><label>Category file names, separated by commas<input name="categories" placeholder="Messages.csv, Connections.csv" required></label><p class="muted">Existing matching files will also be imported. No subfolders or symbolic links. Runs while the local server is open.</p><button class="primary">Watch folder</button></form></dialog>
-<dialog id="evidence-dialog"><div class="dialog-top"><h2 id="evidence-title">Evidence</h2><button data-close="evidence-dialog" aria-label="Close">×</button></div><div id="evidence"></div></dialog>
-<dialog id="work-dialog"><div class="dialog-top"><h2 id="work-title">Training example</h2><button data-close="work-dialog" aria-label="Close">×</button></div><div id="work-content"></div></dialog>
-</body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Proofpage — Evidence workspace</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/newsreader-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<script src="/ui.js" defer></script>
+<script src="/app.js" defer></script>
+<script src="/workbench.js" defer></script>
+<script src="/timeline.js" defer></script>
+<script src="/proof.js" defer></script>
+<script src="/claims.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+
+<aside class="sidebar">
+  <a class="brand" href="#/library" aria-label="Proofpage library">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="ring" cx="16" cy="16" r="15"/><circle class="perforation" cx="16" cy="16" r="12.2"/><text class="letter" x="16" y="21.6" text-anchor="middle">p</text></svg>
+    <span class="brand-name">Proofpage</span>
+  </a>
+  <div class="workspace"><span class="dot"></span><span>Local workspace</span></div>
+  <nav aria-label="Workspace">
+    <div class="nav-group">
+      <p class="nav-label">Evidence</p>
+      <button type="button" class="active" data-view="library" data-icon="library"><svg class="icon" aria-hidden="true"><use href="/icons.svg#library"></use></svg><span class="nav-text">Library</span><span id="count" class="nav-count">0</span></button>
+      <button type="button" data-view="timeline" data-icon="history"><svg class="icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg><span class="nav-text">Timeline</span><span id="unread" class="nav-count unread" hidden></span></button>
+    </div>
+    <div class="nav-group">
+      <p class="nav-label">Collect</p>
+      <button type="button" data-view="sources" data-icon="globe"><svg class="icon" aria-hidden="true"><use href="/icons.svg#globe"></use></svg><span class="nav-text">Sources</span></button>
+      <button type="button" data-view="activity" data-icon="activity"><svg class="icon" aria-hidden="true"><use href="/icons.svg#activity"></use></svg><span class="nav-text">Activity</span></button>
+    </div>
+    <div class="nav-group">
+      <p class="nav-label">Use</p>
+      <button type="button" data-view="verify" data-icon="check"><svg class="icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg><span class="nav-text">Verify</span></button>
+      <button type="button" data-view="training" data-icon="training"><svg class="icon" aria-hidden="true"><use href="/icons.svg#training"></use></svg><span class="nav-text">Training</span></button>
+      <button type="button" data-view="datasets" data-icon="database"><svg class="icon" aria-hidden="true"><use href="/icons.svg#database"></use></svg><span class="nav-text">Datasets</span></button>
+      <button type="button" data-view="agents" data-icon="plug"><svg class="icon" aria-hidden="true"><use href="/icons.svg#plug"></use></svg><span class="nav-text">Agent<span class="nav-long"> access</span></span></button>
+    </div>
+    <div class="nav-group">
+      <p class="nav-label">Workspace</p>
+      <button type="button" data-view="settings" data-icon="key"><svg class="icon" aria-hidden="true"><use href="/icons.svg#key"></use></svg><span class="nav-text">Settings</span></button>
+    </div>
+  </nav>
+  <div class="aside-bottom">Your sources. Your evidence.<br><span>Stored on this computer.</span></div>
+</aside>
+
+<main>
+  <header class="topbar">
+    <a class="brand mobile-brand" href="#/library" aria-label="Proofpage library">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="ring" cx="16" cy="16" r="15"/><circle class="perforation" cx="16" cy="16" r="12.2"/><text class="letter" x="16" y="21.6" text-anchor="middle">p</text></svg>
+      <span class="brand-name">Proofpage</span>
+    </a>
+    <span id="breadcrumb">Workspace / Library</span>
+    <button type="button" class="search-trigger" id="palette-open" aria-label="Search evidence and commands"><svg class="icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg><span class="label">Search evidence or jump to…</span><kbd>⌘K</kbd></button>
+    <span class="storage-badge"><span class="dot"></span><span>Local storage</span></span>
+    <button type="button" class="icon-button" id="theme-toggle" aria-label="Switch theme"></button>
+  </header>
+
+  <div class="content-wrap">
+    <section class="heading">
+      <div>
+        <h1 id="title">A library you can trace.</h1>
+        <p id="subtitle">Collect useful material. Keep the evidence behind it.</p>
+      </div>
+      <div class="actions">
+        <button type="button" id="import-open" class="secondary"><svg class="icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>Import files</button>
+        <button type="button" id="source-open" class="primary"><svg class="icon" aria-hidden="true"><use href="/icons.svg#plus"></use></svg>Add source</button>
+      </div>
+    </section>
+    <section id="content" tabindex="-1" aria-live="polite"></section>
+  </div>
+
+  <footer class="page-footer"><span>Proofpage 0.2.0 · Static pages and supplied archives</span><span>Coverage is recorded with every capture. Robots rules respected; logins and CAPTCHAs are never bypassed.</span></footer>
+</main>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<dialog id="palette" class="palette" aria-label="Search and commands">
+  <div class="palette-input"><svg class="icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg><input id="palette-input" type="text" placeholder="Search evidence, views, and actions…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="palette-results" aria-label="Search evidence, views, and actions"></div>
+  <div id="palette-results" role="listbox"></div>
+  <div class="palette-hint"><span><kbd>↑</kbd> <kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span><span><kbd>Esc</kbd> close</span></div>
+</dialog>
+
+<dialog id="source-dialog"><form id="source-form">
+  <div class="dialog-top"><h2>Add a web source</h2><button type="button" class="icon-button" data-close="source-dialog" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="/icons.svg#x"></use></svg></button></div>
+  <p>Capture one public page and preserve its original response.</p>
+  <label>Name<input name="name" required placeholder="Project documentation"></label>
+  <label>Page URL<input name="url" type="url" required placeholder="https://example.org/docs"></label>
+  <p class="callout"><svg class="icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg><span>Static HTML and plain text. Robots rules and cooldowns apply. Logins, CAPTCHAs, and LinkedIn website collection are not supported. Rights Radar records the page's AI-usage signals and reads <code>/.well-known/tdmrep.json</code> at most once per site per day.</span></p>
+  <div class="actions"><button class="primary">Add source</button></div>
+</form></dialog>
+
+<dialog id="import-dialog">
+  <div class="dialog-top"><h2>Import an archive</h2><button type="button" class="icon-button" data-close="import-dialog" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="/icons.svg#x"></use></svg></button></div>
+  <p>Choose the account these records belong to, then preview what to keep.</p>
+  <label>Import profile<select id="import-profile" required></select></label>
+  <button type="button" class="secondary small" data-new-profile><svg class="icon" aria-hidden="true"><use href="/icons.svg#plus"></use></svg>Create an account profile</button>
+  <label>Choose a ZIP, CSV, JSON, JSONL, Markdown, text, or HTML file<input id="file" type="file" accept=".zip,.csv,.json,.jsonl,.md,.txt,.html"></label>
+  <div id="preview" class="preview-list"></div>
+  <p class="muted">8 MiB upload limit. Source roles and branches stay intact. Attachment links remain references. Importing a newer archive under the same profile updates matching records.</p>
+  <div class="actions"><button type="button" id="import-confirm" class="primary" disabled>Import selected</button></div>
+</dialog>
+
+<dialog id="profile-dialog"><form id="profile-form">
+  <div class="dialog-top"><h2>Create an import profile</h2><button type="button" class="icon-button" data-close="profile-dialog" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="/icons.svg#x"></use></svg></button></div>
+  <p>Keep each account separate. These are local labels, not login credentials.</p>
+  <label>Profile name<input name="name" placeholder="Personal conversations" required></label>
+  <label>Provider<input name="provider" placeholder="ChatGPT, Claude, LinkedIn, or another source" required></label>
+  <label>Account label<input name="account" placeholder="Personal account" required></label>
+  <label>Import format<select name="adapter" id="adapter"><option value="auto">Detect supported conversation formats</option><option value="chatgpt">ChatGPT export with conversation mapping</option><option value="claude">Claude export with chat_messages</option><option value="linkedin">LinkedIn CSV archive</option><option value="generic">Preserve generic source fields</option><option value="mapping">Map fields from another app</option></select></label>
+  <fieldset id="mapping-fields" hidden><legend>Source field names</legend><p class="muted">Enter the field name used by your file. Unmapped fields remain in original evidence.</p><label>Text field<input name="map_text" placeholder="content"></label><label>Stable ID field<input name="map_id" placeholder="id"></label><label>Title field<input name="map_title" placeholder="title"></label><label>Role field<input name="map_role" placeholder="role"></label><label>Timestamp field<input name="map_timestamp" placeholder="created_at"></label></fieldset>
+  <div class="actions"><button class="primary">Save profile</button></div>
+</form></dialog>
+
+<dialog id="watch-dialog"><form id="watch-form">
+  <div class="dialog-top"><h2>Watch an export folder</h2><button type="button" class="icon-button" data-close="watch-dialog" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="/icons.svg#x"></use></svg></button></div>
+  <p>Import selected categories when files arrive or change. Proofpage does not request archives from the provider.</p>
+  <label>Import profile<select id="watch-profile" name="profile_id" required></select></label>
+  <label>Folder on this computer<input name="directory" placeholder="/Users/you/Downloads/Exports" required></label>
+  <label>Category file names, separated by commas<input name="categories" placeholder="Messages.csv, Connections.csv" required></label>
+  <p class="muted">Existing matching files will also be imported. No subfolders or symbolic links. Runs while the local server is open.</p>
+  <div class="actions"><button class="primary">Watch folder</button></div>
+</form></dialog>
+
+<dialog id="evidence-dialog" class="drawer" aria-labelledby="evidence-title">
+  <div class="drawer-head">
+    <div class="dialog-top"><div><div id="evidence-kicker" class="actions"></div><h2 id="evidence-title">Evidence</h2></div><button type="button" class="icon-button" data-close="evidence-dialog" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="/icons.svg#x"></use></svg></button></div>
+    <div id="evidence-meta" class="drawer-meta"></div>
+    <div id="evidence-tabs" class="tabs" role="tablist"></div>
+  </div>
+  <div id="evidence" class="drawer-body"></div>
+  <div id="evidence-foot" class="drawer-foot"></div>
+</dialog>
+
+<dialog id="work-dialog" aria-labelledby="work-title">
+  <div class="dialog-top"><h2 id="work-title">Training example</h2><button type="button" class="icon-button" data-close="work-dialog" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="/icons.svg#x"></use></svg></button></div>
+  <div id="work-content"></div>
+</dialog>
+</body>
+</html>

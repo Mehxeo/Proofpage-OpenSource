@@ -1,23 +1,31 @@
-<p align="center"><img src="docs/assets/banner.svg" alt="Proofpage — Evidence for your next model" width="100%"></p>
+<p align="center"><img src="docs/assets/banner.svg" alt="Proofpage — Capture, inspect, verify" width="100%"></p>
 
 <p align="center">
-<a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.3">Download</a> ·
+<a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.2.0">Download</a> ·
 <a href="#install-and-run">Install & run</a> ·
 <a href="docs/CLI.md">CLI guide</a> ·
 <a href="docs/TRAINING_AND_AGENTS.md">Training & agents</a> ·
 <a href="CONTRIBUTING.md">Contribute</a>
 </p>
 
+**Capture it. Keep the evidence. Check the quote.**
+
 Proofpage turns public web pages and your own exported files into **traceable evidence for AI**. Collect material, inspect the original source, review training examples, and export datasets—or let an existing AI assistant search your evidence through MCP.
 
 **Free to run on your own computer. MIT licensed. No account, subscription, or model API key required for core features.** Desktop downloads include Python: no Python installation or terminal is needed. This is an early release. The Mac downloads are Developer ID signed and Apple-notarized; Windows signing is still pending.
 
-![Proofpage training workspace](docs/training-workbench.png)
+![Proofpage evidence workspace](docs/archival-library-light.png)
+
+> **New in v0.2.0:** Rights Radar, Timeline, signed Proof Receipts, and Claim Check are included in the desktop downloads.
 
 ## What you can do
 
 | Your goal | Proofpage gives you |
 | --- | --- |
+| Check an AI answer | [Claim Check](docs/VERIFY.md): preview citations, compare quotes, see drift and export a report |
+| Track publisher signals | [Rights Radar](docs/RIGHTS.md): recorded evidence, conservative verdicts and export gates |
+| Follow page changes | Timeline, immutable revisions and word/number comparisons |
+| Share verifiable evidence | [Proof Receipts](docs/PROOF.md), offline bundles and WACZ archives |
 | Collect useful web content | Public page capture, bounded crawling, refresh schedules, and original evidence |
 | Bring your own data | ZIP, CSV, JSON, JSONL, Markdown, text, and HTML imports; conversation-aware adapters |
 | Prepare training data | Reviewed SFT examples, preference pairs, corrections, evaluations, grouped splits, and frozen exports |
@@ -26,18 +34,29 @@ Proofpage turns public web pages and your own exported files into **traceable ev
 
 Proofpage **prepares data; it does not train a model**. Collection respects robots rules and does not bypass logins or access controls. Optional model-assisted drafting sends selected content only when you request it and still requires review. See [capabilities and limits](docs/IMPLEMENTATION_STATUS.md).
 
+## Run from source
+
+With Python 3.11+ installed, clone this repository and run:
+
+```sh
+python3 -m pip install -e .
+python3 -m proofpage --home ~/Proofpage-preview/data serve --open
+```
+
+Back up your workspace before updating. For the easiest setup, use the native downloads below.
+
 ## Install and run
 
 ### Download, extract, open
 
-Choose your computer from the [v0.1.3 downloads](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.3):
+Choose your computer from the [v0.2.0 downloads](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.2.0):
 
 | Computer | Download | Open it |
 | --- | --- | --- |
-| Mac with Apple silicon (M1 or newer) | **Proofpage-0.1.3-darwin-arm64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
-| Mac with Intel processor | **Proofpage-0.1.3-darwin-x86_64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
-| Windows 10/11, 64-bit Intel/AMD | **Proofpage-0.1.3-windows-x86_64.zip** | Extract the entire ZIP, then double-click **Proofpage.exe** |
-| Linux, 64-bit Intel/AMD desktop | **Proofpage-0.1.3-linux-x86_64.tar.gz** | Extract with your archive manager, then open the **Proofpage** executable |
+| Mac with Apple silicon (M1 or newer) | **Proofpage-0.2.0-darwin-arm64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
+| Mac with Intel processor | **Proofpage-0.2.0-darwin-x86_64.zip** | Extract, drag **Proofpage.app** to Applications, and open it |
+| Windows 10/11, 64-bit Intel/AMD | **Proofpage-0.2.0-windows-x86_64.zip** | Extract the entire ZIP, then double-click **Proofpage.exe** |
+| Linux, 64-bit Intel/AMD desktop | **Proofpage-0.2.0-linux-x86_64.tar.gz** | Extract with your archive manager, then open the **Proofpage** executable |
 
 The small Proofpage window opens your workspace in your default browser. Click **Open workspace** to return to it or **Show data folder** to find your files. Keep the app open while you work; closing its window stops the local server. Active captures may take a little time to finish.
 
@@ -59,7 +78,7 @@ Backups and exports are saved where you choose. Updating or replacing the applic
 <details>
 <summary><strong>Python installation and CLI setup (optional)</strong></summary>
 
-For developers and terminal users, download **proofpage-0.1.3-local.zip** instead. This source-oriented bundle requires Python 3.11+. Extract it and run:
+For developers and terminal users, download **proofpage-0.2.0-local.zip** instead. This source-oriented bundle requires Python 3.11+. Extract it and run:
 
 ```sh
 python3 scripts/install.py
@@ -73,7 +92,7 @@ On Windows use `py -3 scripts/install.py`. It creates an isolated runtime and CL
 
 1. Click **Add source**, enter a public page URL, then click **Collect** in Sources.
 2. Open the record in **Library** to inspect its text, original evidence, and capture details.
-3. Use **Training** to create draft examples, review source permissions, and approve suitable examples.
+3. Open **Verify** to check a quoted answer against captured evidence, or use **Training** to create draft examples, review source permissions, and approve suitable examples.
 4. Freeze and export a training bundle. Use **Datasets** for the separate reviewed text-corpus workflow.
 5. Open **Agent access** to connect an AI assistant to your local evidence.
 

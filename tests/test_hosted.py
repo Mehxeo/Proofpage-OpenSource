@@ -68,6 +68,24 @@ class HostedTests(unittest.TestCase):
         r=self.client.get('/',follow_redirects=False)
         self.assertEqual(r.headers['location'],'/login')
 
+    def test_workspace_page_and_assets(self):
+        self.use(self.a)
+        page=self.client.get('/')
+        self.assertEqual(page.status_code,200)
+        self.assertIn('>Hosted workspace<',page.text)
+        self.assertNotIn('>Local storage<',page.text)
+        self.assertIn('/hosted.js',page.text)
+        for path,kind in (('/hosted.js','text/javascript'),('/icons.svg','image/svg+xml'),('/style.css','text/css'),('/fonts/newsreader-latin-opsz-normal.woff2','font/woff2')):
+            r=self.client.get(path)
+            self.assertEqual(r.status_code,200,path)
+            self.assertTrue(r.headers['content-type'].startswith(kind),path)
+        self.assertEqual(self.client.get('/hosted.py').status_code,404)
+        for path in ('/api/anchor-now','/api/anchor-settings'):
+            r=self.post(path,{'anchor_tsa_url':'http://169.254.169.254/'})
+            self.assertEqual(r.status_code,400)
+            self.assertIn('local edition',r.json()['error'])
+        self.assertEqual(self.client.get('/api/receipts').status_code,200)
+
     def test_invites_single_use_and_password_recovery_revokes_credentials(self):
         self.use(self.a)
         key=self.post('/api/keys',{'name':'Fixture','scope':'read'}).json()['key']
@@ -106,7 +124,7 @@ class HostedTests(unittest.TestCase):
         def rpc(method,params={}):return self.client.post('/agent',json={'jsonrpc':'2.0','id':1,'method':method,'params':params},headers={'Authorization':'Bearer '+key})
         tools=rpc('tools/list').json()['result']['tools']
         names={t['name'] for t in tools}
-        self.assertIn('proofpage_get_context',names);self.assertNotIn('proofpage_collect',names)
+        self.assertIn('proofpage_get_context',names);self.assertIn('proofpage_get_rights',names);self.assertIn('proofpage_diff_revisions',names);self.assertIn('proofpage_get_receipt',names);self.assertIn('proofpage_list_changes_since',names);self.assertNotIn('proofpage_collect',names)
         self.assertFalse(any('approve' in n or 'export' in n for n in names))
         self.assertEqual(rpc('tools/call',{'name':'proofpage_collect','arguments':{'source_id':'anything'}}).status_code,401)
         response=rpc('tools/call',{'name':'proofpage_get_context','arguments':{'query':'sunlight'}})

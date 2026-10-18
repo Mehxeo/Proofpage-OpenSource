@@ -7,14 +7,11 @@ import time
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
-
+from .assets import STATIC, read_asset
 from .core import MAX_BYTES, Store, import_file, preview
 from .imports import create_profile
 from .watch import create_watch, scan_watch
-from . import training, crawl, models, agent
-
-STATIC = Path(__file__).resolve().parent / 'static'
+from . import training, crawl, models, agent, claims
 
 
 class LocalHTTPServer(ThreadingHTTPServer):
@@ -36,7 +33,8 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
         def send(self, status, value, content_type='application/json'):
             body = value if isinstance(value, bytes) else json.dumps(value).encode() if content_type == 'application/json' else value.encode()
             self.send_response(status)
-            self.send_header('Content-Type', content_type + '; charset=utf-8')
+            textual = content_type.startswith('text/') or content_type in ('application/json', 'image/svg+xml')
+            self.send_header('Content-Type', content_type + ('; charset=utf-8' if textual else ''))
             self.send_header('Content-Length', str(len(body)))
             self.send_header('Cache-Control', 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
@@ -63,10 +61,11 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
             url = urllib.parse.urlsplit(self.path)
             path = url.path
             try:
-                if path in ('/', '/app.js', '/workbench.js', '/style.css'):
-                    name = 'index.html' if path == '/' else path[1:]
-                    types = {'index.html': 'text/html', 'app.js': 'text/javascript', 'workbench.js': 'text/javascript', 'style.css': 'text/css'}
-                    return self.send(200, (STATIC / name).read_text(encoding='utf-8'), types[name])
+                if path == '/':
+                    return self.send(200, (STATIC / 'index.html').read_text(encoding='utf-8'), 'text/html')
+                if not path.startswith('/api/'):
+                    asset = read_asset(path)
+                    return self.send(200, *asset) if asset else self.send(404, {'error': 'Not found.'})
                 if path == '/api/session':
                     return self.send(200, {'token': token})
                 if self.headers.get('Authorization') != 'Bearer ' + token:
@@ -102,6 +101,7 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
     def scheduler():
         pending = {}
         last_watch = {}
+        last_anchor_check = 0
         with ThreadPoolExecutor(max_workers=4, thread_name_prefix='proofpage') as pool:
             while not stop.wait(5):
                 for key, future in list(pending.items()):
@@ -115,8 +115,14 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                         del pending[key]
                 jobs = [('web:' + s['id'], store.collect, s['id']) for s in store.rows("SELECT id FROM sources WHERE kind='web' AND interval_seconds>0 AND next_run<=? ORDER BY next_run", (time.time(),))]
                 jobs += [('crawl:' + c['id'], lambda cid: crawl.step_job(store, cid), c['id']) for c in store.rows("SELECT id FROM crawl_jobs WHERE state IN ('queued','running') AND next_attempt<=? ORDER BY updated_at", (time.time(),))]
+                jobs += [('claim:' + c['id'], lambda cid: claims.step(store, cid), c['id']) for c in store.rows("SELECT id FROM claim_checks WHERE state='queued' AND next_attempt<=? AND lease_until<=? ORDER BY created_at", (time.time(), time.time()))]
                 watches = sorted(store.rows('SELECT id FROM watches WHERE enabled=1'), key=lambda w: last_watch.get(w['id'], 0))
                 jobs += [('watch:' + w['id'], lambda wid: scan_watch(store, wid), w['id']) for w in watches]
+                if time.time() - last_anchor_check > 600 and 'anchor' not in pending:
+                    # Anchoring is off unless configured, and runs at most daily; this only checks.
+                    from .receipts import anchor
+                    last_anchor_check = time.time()
+                    pending['anchor'] = pool.submit(anchor, store)
                 for key, operation, identifier in jobs:
                     if len(pending) >= 8:
                         break
