@@ -55,6 +55,21 @@ class ChangeEventTests(unittest.TestCase):
     def kinds(self):
         return [row['kind'] for row in history.inbox(self.store)][::-1]
 
+    def test_first_challenge_creates_attention_and_pauses_schedule(self):
+        with self.store.db() as db:
+            db.execute('UPDATE sources SET interval_seconds=300 WHERE id=?', (self.source['id'],))
+        result = self.collect(body='<title>CAPTCHA</title><p>Please complete the captcha</p>')
+        self.assertEqual(result['state'], 'challenge_required')
+        self.assertTrue(result['attention']['required'])
+        self.assertIn('approval', result['attention']['agent_action'])
+        self.assertIn('user', result['attention']['training_action'])
+        self.assertEqual(self.store.rows('SELECT interval_seconds FROM sources')[0]['interval_seconds'], 0)
+        entries = history.inbox(self.store)
+        self.assertEqual(len(entries), 1)
+        self.assertTrue(entries[0]['detail']['needs_attention'])
+        self.collect(body='<title>CAPTCHA</title><p>Please complete the captcha</p>')
+        self.assertEqual(len(history.inbox(self.store)), 1)
+
     def test_content_change_events_and_reverts(self):
         self.collect()
         self.assertEqual(self.kinds(), [])  # the first capture is not a change
