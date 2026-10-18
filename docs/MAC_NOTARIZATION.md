@@ -26,3 +26,12 @@ Both architecture builds from successful CI run 39091698926 (application source 
 - Intel submission: `f1c8921a-17be-4942-8d63-b8385c25dfa0` — Accepted.
 
 The final signed packages also pass native GUI/HTTP and bundled MCP smoke checks locally (Intel via Rosetta). Release asset hashes are published in `SHA256SUMS`.
+
+## v0.2.1
+
+CI run 39093471821, application commit `7c108d76d6cc1f579da9b50344b556197d6f4565`:
+
+- Apple silicon: `d576bce8-55cb-4e5f-866b-e6c9079f2e4e` — Accepted.
+- Intel: `3607fd11-ed6f-4c50-8923-0364b2997bfc` — Accepted.
+
+Both builds were signed, stapled, and verified by Gatekeeper, then passed native GUI and bundled MCP smoke checks. Publicly downloaded archives were checksum-compared to the originals and rechecked with codesign, stapler, and Gatekeeper.
