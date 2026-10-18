@@ -49,6 +49,37 @@ class HttpTests(unittest.TestCase):
             body = response.read().decode()
             return response.status, json.loads(body) if response.headers.get_content_type() == 'application/json' else body
 
+    def test_companion_pair_import_and_revocation(self):
+        origin = 'chrome-extension://' + 'a' * 32
+        other = 'chrome-extension://' + 'b' * 32
+        headers = {'Origin': origin, 'Authorization': ''}
+        self.assertEqual(self.request('/api/companion/pair', {'code': 'no'}, headers)[0], 403)
+        code = self.request('/api/companion-code', {})[1]['code']
+        self.assertEqual(self.request('/api/companion/pair', {'code': code}, {'Origin': 'https://evil.example'})[0], 403)
+        status, paired = self.request('/api/companion/pair', {'code': code}, headers)
+        self.assertEqual(status, 200)
+        self.assertEqual(self.request('/api/companion/pair', {'code': code}, headers)[0], 403)
+        headers['Authorization'] = 'Bearer ' + paired['token']
+        self.assertEqual(self.request('/api/state', headers=headers)[0], 403)
+        self.assertEqual(self.request('/api/state', headers={'Authorization': headers['Authorization']})[0], 401)
+        capture = {'proofpage_capture': 'visible-text-v1', 'url': 'https://example.com/companion', 'text': 'Reviewed text', 'title': 'Companion test'}
+        payload = {'reviewed': True, 'capture': capture}
+        self.assertEqual(self.request('/api/companion/import', payload, dict(headers, Origin=other))[0], 401)
+        self.assertEqual(self.request('/api/companion/import', {'capture': capture}, headers)[0], 400)
+        status, result = self.request('/api/companion/import', payload, headers)
+        self.assertEqual(status, 200)
+        self.assertEqual(result['added'], 1)
+        self.assertEqual(self.request('/api/companion/import', payload, headers)[1]['added'], 0)
+        self.request('/api/companion-revoke', {})
+        self.assertEqual(self.request('/api/companion/import', payload, headers)[0], 401)
+
+    def test_companion_pair_attempt_limit(self):
+        code = self.request('/api/companion-code', {})[1]['code']
+        headers = {'Origin': 'chrome-extension://' + 'c' * 32}
+        for _ in range(10):
+            self.assertEqual(self.request('/api/companion/pair', {'code': 'wrong'}, headers)[0], 403)
+        self.assertEqual(self.request('/api/companion/pair', {'code': code}, headers)[0], 403)
+
     def test_host_origin_and_session_enforced(self):
         self.assertEqual(self.request('/api/state', headers={'Authorization': ''})[0], 401)
         self.assertEqual(self.request('/api/state', headers={'Origin': 'https://untrusted.example'})[0], 403)

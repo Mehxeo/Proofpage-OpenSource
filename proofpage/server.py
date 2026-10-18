@@ -1,6 +1,7 @@
 import base64
 import json
 import secrets
+import re
 import socketserver
 import threading
 import time
@@ -25,6 +26,8 @@ class LocalHTTPServer(ThreadingHTTPServer):
 def serve(store=None, port=8765, open_browser=False, on_ready=None):
     store = store or Store()
     token = secrets.token_urlsafe(32)
+    companion = {}
+    companion_lock = threading.Lock()
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, format, *args):
@@ -39,6 +42,11 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
             self.send_header('Cache-Control', 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
             self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+            if getattr(self, 'companion_origin', None):
+                self.send_header('Access-Control-Allow-Origin', self.companion_origin)
+                self.send_header('Vary', 'Origin')
+                self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+                self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
             self.end_headers()
             self.wfile.write(body)
 
@@ -54,6 +62,62 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 self.send(403, {'error': 'Cross-site access denied.'})
                 return False
             return True
+
+        def extension_request(self):
+            origin = self.headers.get('Origin', '')
+            if (self.headers.get('Host') != f'127.0.0.1:{port}' or
+                    not re.fullmatch(r'chrome-extension://[a-p]{32}', origin)):
+                self.send(403, {'error': 'Extension origin required.'})
+                return False
+            self.companion_origin = origin
+            return True
+
+        def do_OPTIONS(self):
+            if self.path not in ('/api/companion/pair', '/api/companion/import'):
+                return self.send(403, {'error': 'Not allowed.'})
+            if self.extension_request():
+                self.send(200, {})
+
+        def companion_post(self):
+            if not self.extension_request():
+                return
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+                if not 0 < length <= 3000000:
+                    raise ValueError('Page exceeds the import limit.')
+                data = json.loads(self.rfile.read(length))
+                if not isinstance(data, dict):
+                    raise ValueError('Expected a JSON object.')
+                with companion_lock:
+                    if self.path == '/api/companion/pair':
+                        companion['attempts'] = companion.get('attempts', 0) + 1
+                        if (companion['attempts'] > 10 or time.time() > companion.get('expires', 0) or
+                                not secrets.compare_digest(str(data.get('code', '')), companion.get('code', '!'))):
+                            return self.send(403, {'error': 'Code expired or incorrect. Create a new code in Settings.'})
+                        companion.pop('code', None)
+                        companion['expires'] = 0
+                        companion['origin'] = self.companion_origin
+                        companion['token'] = secrets.token_urlsafe(32)
+                        return self.send(200, {'token': companion['token']})
+                    if (companion.get('origin') != self.companion_origin or
+                            not secrets.compare_digest(self.headers.get('Authorization', ''), 'Bearer ' + companion.get('token', '!'))):
+                        return self.send(401, {'error': 'Connect the companion again in Proofpage Settings.'})
+                    if data.get('reviewed') is not True:
+                        raise ValueError('Review this page before importing.')
+                    capture = data.get('capture')
+                    if not isinstance(capture, dict) or capture.get('proofpage_capture') != 'visible-text-v1':
+                        raise ValueError('Expected a visible page capture.')
+                    # Validate before creating a source or persisting anything.
+                    from .adapters import parse_entry
+                    from .imports import import_archive
+                    payload = json.dumps(capture).encode()
+                    parse_entry('page.json', payload)
+                    profiles = store.rows("SELECT id FROM import_profiles WHERE provider='browser-companion' AND account='local'")
+                    profile_id = profiles[0]['id'] if profiles else create_profile(store, 'Browser pages', 'browser-companion', 'local')['id']
+                    result = import_archive(store, 'page.json', payload, ['page.json'], profile_id)
+                    return self.send(200, result)
+            except (ValueError, KeyError, TypeError, OSError) as exc:
+                return self.send(400, {'error': str(exc)})
 
         def do_GET(self):
             if not self.authorized():
@@ -80,6 +144,8 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 self.send(400, {'error': str(exc)})
 
         def do_POST(self):
+            if self.path in ('/api/companion/pair', '/api/companion/import'):
+                return self.companion_post()
             if not self.authorized():
                 return
             if self.headers.get('Authorization') != 'Bearer ' + token:
@@ -91,6 +157,16 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 data = json.loads(self.rfile.read(length))
                 if not isinstance(data, dict):
                     raise ValueError('Expected a JSON object.')
+                if self.path == '/api/companion-code':
+                    with companion_lock:
+                        companion['code'] = secrets.token_hex(6).upper()
+                        companion['expires'] = time.time() + 300
+                        companion['attempts'] = 0
+                        return self.send(200, {'code': companion['code'], 'port': port})
+                if self.path == '/api/companion-revoke':
+                    with companion_lock:
+                        companion.clear()
+                    return self.send(200, {'revoked': True})
                 from .service import post
                 return self.send(*post(store, self.path, data))
             except (ValueError, KeyError, TypeError, OSError) as exc:

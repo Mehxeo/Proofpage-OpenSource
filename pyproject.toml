@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "proofpage"
-version = "0.2.1"
+version = "0.2.2"
 description = "Local evidence collection and reviewed dataset preparation"
 requires-python = ">=3.11"
 dependencies = []

@@ -44,6 +44,7 @@ async function renderSettings() {
   const s = data.settings;
   const local = hostingMode === 'local';
   $('content').innerHTML = `
+    ${local ? `<section class="panel"><h3>Browser companion</h3><p>Save reviewed pages directly from Chrome. Open the companion, enter this app’s port and a pairing code once. Reconnect after restarting Proofpage. The connection can only import pages.</p><div class="actions"><button id="companion-code">Connect browser</button><button id="companion-revoke" class="secondary">Disconnect browser</button></div><button type="button" id="attention-notifications" class="secondary">Toggle attention notifications</button><p id="companion-result" role="status"></p></section>` : ''}
     <section class="panel">
       <div class="panel-head"><div><h3>Receipt signing key</h3><p>Proofpage signs a receipt for every capture with this Ed25519 key. It stays in this workspace’s database and is included in backups — keep backups private.</p></div><span class="pill tone-ok">${pluralize(data.receipts, 'receipt')}</span></div>
       <dl class="meta-grid">
@@ -81,6 +82,15 @@ proofpage receipts                    # re-check this workspace’s receipt chai
       : `<p class="screening">${icon('alert')}<span>${escape(result.problems.join(' '))}</span></p>`;
   }, $('verify-chain'));
   if (!local) return;
+  $('attention-notifications').onclick = () => action(toggleNotifications, $('attention-notifications'));
+  $('companion-code').onclick = () => action(async () => {
+    const result = await api('companion-code', {});
+    $('companion-result').textContent = `Port ${result.port} · Code ${result.code} · Valid for 5 minutes. Enter this only in the Proofpage companion.`;
+  }, $('companion-code'));
+  $('companion-revoke').onclick = () => action(async () => {
+    await api('companion-revoke', {});
+    $('companion-result').textContent = 'Browser disconnected. Create a new code to reconnect.';
+  }, $('companion-revoke'));
   $('anchor-form').onsubmit = event => {
     event.preventDefault();
     const form = new FormData(event.target);

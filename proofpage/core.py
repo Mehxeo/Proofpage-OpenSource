@@ -425,6 +425,11 @@ class Store:
             db.execute('UPDATE runs SET state=?,finished_at=?,detail=?,added=? WHERE id=?', (state, now(), detail, added, run_id))
             db.execute('INSERT INTO observations VALUES(?,?,?,?,?,?)', (uuid.uuid4().hex, source_id, run_id, state, now(), detail))
         result = self.rows('SELECT * FROM runs WHERE id=?', (run_id,))[0]
+        if state in ('authentication_required', 'challenge_required'):
+            result['attention'] = {'required': True, 'reason': state, 'url': target_url or source['location'],
+                'training_action': 'Ask the user to sign in or complete the challenge, then import reviewed text with the browser companion.',
+                'agent_action': 'Ask for approval for this specific challenge before attempting it in the user browser. Sign in on the website; do not send passwords or session cookies to Proofpage.',
+                'resume': 'Import the readable page using the companion. Direct collection does not inherit browser login sessions.'}
         if rights_result is not None:
             result['rights'] = rights_result
         if discovered_urls is not None:
@@ -466,6 +471,10 @@ class Store:
                                                         'status': page['status'], 'last_captured_at': item['captured_at'],
                                                         'summary': f"The page now returns HTTP {page['status']}. Your last captured version is kept."}, now())
                     return
+            if state in ('authentication_required', 'challenge_required') and source['state'] != state:
+                event(db, 'collection_problem', source['id'], {'source_id': source['id'], 'source_name': source['name'], 'url': requested, 'state': state, 'needs_attention': True,
+                    'summary': 'Sign in on the website or complete its challenge, then save the readable page with the browser companion. Scheduled collection is paused for the source page.'}, now())
+                return
             if (target_url is None or target_url == source['location']) and state in PROBLEM_STATES and source['state'] in ('available', 'discovery'):
                 event(db, 'collection_problem', source['id'], {'source_id': source['id'], 'source_name': source['name'], 'url': requested, 'state': state,
                                                                 'previous_state': source['state'], 'summary': detail}, now())

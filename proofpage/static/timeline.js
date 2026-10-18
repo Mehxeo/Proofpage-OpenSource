@@ -39,6 +39,8 @@ function changeCard(row) {
     actions = `<button type="button" class="small" data-go="${d.datasets?.length ? 'datasets' : 'sources'}" data-change="${escape(row.id)}">${icon(d.datasets?.length ? 'database' : 'globe')}${d.datasets?.length ? 'Review datasets' : 'Open sources'}</button>`;
   } else if (row.kind === 'link_rot') {
     actions = `<button type="button" class="secondary small" data-open-change="${escape(d.item_id)}" data-change="${escape(row.id)}">${icon('eye')}Open last capture</button>`;
+  } else if (d.needs_attention && /^https?:\/\//.test(d.url || '')) {
+    actions = `<a class="button secondary small" href="${escape(d.url)}" target="_blank" rel="noopener noreferrer">Open website</a><button type="button" class="small" data-go="settings">Connect companion</button>`;
   } else {
     actions = `<button type="button" class="small" data-go="sources" data-change="${escape(row.id)}">${icon('globe')}Open sources</button>`;
   }
@@ -107,7 +109,8 @@ async function toggleNotifications() {
 function startNotifications() {
   clearInterval(notifyTimer);
   if (!notificationsOn()) return;
-  notifyTimer = setInterval(() => checkNotifications().catch(() => {}), 60000);
+  checkNotifications().catch(() => {});
+  notifyTimer = setInterval(() => checkNotifications().catch(() => {}), 15000);
 }
 
 async function checkNotifications() {
@@ -116,7 +119,8 @@ async function checkNotifications() {
   updateUnreadBadge(total);
   if (lastUnread !== null && total > lastUnread && data.events[0]) {
     const latest = data.events[0];
-    new Notification(`Proofpage: ${pluralize(total - lastUnread, 'new change')}`, {body: `${(CHANGE_KINDS[latest.kind] || [latest.kind])[0]} — ${latest.detail.title || latest.detail.source_name || ''}`, tag: 'proofpage-changes'});
+    const notification = new Notification(`Proofpage: ${pluralize(total - lastUnread, 'new change')}`, {body: `${(CHANGE_KINDS[latest.kind] || [latest.kind])[0]} — ${latest.detail.title || latest.detail.source_name || ''}`, tag: 'proofpage-changes'});
+    notification.onclick = () => { window.focus(); location.hash = '#/timeline'; notification.close(); };
   }
   lastUnread = total;
 }
