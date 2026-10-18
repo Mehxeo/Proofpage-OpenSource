@@ -1,7 +1,7 @@
 // Workspace views: library, sources, activity, datasets, and the evidence drawer.
 let state, view = 'library', query = '', pendingFile = null, pollTimer;
 const filters = {kind: '', source: '', review: '', rights: ''};
-let layout = (() => { try { return localStorage.getItem('proofpage-layout') || 'grid'; } catch { return 'grid'; } })();
+let layout = (() => { try { return localStorage.getItem('proofpage-layout') === 'list' ? 'list' : 'grid'; } catch { return 'grid'; } })();
 
 const VIEWS = {
   verify: ['Check quotes', 'Does the source say that?', 'Check quoted passages against captured evidence. Review the source before trusting the answer.'],

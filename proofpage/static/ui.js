@@ -247,19 +247,43 @@ function applyThemeButton() {
   $('theme-toggle').title = dark ? 'Use light theme' : 'Use dark theme';
 }
 
-function toggleTheme() {
-  const next = currentTheme() === 'dark' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = next;
-  try { localStorage.setItem('proofpage-theme', next); } catch {}
-  applyThemeButton();
-}
-
-(() => {
+function themePreference() {
   try {
     const saved = localStorage.getItem('proofpage-theme');
-    if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
-  } catch {}
-})();
+    return ['light', 'dark'].includes(saved) ? saved : 'system';
+  } catch { return 'system'; }
+}
+
+let selectedTheme = themePreference();
+function syncTheme() {
+  document.documentElement.dataset.theme = selectedTheme === 'system'
+    ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : selectedTheme;
+  if ($('theme-toggle')) applyThemeButton();
+  if ($('appearance-theme')) $('appearance-theme').value = selectedTheme;
+}
+
+function setTheme(preference) {
+  selectedTheme = ['light', 'dark'].includes(preference) ? preference : 'system';
+  let saved = true;
+  try { localStorage.setItem('proofpage-theme', selectedTheme); } catch { saved = false; }
+  syncTheme();
+  return saved;
+}
+
+function toggleTheme() {
+  if (!setTheme(currentTheme() === 'dark' ? 'light' : 'dark')) {
+    notice('Theme changed for this visit. Browser storage is unavailable.');
+  }
+}
+
+syncTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTheme);
+window.addEventListener('storage', event => {
+  if (event.key === 'proofpage-theme' || event.key === null) {
+    selectedTheme = themePreference();
+    syncTheme();
+  }
+});
 
 // ---------- Command palette ----------
 const paletteViews = () => [...document.querySelectorAll('.sidebar [data-view]')].map(button => ({

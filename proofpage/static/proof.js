@@ -46,6 +46,7 @@ async function renderSettings() {
   $('content').innerHTML = `
     <div class="settings-home">
     <section class="settings-intro"><div><h2>Make this workspace yours.</h2><p>Connect your browser, put an assistant to work, or prepare your next dataset.</p></div><span class="pill">${local ? 'On this computer' : 'Hosted workspace'}</span></section>
+    <section class="panel"><h3>Appearance</h3><p>These preferences belong to this browser. They do not change your evidence or train an AI model.</p><label>Theme<select id="appearance-theme"><option value="system">Follow system</option><option value="light">Light</option><option value="dark">Dark</option></select></label><p id="appearance-status" role="status" aria-live="polite"></p></section>
     <div class="settings-grid">
     ${local ? `<section class="panel connection-card"><div class="settings-symbol">${icon('plug')}</div><h3>Bring your browser along.</h3><p>Save pages, images and PDFs straight to your library.</p><ol class="connection-steps"><li>Open the Proofpage companion in Chrome.</li><li>Create a code below and enter it with this app’s port.</li><li>Preview a page or choose a file, review it, then save.</li></ol><div class="actions"><button id="companion-code">Create connection code</button></div><div id="companion-result" role="status" aria-live="polite"></div><details class="connection-help"><summary>Connection help</summary><p>Keep Proofpage running. Codes expire after five minutes. Reconnect after restarting the app. The companion can import evidence but cannot read your library.</p><button id="companion-revoke" class="secondary">Disconnect browser</button></details></section>` : ''}
     <section class="panel workflow-card"><div class="settings-symbol">${icon('layers')}</div><h3>What would you like to do?</h3><a class="settings-link" href="#/agents"><b>Connect an AI assistant <span>↗</span></b><small>Collect sources, check changes and retrieve cited evidence.</small></a><a class="settings-link" href="#/sources"><b>Watch a website <span>↗</span></b><small>Schedule collection while Proofpage is running.</small></a><a class="settings-link" href="#/training"><b>Build training data <span>↗</span></b><small>Review grounded examples and export reproducible datasets.</small></a></section>
@@ -82,6 +83,11 @@ proofpage verify proof-bundle.zip
 proofpage verify archive.wacz
 proofpage receipts                    # re-check this workspace’s receipt chain</pre>
     </section></details></div>`;
+  $('appearance-theme').value = selectedTheme;
+  $('appearance-theme').onchange = event => {
+    const saved = setTheme(event.target.value);
+    $('appearance-status').textContent = saved ? 'Theme saved for this browser.' : 'Applied for this visit. Browser storage is unavailable; this preference cannot be saved.';
+  };
   $('verify-chain').onclick = () => action(async () => {
     const result = await api('receipts-verify', {});
     $('chain-result').innerHTML = result.ok

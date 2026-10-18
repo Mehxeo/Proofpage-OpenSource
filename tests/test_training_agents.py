@@ -81,6 +81,33 @@ class TrainingAgentTests(unittest.TestCase):
         with self.assertRaises(ValueError):training.review_candidate(self.store,c['id'],'approved')
         training.review_candidate(self.store,c['id'],'approved',True)
 
+    def test_personal_message_mapping_is_explicit_and_persisted(self):
+        self.store.save(self.source['id'], 'personal', 'human_message', 'Alice',
+                        'I prefer concise answers.', 'original',
+                        {'normalized': {'sender': 'Alice'}})
+        rev = self.store.rows("SELECT current_revision FROM items WHERE external_id='personal'")[0]['current_revision']
+        payload = {'messages': [{'role': 'user', 'content': 'How should I answer?'},
+                                {'role': 'assistant', 'content': 'Keep answers concise.'}]}
+        valid = {'target_participant': 'Alice', 'context_confirmed': True, 'roles_approved': True}
+        for mapping in [None, [], 'Alice', dict(valid, target_participant='Bob'),
+                        dict(valid, context_confirmed='false'), dict(valid, roles_approved=1),
+                        dict(valid, roles_approved=False)]:
+            with self.subTest(mapping=mapping), self.assertRaises(ValueError):
+                training.create_candidate(self.store, rev, 'sft', payload,
+                                          'I prefer concise answers.', mapping=mapping)
+        candidate = training.create_candidate(self.store, rev, 'sft', payload,
+                                              'I prefer concise answers.', mapping=valid)
+        restarted = Store(self.temp.name)
+        loaded = training.get_candidate(restarted, candidate['id'])
+        self.assertEqual(loaded['mapping'], valid)
+        self.assertEqual(loaded['status'], 'draft')
+        with self.assertRaises(ValueError):
+            training.freeze_training(restarted, 'Personal style', [candidate['id']], 'sft')
+        self.store.review(rev, True, False)
+        training.review_candidate(self.store, candidate['id'], 'approved', True)
+        dataset = training.freeze_training(restarted, 'Personal style', [candidate['id']], 'sft')
+        self.assertEqual(dataset['records'], 1)
+
     def test_preference_requires_reason_and_difference(self):
         for payload,notes in [({'prompt':'Q','chosen':'A','rejected':'A'},'reason'),({'prompt':'Q','chosen':'A','rejected':'B'},'')]:
             with self.assertRaises(ValueError):training.create_candidate(self.store,self.rev,'preference',payload,'Plants',notes)

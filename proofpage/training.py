@@ -66,11 +66,14 @@ def create_candidate(store, revision_id, kind, payload, quote, notes='', origin=
     offset = revision['text'].find(quote)
     if offset < 0:
         raise ValueError('The evidence quote must appear verbatim in the selected revision.')
-    mapping = mapping or {}
+    if mapping is None:
+        mapping = {}
+    if not isinstance(mapping, dict):
+        raise ValueError('Role mapping must be an object.')
     if revision['kind'] == 'human_message':
         normalized = json.loads(revision['metadata']).get('normalized') or {}
         sender = normalized.get('sender')
-        if not sender or mapping.get('target_participant') != sender or not mapping.get('context_confirmed') or not mapping.get('roles_approved'):
+        if not sender or mapping.get('target_participant') != sender or mapping.get('context_confirmed') is not True or mapping.get('roles_approved') is not True:
             raise ValueError('Human messages require the actual target participant, confirmed context, and explicit role-mapping approval.')
     if kind == 'preference':
         text(notes, 'Preference rationale', 5000)

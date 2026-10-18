@@ -101,3 +101,10 @@ In Agent access, choose **Test MCP connection**. Proofpage launches its actual s
 Choose **Download SKILL.md** or **Copy skill** for collection, schedules, cited research and training-draft instructions. The packaged source is [proofpage/skills/proofpage/SKILL.md](../proofpage/skills/proofpage/SKILL.md). Install it with your assistant's skill mechanism. For project-local Codex use `.agents/skills/proofpage/SKILL.md`; for Claude Code use `.claude/skills/proofpage/SKILL.md`. The skill does not install MCP, grant access or start a scheduler.
 
 Sources now offers **Set schedule** / **Edit schedule**, with 15-minute, hourly, six-hour and daily choices plus pause. The first scheduled check starts after that interval; use Collect for an immediate capture. Keep the app/server open, and inspect Activity and Timeline for actual results and delays.
+
+
+## Personal preferences and personal training data
+
+Settings → Appearance offers Follow system, Light and Dark. The choice is saved in this browser, follows system changes when selected, and syncs across tabs on the same origin. The library also remembers grid/list layout. Browser preferences are not synced between devices or different app ports; clearing browser storage resets them. When browser storage is unavailable, the theme applies for this visit and the app explains that it could not save it.
+
+For personal-model datasets, create separate import profiles for each provider/account. Human-message examples require the actual sender as the target participant and explicit confirmation of context and role mapping. API clients must supply JSON booleans `true`, not strings or numbers, for `context_confirmed` and `roles_approved`. These decisions persist with the example; permission/privacy review and approval are still required before freezing a dataset. Appearance preferences do not personalize model weights, and Proofpage exports training data rather than running fine-tuning itself.
