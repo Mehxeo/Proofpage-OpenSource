@@ -21,6 +21,8 @@ def main():
     collect.add_argument('url')
     search = sub.add_parser('search', help='Search saved evidence; returns JSON')
     search.add_argument('query')
+    rights = sub.add_parser('rights', help='Show the AI-usage signals recorded for a source; returns JSON')
+    rights.add_argument('source', help='Source ID or its exact URL')
     imp = sub.add_parser('import', help='Preview an archive or import selected entries')
     imp.add_argument('path')
     imp.add_argument('--select', action='append', help='Exact entry name from preview; repeat for multiple entries')
@@ -123,6 +125,15 @@ def main():
         result = store.collect(source['id'])
     elif args.command == 'search':
         result = store.search(args.query)
+    elif args.command == 'rights':
+        sources = store.rows('SELECT * FROM sources WHERE id=? OR location=?', (args.source, args.source))
+        if not sources:
+            parser.error('Source not found. Use a source ID or its exact URL.')
+        rows = store.rows('SELECT o.* FROM rights_observations o WHERE o.source_id=? AND o.rowid=(SELECT x.rowid FROM rights_observations x WHERE x.url=o.url ORDER BY x.observed_at DESC, x.rowid DESC LIMIT 1) ORDER BY o.url', (sources[0]['id'],))
+        result = {'source': sources[0]['name'], 'location': sources[0]['location'], 'pages': [
+            {'url': r['url'], 'observed_at': r['observed_at'], 'verdict': json.loads(r['verdict']), 'signals': json.loads(r['signals']), 'checked': json.loads(r['checked'])} for r in rows]}
+        if not rows:
+            result['note'] = 'No rights observations yet. Collect the source to record publisher signals.'
     else:
         path = Path(args.path)
         with path.open('rb') as handle:

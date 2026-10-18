@@ -479,6 +479,16 @@ button.seal:hover { background: var(--seal-soft); color: var(--seal); border-col
 .freeze-bar h3 { margin-right: auto; display: flex; align-items: center; gap: 8px; }
 .freeze-bar input:not([type=checkbox]), .freeze-bar select { width: auto; flex: 1 1 180px; margin: 0; }
 .dataset-card .card-meta { justify-content: space-between; }
+.chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.source-card .chips { justify-content: flex-start; }
+.rights-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 16px; }
+.rights-use { display: grid; justify-items: start; gap: 6px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.signal { display: grid; gap: 6px; margin: 8px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.signal-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.signal code { padding: 6px 8px; border-radius: 6px; background: var(--surface-2); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.signal small { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.basis { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 12px; width: 100%; }
+.drawer-foot .basis label { margin: 0; }
 .citation { padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); margin: 12px 0; }
 .citation blockquote { margin: 10px 0; }
 .citation .card-meta { border-top: 0; padding-top: 0; }
@@ -603,7 +613,7 @@ dialog.palette { top: 12vh; margin: 0 auto; width: min(640px, calc(100vw - 24px)
     background: color-mix(in srgb, var(--sidebar-bg) 92%, transparent);
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   }
-  .sidebar > .brand, .workspace, .aside-bottom, .nav-label, .nav-count { display: none; }
+  .sidebar > .brand, .workspace, .aside-bottom, .nav-label, .nav-count, .nav-long { display: none; }
   .sidebar nav { display: flex; flex: 1; gap: 2px; margin: 0; overflow-x: auto; scrollbar-width: none; }
   .nav-group { display: contents; }
   .sidebar nav button { flex: 1 0 54px; flex-direction: column; gap: 3px; min-height: 54px; padding: 4px 2px; font-size: 10.5px; font-weight: 500; line-height: 1.1; white-space: normal; text-align: center; }
@@ -638,6 +648,7 @@ dialog.palette { top: 12vh; margin: 0 auto; width: min(640px, calc(100vw - 24px)
   dialog { padding: 20px; }
   .drawer-head, .drawer-body, .drawer-foot { padding-left: 18px; padding-right: 18px; }
   .meta-grid { grid-template-columns: 1fr; gap: 2px; }
+  .rights-grid, .basis { grid-template-columns: 1fr; }
   .meta-grid dd { margin-bottom: 10px; }
   .reader { font-size: 16px; }
   .onboarding { padding: 22px; }

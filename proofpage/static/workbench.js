@@ -63,8 +63,9 @@ function renderTraining() {
     ${workState.datasets.length ? `<div class="cards">${workState.datasets.map(dataset => `<article class="card dataset-card">
       <div class="card-top"><span class="tag">${icon(EXAMPLE_ICONS[dataset.format] || 'file')}${escape(kinds[dataset.format] || dataset.format)}</span>${seal(dataset.hash, 'Bundle SHA-256')}</div>
       <h3>${escape(dataset.name)}</h3>
-      <p>${pluralize(JSON.parse(dataset.manifest).records.length, 'example')} with source manifests, checksums, and a standalone validator.</p>
-      <div class="card-meta"><span title="${escape(date(dataset.created_at))}">${icon('clock')}Frozen ${escape(relativeTime(dataset.created_at))}</span><button type="button" class="secondary small" data-bundle="${escape(dataset.id)}">${icon('download')}Download bundle</button></div>
+      ${datasetRightsFlag(dataset)}
+      <p>${pluralize(JSON.parse(dataset.manifest).records.length, 'example')} with source manifests, rights at freeze, documentation drafts, checksums, and a standalone validator.</p>
+      <div class="card-meta"><span title="${escape(date(dataset.created_at))}">${icon('clock')}Frozen ${escape(relativeTime(dataset.created_at))}</span><span class="actions"><button type="button" class="small" data-docs="${escape(dataset.id)}" data-docs-name="${escape(dataset.name)}">${icon('file')}Documentation</button><button type="button" class="secondary small" data-bundle="${escape(dataset.id)}">${icon('download')}Download bundle</button></span></div>
     </article>`).join('')}</div>` : '<p class="muted">Frozen training bundles appear here. Each is reproducible and re-checks revocations on download.</p>'}
     ${workState.extractions.length ? `<div class="section-label">Structured extractions · unreviewed</div>${workState.extractions.map(extraction => `<details><summary>${escape(workState.recipes.find(recipe => recipe.id === extraction.recipe_id)?.name || 'Extraction')} · ${escape(originLabel(extraction.origin))} · ${escape(relativeTime(extraction.created_at))}</summary><pre>${escape(JSON.stringify(JSON.parse(extraction.result), null, 2))}</pre></details>`).join('')}` : ''}`;
 
@@ -79,7 +80,7 @@ function renderTraining() {
       const form = new FormData(event.target);
       action(async () => {
         const result = await api('training-freeze', {name: form.get('name'), kind: form.get('kind'), candidate_ids: [...document.querySelectorAll('[name=freeze-candidate]:checked')].map(input => input.value)});
-        notice(`Frozen ${pluralize(result.records, 'example')}. Splits: ${Object.entries(result.splits || {}).map(([split, count]) => split + ' ' + count).join(', ')}`);
+        notice(`Frozen ${pluralize(result.records, 'example')}. Splits: ${Object.entries(result.splits || {}).map(([split, count]) => split + ' ' + count).join(', ')}.` + rightsCounts(result.rights));
         await refresh();
       }, event.submitter);
     };
@@ -165,7 +166,7 @@ async function renderAgents() {
         ? `<div class="section-label">Cited context · ${pluralize(result.excerpts.length, 'excerpt')} · ${result.characters} characters</div>
           <p class="muted">${escape(result.coverage)} ${escape(result.instruction)}</p>
           ${result.excerpts.map(excerpt => `<article class="citation">
-            <div class="card-top"><h3>${escape(excerpt.title)}</h3><button type="button" class="small" data-item="${escape(excerpt.item_id)}">${icon('eye')}Open evidence</button></div>
+            <div class="card-top"><h3>${escape(excerpt.title)}</h3><span class="chips">${excerpt.rights?.ai_use ? rightsChip(excerpt.rights.ai_use, 'ai_use', true, excerpt.rights.summary) : excerpt.rights?.state ? rightsChip(excerpt.rights.state, 'ai_use') : ''}<button type="button" class="small" data-item="${escape(excerpt.item_id)}">${icon('eye')}Open evidence</button></span></div>
             <blockquote>${highlight(excerpt.text.length > 700 ? excerpt.text.slice(0, 700) + '…' : excerpt.text, terms)}</blockquote>
             <div class="card-meta"><button type="button" class="small" data-copy="${escape(excerpt.citation_id)}" title="Copy citation ID">${icon('copy')}<code>${escape(excerpt.citation_id.slice(0, 36))}…</code></button><span>${icon('clock')}Captured ${escape(relativeTime(excerpt.captured_at))}</span><span>Characters ${excerpt.start}–${excerpt.end}</span></div>
           </article>`).join('')}
@@ -248,7 +249,7 @@ async function inspectCandidate(id) {
   const candidate = await api('candidates/' + id), revision = await api('revisions/' + candidate.revision_id);
   const findings = candidate.findings.map(f => f.code + ' (' + f.severity + ')').join(', ');
   workDialog('Review training example', `
-    <div class="drawer-meta"><span class="tag">${icon(EXAMPLE_ICONS[candidate.kind] || 'file')}${escape(kinds[candidate.kind] || candidate.kind)}</span>${statusPill(candidate.status)}<span>${escape(originLabel(candidate.origin))}</span><span>${escape(relativeTime(candidate.created_at))}</span>${seal(candidate.hash, 'Example SHA-256')}</div>
+    <div class="drawer-meta"><span class="tag">${icon(EXAMPLE_ICONS[candidate.kind] || 'file')}${escape(kinds[candidate.kind] || candidate.kind)}</span>${statusPill(candidate.status)}${rightsChip(revision.rights.train, 'train', true, revision.rights.summary)}<span>${escape(originLabel(candidate.origin))}</span><span>${escape(relativeTime(candidate.created_at))}</span>${seal(candidate.hash, 'Example SHA-256')}</div>
     <div class="section-label">Example</div>
     <div class="payload">${payloadView(candidate.payload)}</div>
     <details><summary>Raw payload</summary><pre>${escape(JSON.stringify(candidate.payload, null, 2))}</pre></details>
@@ -257,13 +258,15 @@ async function inspectCandidate(id) {
     <details><summary>Full source revision</summary><pre>${escape(revision.text)}</pre></details>
     ${candidate.notes ? `<p>${escape(candidate.notes)}</p>` : ''}
     <p class="screening${findings ? '' : ' clear'}">${icon(findings ? 'alert' : 'check')}<span>${escape(findings ? 'Screening findings: ' + findings : 'No heuristic screening findings. Still review the actual content.')}</span></p>
+    ${revision.rights.train === 'reserved' || revision.rights.drifted ? `<p class="screening">${icon('alert')}<span>${escape(revision.rights.summary)}</span></p>` : ''}
+    ${basisFields(revision.rights, revision.review)}
     <label><input id="example-permission" type="checkbox"${revision.review.allowed ? ' checked' : ''}> I have permission to use this source revision.</label>
     <label><input id="example-correct" type="checkbox"> I reviewed the example, context, and answer correctness.</label>
     <label><input id="example-ack" type="checkbox"> I reviewed and accept any screening warnings.</label>
     <div class="actions"><button type="button" id="approve-example" class="primary">${icon('check')}Approve</button><button type="button" id="edit-example" class="secondary">Revise draft</button><button type="button" id="reject-example">Reject</button><button type="button" id="revoke-example" class="danger-text">Revoke</button></div>`);
   $('approve-example').onclick = () => action(async () => {
     if (!$('example-permission').checked || !$('example-correct').checked) throw new Error('Confirm source permission and example correctness.');
-    await api('review', {revision_id: candidate.revision_id, allowed: true, approved: !!revision.review.approved});
+    await api('review', {revision_id: candidate.revision_id, allowed: true, approved: !!revision.review.approved, ...basisPayload()});
     await api('candidate-review', {candidate_id: id, decision: 'approved', acknowledge: $('example-ack').checked});
     $('work-dialog').close();
     notice('Example approved.');

@@ -21,6 +21,7 @@ import urllib.request
 import urllib.robotparser
 import uuid
 import zipfile
+import zlib
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -29,6 +30,19 @@ from pathlib import Path
 
 MAX_BYTES = 8 * 1024 * 1024
 LOCK = threading.RLock()
+USER_AGENT = 'Proofpage/0.1 (local evidence collector)'
+_RECORDER = threading.local()
+
+
+@contextmanager
+def recording():
+    """Collect transport details from the next fetch on this thread: exact bytes, header order, redirects, peer, TLS."""
+    meta, previous = {}, getattr(_RECORDER, 'meta', None)
+    _RECORDER.meta = meta
+    try:
+        yield meta
+    finally:
+        _RECORDER.meta = previous
 
 
 def now():
@@ -131,6 +145,7 @@ class SafeRedirect(urllib.request.HTTPRedirectHandler):
 
 def fetch(url, allowed=None):
     initial_host = urllib.parse.urlsplit(url).hostname
+    redirects = []
     for _ in range(6):
         validate_url(url)
         if allowed is not None and not allowed(url):
@@ -144,6 +159,7 @@ def fetch(url, allowed=None):
             raise ValueError('Destination resolved to a non-public address.')
         # Connect directly to the validated numeric address, preventing DNS rebinding.
         connection = http.client.HTTPConnection(parsed.hostname, port, timeout=20)
+        tls = {}
         def connect():
             sock = socket.create_connection((addresses[0][4][0], port), timeout=20)
             if parsed.scheme == 'https':
@@ -151,18 +167,20 @@ def fetch(url, allowed=None):
                     from .tls import context as tls_context
                     context = tls_context()
                     sock = context.wrap_socket(sock, server_hostname=parsed.hostname)
+                    tls.update(tls_details(sock))
                 except Exception:
                     sock.close()
                     raise
             connection.sock = sock
         connection.connect = connect
         try:
-            connection.request('GET', urllib.parse.urlunsplit(('', '', parsed.path or '/', parsed.query, '')), headers={'User-Agent': 'Proofpage/0.1 (local evidence collector)', 'Accept': 'text/html,text/plain', 'Accept-Encoding': 'identity'})
+            connection.request('GET', urllib.parse.urlunsplit(('', '', parsed.path or '/', parsed.query, '')), headers={'User-Agent': USER_AGENT, 'Accept': 'text/html,text/plain', 'Accept-Encoding': 'identity'})
             response = connection.getresponse()
             if response.status in (301, 302, 303, 307, 308):
                 target = urllib.parse.urljoin(url, response.getheader('Location', ''))
                 if parsed.scheme == 'https' and urllib.parse.urlsplit(target).scheme != 'https':
                     raise ValueError('HTTPS downgrade redirect refused.')
+                redirects.append({'url': url, 'status': response.status, 'location': target})
                 url = target
                 continue
             body = response.read(MAX_BYTES + 1)
@@ -170,10 +188,34 @@ def fetch(url, allowed=None):
                 raise ValueError('Response exceeds the 8 MiB collection limit.')
             # Normalize headers so provider capitalization does not change behavior.
             headers = {key.lower(): value for key, value in response.getheaders()}
+            meta = getattr(_RECORDER, 'meta', None)
+            if meta is not None:
+                meta.update(raw=body, header_list=response.getheaders(), redirects=redirects, peer_ip=addresses[0][4][0],
+                             http_version='HTTP/1.1' if response.version == 11 else 'HTTP/1.0', reason=response.reason, tls=dict(tls))
             return response.status, headers, body.decode('utf-8', errors='replace'), url
         finally:
             connection.close()
     raise ValueError('Redirect limit reached.')
+
+
+def tls_details(sock):
+    """Certificate fingerprint and identity for provenance; TLS itself does not prove what a server sent."""
+    der = sock.getpeercert(binary_form=True)
+    cert = sock.getpeercert() or {}
+    name = lambda parts: ', '.join('='.join(pair) for group in parts or () for pair in group)
+    return {'version': sock.version(), 'cipher': (sock.cipher() or (None,))[0], 'cert_sha256': hashlib.sha256(der).hexdigest() if der else None,
+            'subject': name(cert.get('subject')), 'issuer': name(cert.get('issuer')), 'not_after': cert.get('notAfter')}
+
+
+def tdmrep_result(status, body, detail=''):
+    if status == 200:
+        try:
+            return {'status': 'read', 'data': json.loads(body)}
+        except ValueError:
+            return {'status': 'invalid'}
+    if status in (404, 410):
+        return {'status': 'missing'}
+    return {'status': 'unavailable', 'detail': detail or (f'unavailable (HTTP {status})' if status else 'unavailable')}
 
 
 def retry_seconds(value):
@@ -293,9 +335,11 @@ class Store:
             db.execute('INSERT INTO run_targets VALUES(?,?)', (run_id, source['location']))
             db.execute('INSERT OR REPLACE INTO cooldowns VALUES(?,?)', (origin, time.time() + 30))
         added, state, detail, discovered_urls = 0, 'failed', '', None
+        page, tdmrep, robots_status, robots_body = None, None, None, ''
+        robots_url = urllib.parse.urljoin(source['location'], '/robots.txt')
         try:
-            robots_url = urllib.parse.urljoin(source['location'], '/robots.txt')
             rs, rh, robots, _ = fetch(robots_url)
+            robots_status, robots_body = rs, robots if rs == 200 else ''
             if rs == 429:
                 with self.db() as db:
                     db.execute('INSERT OR REPLACE INTO cooldowns VALUES(?,?)', (origin, time.time() + retry_seconds(rh.get('retry-after'))))
@@ -315,7 +359,11 @@ class Store:
                 else:
                     from .crawl import in_scope
                     allowed = lambda url: in_scope(root_url, url) and (rs != 200 or rp.can_fetch('Proofpage', url))
-                    status, headers, body, final_url = fetch(source['location'], allowed=allowed)
+                    requested_at = now()
+                    with recording() as transport:
+                        status, headers, body, final_url = fetch(source['location'], allowed=allowed)
+                    page = {'url': source['location'], 'final_url': final_url or source['location'], 'requested_at': requested_at,
+                            'status': status, 'headers': headers, 'body': body, 'transport': transport}
                     state, title, text = classify(status, body)
                     content_type = headers.get('content-type', '')
                     render_metadata = {}
@@ -338,6 +386,8 @@ class Store:
                     if state == 'available':
                         added = int(self.save(source_id, source['location'], 'document', title or source['name'], text, body, {'url': final_url, 'status': status, 'coverage': 'Single observed page; attachments were not acquired.', **render_metadata}))
                         detail = 'Captured requested page.' if added else 'No substantive change.'
+                        page['revision_id'] = self.rows('SELECT current_revision FROM items WHERE source_id=? AND external_id=?', (source_id, source['location']))[0]['current_revision']
+                        tdmrep = self._tdmrep(origin, source['location'])
                     elif state == 'discovery':
                         detail = f'Discovered {len(discovered_urls)} feed/sitemap links. No article content was inferred.'
                     else:
@@ -348,6 +398,13 @@ class Store:
                             db.execute('INSERT OR REPLACE INTO cooldowns VALUES(?,?)', (origin, time.time() + retry_seconds(headers.get('retry-after'))))
         except Exception as exc:
             state, detail = 'failed', str(exc)[:500]
+        rights_result = None
+        if page is not None:
+            try:
+                rights_result = self._record_capture(run_id, source_id, origin, page, state, robots_url, robots_status, robots_body, tdmrep)
+            except Exception as exc:
+                # Provenance recording must never turn a completed capture into a failure.
+                rights_result = {'error': 'Rights and capture details were not recorded: ' + str(exc)[:300]}
         with self.db() as db:
             cooldown = db.execute('SELECT until FROM cooldowns WHERE origin=?', (origin,)).fetchone()
             next_run = max(time.time() + max(60, source['interval_seconds']), cooldown['until'] if cooldown else 0)
@@ -357,40 +414,103 @@ class Store:
             db.execute('UPDATE runs SET state=?,finished_at=?,detail=?,added=? WHERE id=?', (state, now(), detail, added, run_id))
             db.execute('INSERT INTO observations VALUES(?,?,?,?,?,?)', (uuid.uuid4().hex, source_id, run_id, state, now(), detail))
         result = self.rows('SELECT * FROM runs WHERE id=?', (run_id,))[0]
+        if rights_result is not None:
+            result['rights'] = rights_result
         if discovered_urls is not None:
             result['discovered_urls'] = discovered_urls
         return result
 
+    def _tdmrep(self, origin, page_url):
+        """Read /.well-known/tdmrep.json at most once per site per day; the request counts toward the host budget."""
+        day = now()[:10]
+        cached = self.rows("SELECT status,body,detail FROM policy_documents WHERE origin=? AND kind='tdmrep' AND substr(fetched_at,1,10)=? ORDER BY fetched_at DESC LIMIT 1", (origin, day))
+        if cached:
+            return tdmrep_result(cached[0]['status'], cached[0]['body'], cached[0]['detail'])
+        budget = self.rows('SELECT attempts FROM budgets WHERE origin=? AND day=?', (origin, day))
+        if budget and budget[0]['attempts'] >= 100:
+            return {'status': 'not_checked', 'detail': 'not checked (daily host budget reached)'}
+        url = urllib.parse.urljoin(page_url, '/.well-known/tdmrep.json')
+        status, body, detail = None, '', ''
+        with self.db() as db:
+            db.execute('INSERT INTO budgets VALUES(?,?,1) ON CONFLICT(origin,day) DO UPDATE SET attempts=attempts+1', (origin, day))
+        try:
+            status, _, body, _ = fetch(url)
+        except Exception as exc:
+            detail = ('unavailable: ' + str(exc))[:200] if str(exc) else 'unavailable'
+        body = body if status == 200 and isinstance(body, str) else ''
+        with self.db() as db:
+            db.execute('INSERT INTO policy_documents VALUES(?,?,?,?,?,?,?,?,?)', (uuid.uuid4().hex, origin, 'tdmrep', url, now(), status, digest(body) if body else None, body[:1024 * 1024], detail))
+        return tdmrep_result(status, body, detail)
+
+    def _record_capture(self, run_id, source_id, origin, page, state, robots_url, robots_status, robots_body, tdmrep):
+        from . import rights
+        transport = page['transport']
+        exact = transport.get('raw') is not None
+        raw = transport['raw'] if exact else page['body'].encode('utf-8')
+        body_sha = hashlib.sha256(raw).hexdigest()
+        headers = [[key, value] for key, value in (transport.get('header_list') or page['headers'].items()) if key.lower() != 'set-cookie']
+        robots_sha = digest(robots_body) if robots_status == 200 else None
+        html = page['body'] if 'html' in (page['headers'] or {}).get('content-type', 'text/html') else ''
+        observation = rights.observe(page['final_url'], page['headers'], html, robots_body, robots_status, tdmrep)
+        with LOCK, self.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            # Only confirmed content keeps its exact bytes; login forms and challenge pages are never stored.
+            if state in ('available', 'discovery'):
+                db.execute('INSERT OR IGNORE INTO capture_payloads VALUES(?,?)', (body_sha, zlib.compress(raw, 6)))
+            if robots_sha and not db.execute("SELECT 1 FROM policy_documents WHERE origin=? AND kind='robots' AND sha256=?", (origin, robots_sha)).fetchone():
+                db.execute('INSERT INTO policy_documents VALUES(?,?,?,?,?,?,?,?,?)', (uuid.uuid4().hex, origin, 'robots', robots_url, now(), 200, robots_sha, robots_body[:MAX_BYTES], ''))
+            capture_id = uuid.uuid4().hex
+            db.execute('INSERT INTO captures VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', (
+                capture_id, run_id, source_id, page['url'], page['final_url'], page['requested_at'], page['status'], json.dumps(headers), body_sha, len(raw), int(exact),
+                transport.get('peer_ip'), json.dumps(transport.get('tls') or {}, sort_keys=True), json.dumps(transport.get('redirects') or []), page.get('revision_id'), robots_sha))
+            return dict(rights.record(self, db, capture_id, source_id, page['final_url'], observation, now()), capture_id=capture_id)
+
     def search(self, query='', include_traces=True, snippets=False):
-        columns = 'i.*,r.text,r.hash,r.captured_at,r.source_time,s.name source_name,COALESCE(v.allowed,0) allowed,COALESCE(v.approved,0) approved'
+        columns = ('i.*,r.text,r.hash,r.captured_at,r.source_time,s.name source_name,s.kind source_kind,COALESCE(v.allowed,0) allowed,COALESCE(v.approved,0) approved,'
+                   '(SELECT o.verdict FROM captures c JOIN rights_observations o ON o.capture_id=c.id WHERE c.revision_id=i.current_revision ORDER BY o.observed_at DESC LIMIT 1) rights')
         joins = 'JOIN revisions r ON r.id=i.current_revision JOIN sources s ON s.id=i.source_id LEFT JOIN reviews v ON v.revision_id=i.current_revision'
         if query.strip():
             terms = ' AND '.join('"' + t.replace('"', '""') + '"' for t in query.split())
             # Control characters mark matches so the browser can escape text before highlighting it.
             highlight = ",snippet(search,2,char(2),char(3),'…',24) snippet" if snippets else ''
-            return self.rows(f"SELECT {columns}{highlight} FROM search JOIN items i ON i.id=search.item_id {joins} WHERE search MATCH ? AND (? OR i.kind!='agent_trace') ORDER BY rank LIMIT 100", (terms, int(include_traces)))
-        return self.rows(f'SELECT {columns} FROM items i {joins} ORDER BY r.captured_at DESC LIMIT 100')
+            rows = self.rows(f"SELECT {columns}{highlight} FROM search JOIN items i ON i.id=search.item_id {joins} WHERE search MATCH ? AND (? OR i.kind!='agent_trace') ORDER BY rank LIMIT 100", (terms, int(include_traces)))
+        else:
+            rows = self.rows(f'SELECT {columns} FROM items i {joins} ORDER BY r.captured_at DESC LIMIT 100')
+        for row in rows:
+            row['rights'] = json.loads(row['rights']) if row['rights'] else None
+        return rows
 
     def item(self, item_id):
         result = self.rows('SELECT i.*,r.*,s.name source_name FROM items i JOIN revisions r ON r.id=i.current_revision JOIN sources s ON s.id=i.source_id WHERE i.id=?', (item_id,))
         if not result:
             raise ValueError('Record not found.')
         result[0]['revisions'] = self.rows('SELECT id,hash,captured_at,source_time FROM revisions WHERE item_id=? ORDER BY captured_at DESC', (item_id,))
-        reviews = self.rows('SELECT allowed,approved FROM reviews WHERE revision_id=?', (result[0]['current_revision'],))
-        result[0]['review'] = reviews[0] if reviews else {'allowed': 0, 'approved': 0}
+        reviews = self.rows('SELECT allowed,approved,rights_basis,rights_note FROM reviews WHERE revision_id=?', (result[0]['current_revision'],))
+        result[0]['review'] = reviews[0] if reviews else {'allowed': 0, 'approved': 0, 'rights_basis': None, 'rights_note': ''}
         from .quality import findings
+        from .rights import revision_rights
         result[0]['findings'] = findings(result[0]['text'])
+        result[0]['rights'] = revision_rights(self, result[0]['current_revision'])
         return result[0]
 
-    def review(self, revision_id, allowed, approved):
+    def review(self, revision_id, allowed, approved, rights_basis=None, rights_note=None):
         revisions = self.rows('SELECT id,text FROM revisions WHERE id=?', (revision_id,))
         if not revisions:
             raise ValueError('Revision not found.')
         from .quality import findings
         if approved and any(f['severity'] == 'block' for f in findings(revisions[0]['text'])):
             raise ValueError('This revision contains detected credentials. Grant source permission separately and create a redacted training example.')
+        # A basis recorded earlier is kept unless a new one is supplied; an empty string clears it.
+        existing = (self.rows('SELECT rights_basis,rights_note FROM reviews WHERE revision_id=?', (revision_id,)) or [{}])[0]
+        basis = existing.get('rights_basis') if rights_basis is None else (rights_basis or None)
+        note = (existing.get('rights_note') or '') if rights_basis is None else (rights_note or '').strip()[:1000]
+        if allowed:
+            from .rights import check_basis
+            check_basis(self, revision_id, basis, note)
+        else:
+            basis, note = None, ''
         with self.db() as db:
-            db.execute('INSERT OR REPLACE INTO reviews VALUES(?,?,?)', (revision_id, int(allowed), int(approved)))
+            db.execute('INSERT OR REPLACE INTO reviews(revision_id,allowed,approved,rights_basis,rights_note) VALUES(?,?,?,?,?)', (revision_id, int(allowed), int(approved), basis, note))
 
     def revision(self, revision_id):
         revisions = self.rows('SELECT * FROM revisions WHERE id=?', (revision_id,))
@@ -403,8 +523,10 @@ class Store:
         from .quality import findings
         result['findings'] = findings(result['text'])
         result['current_revision'] = revision_id  # The revision selected for review, never a database update.
-        reviews = self.rows('SELECT allowed,approved FROM reviews WHERE revision_id=?', (revision_id,))
-        result['review'] = reviews[0] if reviews else {'allowed': 0, 'approved': 0}
+        reviews = self.rows('SELECT allowed,approved,rights_basis,rights_note FROM reviews WHERE revision_id=?', (revision_id,))
+        result['review'] = reviews[0] if reviews else {'allowed': 0, 'approved': 0, 'rights_basis': None, 'rights_note': ''}
+        from .rights import revision_rights
+        result['rights'] = revision_rights(self, revision_id)
         return result
 
     def freeze(self, name):
@@ -425,10 +547,13 @@ class Store:
         payload = '\n'.join(lines) + '\n'
         if not ids:
             raise ValueError('Reviewed revisions contain no nonempty corpus text.')
+        from . import rights
+        snapshot = rights.freeze_snapshot(self, ids)
         dataset_id = uuid.uuid4().hex
         with self.db() as db:
             db.execute('INSERT INTO datasets VALUES(?,?,?,?,?,?)', (dataset_id, name[:200], now(), payload, json.dumps(ids), digest(payload)))
-        return {'id': dataset_id, 'records': len(ids), 'hash': digest(payload)}
+            rights.save_snapshot(db, dataset_id, snapshot)
+        return {'id': dataset_id, 'records': len(ids), 'hash': digest(payload), 'rights': rights.snapshot_counts(snapshot)}
 
     def export(self, dataset_id):
         with self.db() as db:
@@ -445,6 +570,11 @@ class Store:
                 permission = db.execute('SELECT * FROM reviews WHERE revision_id=? AND allowed=1', (revision_id,)).fetchone()
                 if not permission or (not training and not permission['approved']):
                     raise ValueError('Export blocked: a frozen revision no longer has permission and approval.')
+            # A source that now reserves AI training blocks downloads until a rights basis is recorded.
+            from .rights import blocked_message, export_blockers
+            blocked = export_blockers(self, dataset_id, json.loads(dataset['revision_ids']))
+            if blocked:
+                raise ValueError(blocked_message(self, blocked))
             if digest(dataset['payload']) != dataset['hash']:
                 raise ValueError('Frozen dataset integrity check failed.')
             return dataset['payload']

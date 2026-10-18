@@ -18,6 +18,7 @@ TOOLS = {
     'proofpage_get_crawl': ('Read durable crawl coverage, incomplete pages, and checkpoints.', {'job_id': 'string'}),
     'proofpage_step_crawl': ('Advance at most one page of an existing crawl, respecting cooldowns. Poll next_attempt before retrying.', {'job_id': 'string'}),
     'proofpage_cancel_crawl': ('Cancel future requests in a collection job.', {'job_id': 'string'}),
+    'proofpage_get_rights': ('Read the AI-usage rights Proofpage observed for a record: publisher signals with exact evidence, verdicts for training, AI answers, and search, and any change since capture. Unknown is not permission.', {'item_id': 'string'}),
     'proofpage_list_recipes': ('List configured structured-extraction fields.', {}),
     'proofpage_submit_extraction': ('Store proposed field values with exact evidence quotes; null for absent fields. Remains unreviewed.', {'recipe_id': 'string', 'revision_id': 'string', 'fields': 'object'}),
     'proofpage_draft_example': ('Create an unapproved SFT, preference, correction, or evaluation draft tied to an exact evidence quote. Cannot approve or export training data.', {'revision_id': 'string', 'kind': 'string', 'payload': 'object', 'quote': 'string', 'notes': 'string'}),
@@ -59,6 +60,9 @@ def call(store, name, args):
         if name == 'proofpage_start_crawl':
             return create_job(store, args['source_id'], args['max_pages'], args['max_depth'])
         return {'proofpage_get_crawl': get_job, 'proofpage_step_crawl': step_job, 'proofpage_cancel_crawl': cancel_job}[name](store, args['job_id'])
+    if name == 'proofpage_get_rights':
+        item = store.item(args['item_id'])
+        return {'item_id': item['id'], 'title': item['title'], 'revision_id': item['current_revision'], 'rights': item['rights'], 'review': item['review']}
     if name == 'proofpage_list_recipes':
         return store.rows('SELECT * FROM extraction_recipes')
     if name == 'proofpage_submit_extraction':

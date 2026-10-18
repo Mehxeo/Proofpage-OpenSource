@@ -1,6 +1,6 @@
 // Workspace views: library, sources, activity, datasets, and the evidence drawer.
 let state, view = 'library', query = '', pendingFile = null, pollTimer;
-const filters = {kind: '', source: '', review: ''};
+const filters = {kind: '', source: '', review: '', rights: ''};
 let layout = (() => { try { return localStorage.getItem('proofpage-layout') || 'grid'; } catch { return 'grid'; } })();
 
 const VIEWS = {
@@ -14,6 +14,7 @@ const KIND_ICONS = {document: 'file', conversation: 'message', human_message: 'm
 const kindIcon = kind => KIND_ICONS[kind] || 'file';
 const kindLabel = kind => String(kind || 'record').replaceAll('_', ' ');
 const locationLabel = url => { try { const parsed = new URL(url); return parsed.hostname.replace(/^www\./, '') + (parsed.pathname === '/' ? '' : parsed.pathname); } catch { return url; } };
+const itemRights = item => item.source_kind && item.source_kind !== 'web' ? 'user_supplied' : (item.rights?.train || 'not_recorded');
 const snippetHtml = text => escape(text).replaceAll('\u0002', '<mark>').replaceAll('\u0003', '</mark>');
 
 async function refresh() {
@@ -66,7 +67,7 @@ function render() {
 function itemCard(item) {
   const excerpt = item.snippet ? snippetHtml(item.snippet) : escape((item.text || '').slice(0, 260));
   return `<article class="card">
-    <div class="card-top"><span class="tag">${icon(kindIcon(item.kind))}${escape(kindLabel(item.kind))}</span>${item.approved ? '<span class="pill tone-ok">Approved</span>' : item.allowed ? '<span class="pill tone-accent">Permitted</span>' : ''}</div>
+    <div class="card-top"><span class="tag">${icon(kindIcon(item.kind))}${escape(kindLabel(item.kind))}</span><span class="chips">${item.approved ? '<span class="pill tone-ok">Approved</span>' : item.allowed ? '<span class="pill tone-accent">Permission given</span>' : ''}${item.source_kind === 'web' ? rightsChip(itemRights(item), 'train', true, item.rights?.summary) : ''}</span></div>
     <h3><button type="button" class="card-link" data-item="${escape(item.id)}">${escape(item.title || 'Untitled record')}</button></h3>
     <p>${excerpt || '<span class="muted">No text captured.</span>'}</p>
     <div class="card-meta"><span>${icon('globe')}${escape(item.source_name)}</span><span title="${escape(date(item.captured_at))}">${icon('clock')}${escape(relativeTime(item.captured_at))}</span>${seal(item.hash, 'Revision SHA-256')}</div>
@@ -87,7 +88,7 @@ function onboarding() {
     </div>
     <ol class="steps">
       <li><b>Add a public page</b><span>Paste a URL. Robots rules, cooldowns, and daily budgets are respected.</span></li>
-      <li><b>Collect it</b><span>Proofpage stores the readable text, the original response, and coverage notes.</span></li>
+      <li><b>Collect it</b><span>Proofpage stores the readable text, the original response, and the publisher’s AI-usage signals.</span></li>
       <li><b>Inspect the evidence</b><span>Read it, confirm permission, and turn it into reviewed training data.</span></li>
     </ol>
   </section>`;
@@ -105,7 +106,10 @@ function renderLibrary() {
   const sources = state.sources.filter(source => items.some(item => item.source_id === source.id));
   const shown = items.filter(item => (!filters.kind || item.kind === filters.kind)
     && (!filters.source || item.source_id === filters.source)
-    && (!filters.review || (filters.review === 'approved' ? item.approved : !item.approved)));
+    && (!filters.review || (filters.review === 'approved' ? item.approved : !item.approved))
+    && (!filters.rights || itemRights(item) === filters.rights));
+  const rightsPresent = [...new Set(items.filter(item => item.source_kind === 'web').map(itemRights))];
+  if (filters.rights && !rightsPresent.includes(filters.rights)) filters.rights = '';
   const chip = (group, value, label, count) => `<button type="button" class="chip" data-filter="${group}" data-value="${escape(value)}" aria-pressed="${filters[group] === value}">${escape(label)}${count === undefined ? '' : ` <span class="count">${count}</span>`}</button>`;
 
   $('content').innerHTML = `
@@ -125,11 +129,12 @@ function renderLibrary() {
     <div class="toolbar">
       <div class="filters" role="group" aria-label="Filter by kind">${chip('kind', '', 'All kinds')}${kinds.map(([kind, count]) => chip('kind', kind, kindLabel(kind), count)).join('')}</div>
       <div class="filters" role="group" aria-label="Filter by review">${chip('review', '', 'Any review')}${chip('review', 'approved', 'Approved')}${chip('review', 'pending', 'Not approved')}</div>
+      ${rightsPresent.length ? `<div class="filters" role="group" aria-label="Filter by AI-training rights">${chip('rights', '', 'Any rights')}${['allowed', 'conditional', 'unknown', 'reserved', 'not_recorded'].filter(v => rightsPresent.includes(v)).map(v => chip('rights', v, 'Training ' + RIGHTS[v][0].toLowerCase())).join('')}</div>` : ''}
       ${sources.length > 1 ? `<select id="source-filter" aria-label="Filter by source" class="small"><option value="">All sources</option>${sources.map(source => `<option value="${escape(source.id)}"${filters.source === source.id ? ' selected' : ''}>${escape(source.name)}</option>`).join('')}</select>` : ''}
     </div>
     <div class="section-label">${query ? `Results for “${escape(query)}” · ${shown.length}` : `Recent evidence · ${shown.length}`}</div>
     ${shown.length ? `<div class="cards${layout === 'list' ? ' list-mode' : ''}">${shown.map(itemCard).join('')}</div>`
-      : query || filters.kind || filters.review || filters.source
+      : query || filters.kind || filters.review || filters.source || filters.rights
         ? empty('No matching evidence.', 'Try a different word, clear a filter, or add another source.', `<button type="button" class="secondary" id="clear-search">${icon('x')}Clear search and filters</button>`, 'search')
         : empty('Collect your first source.', 'Your sources are set up. Collect one to capture its text and original evidence.', `<button type="button" class="primary" data-go="sources">${icon('globe')}Go to sources</button>`, 'collect')}`;
 
@@ -151,6 +156,7 @@ function sourceCard(source) {
   return `<article class="card source-card">
     <div class="card-top"><span class="monogram" aria-hidden="true">${escape(letter)}</span><div><h3>${escape(source.name)}</h3><span class="location" title="${escape(source.location)}">${escape(web ? locationLabel(source.location) : source.location)}</span></div>${statusPill(source.state)}</div>
     <p class="help">${escape(run?.detail || stateInfo(source.state).help || 'Configured.')}</p>
+    ${web ? (() => { const verdict = source.rights ? JSON.parse(source.rights) : null; return `<div class="chips">${verdict ? Object.keys(RIGHTS_USES).map(use => rightsChip(verdict[use], use, true, verdict.summary)).join('') : rightsChip('not_recorded')}</div>`; })() : ''}
     <div class="card-meta"><span>${icon(web ? 'clock' : 'folder')}${escape(schedule)}${run ? ' · last run ' + escape(relativeTime(run.finished_at || run.started_at)) : ''}</span>
       ${web ? `<div class="actions">
         ${live ? `<a class="button icon-button small" href="${escape(source.location)}" target="_blank" rel="noopener noreferrer" aria-label="Open live page" title="Open live page">${icon('external')}</a>` : ''}
@@ -206,14 +212,15 @@ function renderDatasets() {
     <div class="section-label">Frozen datasets · ${state.datasets.length}</div>
     ${state.datasets.length ? `<div class="cards">${state.datasets.map(dataset => `<article class="card dataset-card">
       <div class="card-top"><span class="tag">${icon(dataset.format ? 'training' : 'database')}${dataset.format ? escape(kinds[dataset.format] || dataset.format) : 'Corpus JSONL'}</span>${seal(dataset.hash, 'Dataset SHA-256')}</div>
+      ${datasetRightsFlag(dataset)}
       <h3>${escape(dataset.name)}</h3>
-      <p>Frozen ${escape(relativeTime(dataset.created_at))}. ${dataset.format ? 'Training examples as JSONL; download the full bundle from Training.' : 'Exports re-check permission and integrity every time.'}</p>
-      <div class="card-meta"><span title="${escape(date(dataset.created_at))}">${icon('clock')}${escape(date(dataset.created_at))}</span><button type="button" class="secondary small" data-export="${escape(dataset.id)}">${icon('download')}Export JSONL</button></div>
+      <p>Frozen ${escape(relativeTime(dataset.created_at))}. ${dataset.format ? 'Training examples as JSONL; download the full bundle from Training.' : 'Every export re-checks permission, publisher rights, and integrity.'}</p>
+      <div class="card-meta"><span title="${escape(date(dataset.created_at))}">${icon('clock')}${escape(date(dataset.created_at))}</span><span class="actions"><button type="button" class="small" data-docs="${escape(dataset.id)}" data-docs-name="${escape(dataset.name)}">${icon('file')}Documentation</button><button type="button" class="secondary small" data-export="${escape(dataset.id)}">${icon('download')}Export JSONL</button></span></div>
     </article>`).join('')}</div>`
       : empty('Review before you export.', 'Open a library record, review its evidence, and confirm permission. Frozen exports use exactly the approved revisions.', `<button type="button" class="secondary" data-go="library">${icon('library')}Open the library</button>`, 'database')}`;
   $('freeze').onclick = () => action(async () => {
     const result = await api('freeze', {name: 'Reviewed corpus · ' + new Date().toLocaleDateString()});
-    notice(`Frozen ${pluralize(result.records, 'reviewed record')}.`);
+    notice(`Frozen ${pluralize(result.records, 'reviewed record')}.` + rightsCounts(result.rights));
     await refresh();
   }, $('freeze'));
 }
@@ -226,6 +233,37 @@ function conversationView(metadata) {
   return `<details open><summary>Source conversation · ${pluralize(normalized.messages.length, 'message')}</summary><p class="muted">${escape(normalized.branching)}</p>${normalized.messages.map((message, index) => `<article class="message"><div class="message-head"><span class="tag">${escape(message.role || 'Unknown source role')}</span><strong>Message ${index + 1}</strong></div><p class="muted">${message.parent ? 'Replies to ' + escape(labels.get(message.parent) || 'a missing source message') : 'Parent relationship not supplied'}${message.children?.length > 1 ? ' · ' + message.children.length + ' source branches' : ''}</p><pre>${escape(message.text || 'No text supplied for this node.')}</pre></article>`).join('')}</details>`;
 }
 
+function signalRow(signal) {
+  return `<div class="signal"><div class="signal-head"><b>${escape(signal.label)}</b>${Object.entries(signal.effects).map(([use, value]) => rightsChip(value, use)).join('')}</div>
+    <code>${escape(signal.raw)}</code><small>${escape(signal.source)} · ${escape(signal.status)}${signal.note ? ' · ' + escape(signal.note) : ''}</small></div>`;
+}
+
+function rightsPanel(rights, review) {
+  if (rights.state !== 'observed') {
+    return `<p class="callout">${icon('info')}<span>${escape(rights.summary)}</span></p>`;
+  }
+  const current = rights.current, capture = rights.at_capture;
+  return `<div class="rights-grid">${Object.keys(RIGHTS_USES).map(use => `<div class="rights-use"><span class="muted">${RIGHTS_USES[use]}</span>${rightsChip(rights[use], use, false)}</div>`).join('')}</div>
+    <p>${escape(rights.summary)}</p>
+    ${rights.drifted ? `<p class="screening">${icon('alert')}<span>Signals changed after this revision was captured. At capture, AI training was ${escape((RIGHTS[capture.verdict.train] || RIGHTS.unknown)[0].toLowerCase())}; now it is ${escape((RIGHTS[current.verdict.train] || RIGHTS.unknown)[0].toLowerCase())}. Proofpage uses the stricter of the two.</span></p>` : ''}
+    ${review.rights_basis ? `<p class="screening clear">${icon('shield')}<span>Recorded rights basis: ${escape(RIGHTS_BASES[review.rights_basis] || review.rights_basis)}${review.rights_note ? ' — ' + escape(review.rights_note) : ''}</span></p>` : ''}
+    <div class="section-label">Publisher signals · ${current.signals.length}</div>
+    ${current.signals.length ? current.signals.map(signalRow).join('') : '<p class="muted">No machine-readable AI-usage signals were published for this page.</p>'}
+    <div class="section-label">What Proofpage checked</div>
+    <dl class="meta-grid">${Object.entries(current.checked).map(([where, outcome]) => `<dt>${escape(where)}</dt><dd>${escape(outcome)}</dd>`).join('')}</dl>
+    <p class="muted">Observed ${escape(relativeTime(current.observed_at))} for ${escape(rights.url)}. Signals are advisory; several are drafts or vendor conventions. This is not legal advice.</p>`;
+}
+
+function basisFields(rights, review) {
+  if (rights?.train !== 'reserved') return '';
+  return `<div class="basis"><label>Rights basis — required because the publisher reserved AI training<select id="rights-basis"><option value="">Choose a basis…</option>${Object.entries(RIGHTS_BASES).map(([key, label]) => `<option value="${key}"${review.rights_basis === key ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
+    <label>Basis note<input id="rights-note" maxlength="1000" placeholder="License reference, agreement date, or other evidence" value="${escape(review.rights_note || '')}"></label></div>`;
+}
+
+function basisPayload() {
+  return $('rights-basis') ? {rights_basis: $('rights-basis').value, rights_note: $('rights-note').value} : {};
+}
+
 function evidenceTabs(tabs) {
   $('evidence-tabs').innerHTML = tabs.map(([id, label], index) => `<button type="button" role="tab" id="tab-${id}" aria-controls="panel-${id}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${label}</button>`).join('');
 }
@@ -236,9 +274,9 @@ async function showEvidence(id, revision) {
   const findings = item.findings || [];
   const branchTargets = (metadata.normalized?.messages || []).filter(message => message.role === 'assistant' && message.id);
   $('evidence-title').textContent = item.title || 'Untitled record';
-  $('evidence-kicker').innerHTML = `<span class="tag">${icon(kindIcon(item.kind))}${escape(kindLabel(item.kind))}</span>${item.is_current === false ? '<span class="pill tone-warn">Earlier revision</span>' : ''}`;
+  $('evidence-kicker').innerHTML = `<span class="tag">${icon(kindIcon(item.kind))}${escape(kindLabel(item.kind))}</span>${item.rights?.state === 'observed' || item.rights?.state === 'not_recorded' ? rightsChip(item.rights.train, 'train', true, item.rights.summary) : ''}${item.is_current === false ? '<span class="pill tone-warn">Earlier revision</span>' : ''}`;
   $('evidence-meta').innerHTML = `<span>${icon('globe', 'icon-sm')}${escape(item.source_name)}</span><span title="${escape(date(item.captured_at))}">${icon('clock', 'icon-sm')}Captured ${escape(relativeTime(item.captured_at))}</span>${seal(item.hash, 'Revision SHA-256')}${/^https?:\/\//i.test(metadata.url || '') ? `<a href="${escape(metadata.url)}" target="_blank" rel="noopener noreferrer">${icon('external', 'icon-sm')}Live page</a>` : ''}`;
-  evidenceTabs([['reader', 'Reader'], ['original', 'Original evidence'], ['provenance', 'Provenance'], ['versions', `Versions <span class="count">${item.revisions.length}</span>`]]);
+  evidenceTabs([['reader', 'Reader'], ['rights', 'Rights'], ['original', 'Original evidence'], ['provenance', 'Provenance'], ['versions', `Versions <span class="count">${item.revisions.length}</span>`]]);
   const provenance = [
     ['Source', escape(item.source_name)],
     ['Kind', escape(kindLabel(item.kind))],
@@ -259,6 +297,7 @@ async function showEvidence(id, revision) {
       <div class="reader">${escape(item.text) || '<span class="muted">No readable text was captured.</span>'}</div>
       ${branchTargets.length ? `<details><summary>Create an SFT draft from one supplied branch</summary><div class="actions">${branchTargets.map(message => `<button type="button" class="secondary small" data-branch-target="${escape(message.id)}" data-branch-revision="${escape(item.current_revision)}">${icon('branch')}${escape(message.text.slice(0, 80) || message.id)}</button>`).join('')}</div></details>` : ''}
     </section>
+    <section role="tabpanel" id="panel-rights" aria-labelledby="tab-rights" hidden>${rightsPanel(item.rights, item.review)}</section>
     <section role="tabpanel" id="panel-original" aria-labelledby="tab-original" hidden>
       <p class="muted">The response exactly as captured. Proofpage never edits original evidence.</p>
       <pre>${escape(item.raw)}</pre>
@@ -271,7 +310,7 @@ async function showEvidence(id, revision) {
       <p class="muted">Each change creates a new immutable revision. Inspect or revoke an earlier version.</p>
       <div class="versions">${item.revisions.map(r => `<button type="button" class="version${r.id === item.current_revision ? ' current' : ''}" data-revision="${escape(r.id)}" data-record="${escape(id)}"><span><b>${escape(date(r.captured_at))}</b><br><small>${r.id === item.current_revision ? 'Shown now' : 'Captured ' + escape(relativeTime(r.captured_at))}</small></span><code class="seal">${escape(r.hash.slice(0, 4))}·${escape(r.hash.slice(4, 8))}</code></button>`).join('')}</div>
     </section>`;
-  $('evidence-foot').innerHTML = `
+  $('evidence-foot').innerHTML = `${basisFields(item.rights, item.review)}
     <label><input id="permission" type="checkbox"${item.review.allowed ? ' checked' : ''}> I have permission to include this revision in a dataset.</label>
     <label><input id="approved" type="checkbox"${item.review.approved ? ' checked' : ''}> I reviewed and approve it for a clean corpus.</label>
     <div class="actions">
@@ -281,7 +320,7 @@ async function showEvidence(id, revision) {
       <button type="button" class="primary small" id="review">${icon('check')}Save review</button>
     </div>`;
   $('review').onclick = () => action(async () => {
-    await api('review', {revision_id: item.current_revision, allowed: $('permission').checked, approved: $('approved').checked});
+    await api('review', {revision_id: item.current_revision, allowed: $('permission').checked, approved: $('approved').checked, ...basisPayload()});
     $('evidence-dialog').close();
     notice('Review saved for this revision.');
     await refresh();
@@ -317,13 +356,36 @@ document.addEventListener('keydown', event => {
   selectTab(tabs[(next + tabs.length) % tabs.length]);
 });
 
+// ---------- Documentation drafts ----------
+let documentationDrafts;
+async function openDocs(datasetId, name) {
+  const docs = await api('compliance/' + datasetId);
+  documentationDrafts = {docs, slug: String(name || 'dataset').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'dataset'};
+  openModal('Documentation drafts', `
+    <p class="callout">${icon('info')}<span>Built only from what Proofpage recorded for “${escape(name)}”. These are drafts, not legal advice; review and complete them before publishing.</span></p>
+    <div class="tabs" role="tablist" aria-label="Documents">
+      <button type="button" role="tab" id="tab-doc-summary" aria-controls="panel-doc-summary" aria-selected="true">EU AI Act summary</button>
+      <button type="button" role="tab" id="tab-doc-card" aria-controls="panel-doc-card" aria-selected="false" tabindex="-1">Dataset card</button>
+      <button type="button" role="tab" id="tab-doc-croissant" aria-controls="panel-doc-croissant" aria-selected="false" tabindex="-1">Croissant</button>
+    </div>
+    <section role="tabpanel" id="panel-doc-summary" aria-labelledby="tab-doc-summary"><pre>${escape(docs.summary_markdown)}</pre></section>
+    <section role="tabpanel" id="panel-doc-card" aria-labelledby="tab-doc-card" hidden><pre>${escape(docs.dataset_card)}</pre></section>
+    <section role="tabpanel" id="panel-doc-croissant" aria-labelledby="tab-doc-croissant" hidden><pre>${escape(JSON.stringify(docs.croissant, null, 2))}</pre></section>
+    <div class="actions">
+      <button type="button" class="primary small" data-save-doc="summary">${icon('download')}Summary (.md)</button>
+      <button type="button" class="secondary small" data-save-doc="json">Summary (.json)</button>
+      <button type="button" class="secondary small" data-save-doc="card">Dataset card (.md)</button>
+      <button type="button" class="secondary small" data-save-doc="croissant">croissant.json</button>
+    </div>`);
+}
+
 // ---------- Actions ----------
 async function tryExample(button) {
   await action(async () => {
     const source = await api('sources', {name: 'Example Domain', url: 'https://example.com/'});
     notice('Collecting example.com… robots rules are checked first.');
     const result = await api('collect', {source_id: source.id});
-    notice(result.detail, result.state !== 'available');
+    notice(result.detail + rightsNote(result.rights), result.state !== 'available');
     await refresh();
   }, button);
 }
@@ -341,7 +403,14 @@ document.addEventListener('click', event => {
   if (b.id === 'clear-search') { query = ''; Object.keys(filters).forEach(key => { filters[key] = ''; }); action(refresh); }
   if (b.dataset.filter) { filters[b.dataset.filter] = b.dataset.value; renderLibrary(); }
   if (b.dataset.layout) { layout = b.dataset.layout; try { localStorage.setItem('proofpage-layout', layout); } catch {} renderLibrary(); }
-  if (b.getAttribute('role') === 'tab' && b.closest('#evidence-tabs')) selectTab(b);
+  if (b.getAttribute('role') === 'tab' && b.closest('[role=tablist]')) selectTab(b);
+  if (b.dataset.docs) action(() => openDocs(b.dataset.docs, b.dataset.docsName), b);
+  if (b.dataset.saveDoc && documentationDrafts) {
+    const {docs, slug} = documentationDrafts;
+    const files = {summary: [`${slug}-training-content-summary.md`, docs.summary_markdown], json: [`${slug}-training-content-summary.json`, JSON.stringify(docs.summary, null, 2), 'application/json'],
+      card: [`${slug}-dataset-card.md`, docs.dataset_card], croissant: [`${slug}-croissant.json`, JSON.stringify(docs.croissant, null, 2), 'application/ld+json']};
+    saveText(...files[b.dataset.saveDoc]);
+  }
   if (b.dataset.watchToggle) action(async () => { await api('watch-toggle', {watch_id: b.dataset.watchToggle, enabled: b.dataset.enabled === 'true'}); await refresh(); }, b);
   if (b.dataset.watchScan) action(async () => { const result = await api('watch-scan', {watch_id: b.dataset.watchScan}); notice(result.detail || result.state); await refresh(); }, b);
   if (b.dataset.watchDetail) action(async () => {
@@ -353,7 +422,7 @@ document.addEventListener('click', event => {
   if (b.dataset.collect) action(async () => {
     notice('Collecting the requested page… robots rules are checked first.');
     const result = await api('collect', {source_id: b.dataset.collect});
-    notice(result.detail, result.state !== 'available');
+    notice(result.detail + rightsNote(result.rights), result.state !== 'available');
     await refresh();
   }, b);
   if (b.dataset.schedule) action(async () => { await api('schedule', {source_id: b.dataset.schedule, interval_seconds: Number(b.dataset.interval)}); await refresh(); }, b);

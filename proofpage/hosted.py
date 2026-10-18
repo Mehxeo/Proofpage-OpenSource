@@ -18,7 +18,7 @@ from .billing import Billing
 STATIC = Path(__file__).parent / 'static'
 READ_TOOLS = {'proofpage_list_sources','proofpage_get_source_access','proofpage_get_run','proofpage_search',
               'proofpage_get_item','proofpage_get_evidence','proofpage_list_changes','proofpage_get_context',
-              'proofpage_get_crawl','proofpage_list_recipes'}
+              'proofpage_get_crawl','proofpage_list_recipes','proofpage_get_rights'}
 
 
 class HostedStore(Store):

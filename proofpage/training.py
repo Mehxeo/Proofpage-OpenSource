@@ -164,6 +164,8 @@ def freeze_training(store, name, candidate_ids, kind):
         provenance.append({'candidate_id': candidate['id'], 'hash': candidate['hash'], 'split': split, 'group': group,
                            'citations': candidate['citations'], 'origin': candidate['origin'], 'notes': candidate['notes']})
     payload = '\n'.join(lines) + '\n'
+    from . import rights
+    snapshot = rights.freeze_snapshot(store, sorted({c['revision_id'] for c in candidates}))
     dataset_id = uuid.uuid4().hex
     manifest = {'schema': 'proofpage.training.v1', 'kind': kind, 'created_at': now(), 'payload_sha256': digest(payload),
                 'records': provenance, 'split_policy': 'Source groups and 0.85 Jaccard word-shingle neighbors stay together; exact example duplicates removed.',
@@ -176,7 +178,8 @@ def freeze_training(store, name, candidate_ids, kind):
                 raise ValueError('Permission or approval changed; review the selected examples again.')
         db.execute('INSERT INTO datasets VALUES(?,?,?,?,?,?)', (dataset_id, text(name, 'Dataset name', 200), now(), payload, json.dumps(sorted({c['revision_id'] for c in candidates})), digest(payload)))
         db.execute('INSERT INTO dataset_manifests VALUES(?,?,?,?)', (dataset_id, kind, json.dumps(manifest), json.dumps([c['id'] for c in candidates])))
-    return {'id': dataset_id, 'records': len(candidates), 'hash': digest(payload), 'kind': kind,
+        rights.save_snapshot(db, dataset_id, snapshot)
+    return {'id': dataset_id, 'records': len(candidates), 'hash': digest(payload), 'kind': kind, 'rights': rights.snapshot_counts(snapshot),
             'splits': {split: sum(r['split'] == split for r in provenance) for split in ('train', 'validation', 'test')}}
 
 
@@ -195,11 +198,51 @@ def export_bundle(store, dataset_id):
         for split in ('train', 'validation', 'test'):
             selected = [line for line, record in zip(lines, manifest['records']) if record['split'] == split]
             files[split + '.jsonl'] = '\n'.join(selected) + ('\n' if selected else '')
+        files.update(rights_files(store, dataset_id, manifest))
         for name, contents in sorted(files.items()):
             info = zipfile.ZipInfo(name, date_time=(2020, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, contents)
     return buffer.getvalue()
+
+
+RIGHTS_README = '''# Rights at freeze
+
+Each line of `rights.jsonl` records, for one example's source revision, the publisher's machine-readable
+AI-training signal when this bundle was frozen and any rights basis a reviewer recorded.
+
+- `reserved`: the publisher reserved AI training. Included only with a recorded basis.
+- `conditional`: a published license or terms apply.
+- `allowed`: an explicit permission signal was published.
+- `unknown`: no machine-readable signal was found. This is not permission.
+- `user_supplied`: from an archive you supplied; no publisher signal applies.
+- `not_recorded`: captured before Proofpage recorded publisher signals.
+
+Rights can change after freezing. Proofpage flags datasets whose sources later changed their signals, and blocks
+new downloads when a source now reserves AI training and no rights basis is recorded.
+`TRAINING_CONTENT_SUMMARY.md`, `DATASET_CARD.md`, and `croissant.json` are drafts to complete before publishing.
+This is not legal advice.
+
+'''
+
+
+def rights_files(store, dataset_id, manifest):
+    from .compliance import build
+    snapshot = {row['revision_id']: row for row in store.rows('SELECT revision_id,verdict,basis FROM dataset_rights WHERE dataset_id=?', (dataset_id,))}
+    ids = [record['candidate_id'] for record in manifest['records']]
+    revision_of = {row['id']: row['revision_id'] for row in store.rows(f"SELECT id,revision_id FROM candidates WHERE id IN ({','.join('?' * len(ids))})", ids)} if ids else {}
+    lines, counts = [], {}
+    for candidate_id in ids:
+        revision_id = revision_of.get(candidate_id)
+        entry = snapshot.get(revision_id, {})
+        verdict = entry.get('verdict', 'not_recorded')
+        counts[verdict] = counts.get(verdict, 0) + 1
+        lines.append(json.dumps({'candidate_id': candidate_id, 'revision_id': revision_id, 'verdict_at_freeze': verdict, 'rights_basis': entry.get('basis')}, sort_keys=True))
+    docs = build(store, dataset_id)
+    return {'rights.jsonl': '\n'.join(lines) + ('\n' if lines else ''),
+            'RIGHTS.md': RIGHTS_README + ''.join(f'- {verdict}: {count}\n' for verdict, count in sorted(counts.items())),
+            'TRAINING_CONTENT_SUMMARY.md': docs['summary_markdown'], 'DATASET_CARD.md': docs['dataset_card'],
+            'croissant.json': json.dumps(docs['croissant'], indent=2, sort_keys=True) + '\n'}
 
 
 BUNDLE_VALIDATOR = '''"""Validate a frozen Proofpage bundle before training (Python standard library)."""

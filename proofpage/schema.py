@@ -18,6 +18,21 @@ MIGRATIONS = [
         "CREATE TABLE extraction_recipes(id TEXT PRIMARY KEY,name TEXT NOT NULL,fields TEXT NOT NULL,created_at TEXT NOT NULL)",
         "CREATE TABLE extractions(id TEXT PRIMARY KEY,recipe_id TEXT NOT NULL,revision_id TEXT NOT NULL,result TEXT NOT NULL,origin TEXT NOT NULL,created_at TEXT NOT NULL)",
     ]),
+    (3, [
+        # One row per page fetch. Revision hashes stay unchanged; transport provenance lives here.
+        "CREATE TABLE captures(id TEXT PRIMARY KEY,run_id TEXT NOT NULL,source_id TEXT NOT NULL,url TEXT NOT NULL,final_url TEXT NOT NULL,requested_at TEXT NOT NULL,status INTEGER,headers TEXT NOT NULL,body_sha256 TEXT NOT NULL,body_bytes INTEGER NOT NULL,raw_exact INTEGER NOT NULL,peer_ip TEXT,tls TEXT NOT NULL DEFAULT '{}',redirects TEXT NOT NULL DEFAULT '[]',revision_id TEXT,robots_sha256 TEXT)",
+        "CREATE INDEX captures_revision ON captures(revision_id)",
+        "CREATE INDEX captures_url ON captures(final_url,requested_at)",
+        "CREATE TABLE capture_payloads(sha256 TEXT PRIMARY KEY,data BLOB NOT NULL)",
+        "CREATE TABLE policy_documents(id TEXT PRIMARY KEY,origin TEXT NOT NULL,kind TEXT NOT NULL,url TEXT NOT NULL,fetched_at TEXT NOT NULL,status INTEGER,sha256 TEXT,body TEXT NOT NULL DEFAULT '',detail TEXT NOT NULL DEFAULT '')",
+        "CREATE INDEX policy_documents_lookup ON policy_documents(origin,kind,fetched_at)",
+        "CREATE TABLE rights_observations(id TEXT PRIMARY KEY,capture_id TEXT NOT NULL,source_id TEXT NOT NULL,origin TEXT NOT NULL,url TEXT NOT NULL,observed_at TEXT NOT NULL,verdict TEXT NOT NULL,signals TEXT NOT NULL,checked TEXT NOT NULL,hash TEXT NOT NULL)",
+        "CREATE INDEX rights_url ON rights_observations(url,observed_at)",
+        "CREATE TABLE inbox(id TEXT PRIMARY KEY,kind TEXT NOT NULL,subject_id TEXT NOT NULL,created_at TEXT NOT NULL,detail TEXT NOT NULL,seen INTEGER NOT NULL DEFAULT 0)",
+        "CREATE TABLE dataset_rights(dataset_id TEXT NOT NULL,revision_id TEXT NOT NULL,verdict TEXT NOT NULL,basis TEXT,drifted INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(dataset_id,revision_id))",
+        "ALTER TABLE reviews ADD COLUMN rights_basis TEXT",
+        "ALTER TABLE reviews ADD COLUMN rights_note TEXT NOT NULL DEFAULT ''",
+    ]),
 ]
 
 

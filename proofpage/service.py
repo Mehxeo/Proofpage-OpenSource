@@ -11,9 +11,17 @@ from .mcp import TOOLS
 def response(status, value, content_type='application/json'):
     return status, value, content_type
 
+def with_blockers(store, datasets):
+    """Count revisions that currently block each dataset's download (see rights.export_blockers)."""
+    from .rights import export_blockers
+    for dataset in datasets:
+        dataset['rights_blocked'] = len(export_blockers(store, dataset['id'], json.loads(dataset.pop('revision_ids'))))
+    return datasets
+
+
 def get(store, path, query):
     if path == '/api/state':
-        return response(200, {'sources': store.rows('SELECT * FROM sources'), 'profiles': store.rows('SELECT * FROM import_profiles'), 'watches': store.rows('SELECT * FROM watches'), 'runs': store.rows('SELECT * FROM runs ORDER BY started_at DESC LIMIT 30'), 'datasets': store.rows('SELECT d.id,d.name,d.created_at,d.hash,m.format FROM datasets d LEFT JOIN dataset_manifests m ON m.dataset_id=d.id ORDER BY d.created_at DESC'), 'items': store.search(query.get('q', [''])[0], snippets=True),
+        return response(200, {'sources': store.rows('SELECT s.*,(SELECT o.verdict FROM rights_observations o WHERE o.source_id=s.id ORDER BY o.observed_at DESC LIMIT 1) rights FROM sources s'), 'profiles': store.rows('SELECT * FROM import_profiles'), 'watches': store.rows('SELECT * FROM watches'), 'runs': store.rows('SELECT * FROM runs ORDER BY started_at DESC LIMIT 30'), 'datasets': with_blockers(store, store.rows('SELECT d.id,d.name,d.created_at,d.hash,d.revision_ids,m.format,(SELECT COUNT(*) FROM dataset_rights x WHERE x.dataset_id=d.id AND x.drifted=1) rights_changed FROM datasets d LEFT JOIN dataset_manifests m ON m.dataset_id=d.id ORDER BY d.created_at DESC')), 'items': store.search(query.get('q', [''])[0], snippets=True),
                                 'total': store.rows('SELECT COUNT(*) n FROM items')[0]['n'], 'approved': store.rows('SELECT COUNT(*) n FROM items i JOIN reviews v ON v.revision_id=i.current_revision WHERE v.approved=1')[0]['n']})
     if path.startswith('/api/watches/'):
         return response(200, store.rows('SELECT path,state,detail FROM watch_files WHERE watch_id=?', (path.rsplit('/', 1)[1],)))
@@ -27,10 +35,15 @@ def get(store, path, query):
         except ValueError as exc:
             config = {'configured': False, 'detail': str(exc)}
         return response(200, {'candidates': store.rows('SELECT id,revision_id,kind,status,origin,notes,findings,created_at FROM candidates ORDER BY created_at DESC LIMIT 500'),
-                              'datasets': store.rows('SELECT d.id,d.name,d.created_at,d.hash,m.format,m.manifest FROM datasets d JOIN dataset_manifests m ON m.dataset_id=d.id ORDER BY d.created_at DESC'),
+                              'datasets': with_blockers(store, store.rows('SELECT d.id,d.name,d.created_at,d.hash,d.revision_ids,m.format,m.manifest,(SELECT COUNT(*) FROM dataset_rights x WHERE x.dataset_id=d.id AND x.drifted=1) rights_changed FROM datasets d JOIN dataset_manifests m ON m.dataset_id=d.id ORDER BY d.created_at DESC')),
                               'jobs': store.rows('SELECT * FROM crawl_jobs ORDER BY created_at DESC LIMIT 30'), 'model': config,
                               'recipes': store.rows('SELECT * FROM extraction_recipes'), 'extractions': store.rows('SELECT * FROM extractions ORDER BY created_at DESC LIMIT 30'),
                               'tools': [{'name': name, 'description': description} for name, (description, _) in TOOLS.items()]})
+    if path.startswith('/api/compliance/'):
+        from .compliance import build
+        return response(200, build(store, path.rsplit('/', 1)[1]))
+    if path == '/api/inbox':
+        return response(200, store.rows('SELECT * FROM inbox ORDER BY created_at DESC LIMIT 200'))
     if path.startswith('/api/candidates/'):
         return response(200, training.get_candidate(store, path.rsplit('/', 1)[1]))
     if path.startswith('/api/crawls/'):
@@ -90,7 +103,7 @@ def post(store, path, data):
             raise ValueError('Choose an account-specific import profile.')
         result = preview(data['filename'], content) if path == '/api/preview' else import_file(store, data['filename'], content, data['selected'], data['profile_id'])
     elif path == '/api/review':
-        store.review(data['revision_id'], data['allowed'] is True, data['approved'] is True)
+        store.review(data['revision_id'], data['allowed'] is True, data['approved'] is True, data.get('rights_basis'), data.get('rights_note'))
         result = {'saved': True}
     elif path == '/api/freeze':
         result = store.freeze(data['name'])

@@ -114,6 +114,51 @@ const STATES = {
   revoked: ['Revoked', 'danger', 'Approval was withdrawn. Exports that include it are blocked.'],
 };
 
+// Rights Radar verdicts (see rights.py). Unknown is never shown as permission.
+const RIGHTS = {
+  reserved: ['Reserved', 'danger', 'The publisher reserved this use.'],
+  conditional: ['Terms apply', 'warn', 'A published license or terms apply.'],
+  allowed: ['Permitted', 'ok', 'The publisher published an explicit permission signal.'],
+  unknown: ['Unknown', '', 'No machine-readable signal was found. Unknown is not permission.'],
+  not_recorded: ['Not recorded', '', 'Captured before Rights Radar. Collect the source again to check.'],
+  user_supplied: ['Your archive', 'accent', 'Supplied by you; no publisher signal applies.'],
+};
+const RIGHTS_USES = {train: 'AI training', ai_use: 'AI answers', search: 'Search'};
+const RIGHTS_BASES = {licensed: 'Licensed from the publisher', own_content: 'Your own content', public_domain: 'Public domain', other: 'Other documented basis'};
+
+function rightsChip(verdict, use = 'train', withUse = true, title = '') {
+  const [label, tone, help] = RIGHTS[verdict] || RIGHTS.unknown;
+  return `<span class="pill${tone ? ' tone-' + tone : ''}" title="${escape(title || help)}">${withUse ? escape(RIGHTS_USES[use]) + ': ' : ''}${escape(label)}</span>`;
+}
+
+function rightsNote(rights) {
+  if (!rights || rights.error) return rights?.error ? ' ' + rights.error : '';
+  const drift = rights.drift?.changes?.train;
+  if (drift) return ` Rights changed: AI training was ${(RIGHTS[drift[0]] || RIGHTS.unknown)[0].toLowerCase()}, now ${(RIGHTS[drift[1]] || RIGHTS.unknown)[0].toLowerCase()}.`;
+  return rights.train === 'reserved' ? ' The publisher reserves AI training for this page.' : '';
+}
+
+function datasetRightsFlag(dataset) {
+  if (dataset.rights_blocked) return `<span class="pill tone-danger" title="${escape(pluralize(dataset.rights_blocked, 'source revision') + ' now reserve AI training without a recorded rights basis. Record a basis in each record’s Rights tab, or freeze a new dataset without them.')}">Download blocked · ${dataset.rights_blocked} reserved</span>`;
+  if (dataset.rights_changed) return `<span class="pill tone-warn" title="A source changed its AI-usage signals after this dataset was frozen.">Rights changed since freeze · ${dataset.rights_changed}</span>`;
+  return '';
+}
+
+function rightsCounts(counts) {
+  const labels = {reserved_with_basis: 'reserved with a recorded basis'};
+  const parts = Object.entries(counts || {}).map(([verdict, count]) => `${count} ${labels[verdict] || (RIGHTS[verdict] || RIGHTS.unknown)[0].toLowerCase()}`);
+  return parts.length ? ' Rights at freeze: ' + parts.join(', ') + '.' : '';
+}
+
+function saveText(filename, text, type = 'text/markdown') {
+  const url = URL.createObjectURL(new Blob([text], {type}));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function stateInfo(state) {
   const known = STATES[state];
   const fallback = String(state || 'unknown').replaceAll('_', ' ');
