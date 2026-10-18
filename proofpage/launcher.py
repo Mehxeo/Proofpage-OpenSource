@@ -59,8 +59,8 @@ def main():
         root.report_callback_exception = callback_error
         root.after(30000, lambda: (report.write_text(json.dumps({'ready': False, 'error': 'GUI startup timed out'})), root.destroy()))
     root.title('Proofpage')
-    root.geometry('540x360')
-    root.minsize(480, 340)
+    root.geometry('600x390')
+    root.minsize(580, 370)
     paper, ink, muted, accent = '#f5f2ea', '#1c201e', '#5f665f', '#1e5b43'  # Archival ink palette (static/style.css).
     root.configure(bg=paper)
     try:
@@ -99,6 +99,7 @@ def main():
     launch = tk.Button(buttons, text='Open workspace', command=open_workspace, state='disabled', padx=14, pady=8)
     launch.pack(side='left', padx=(0, 10))
     tk.Button(buttons, text='Show data folder', command=open_folder, padx=10, pady=8).pack(side='left')
+    tk.Button(buttons, text='App updates', command=lambda: webbrowser.open(f'http://127.0.0.1:{server.server_address[1]}/#/settings') if server else None, padx=10, pady=8).pack(side='left', padx=(10, 0))
     tk.Label(frame, text='Keep this window open while you work.\nClosing it stops collection; your saved evidence stays safe.', font=('Helvetica', 11), fg=muted, bg=paper, justify='left').pack(anchor='w', pady=(18, 0))
 
     def worker():

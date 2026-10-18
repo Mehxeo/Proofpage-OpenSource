@@ -30,3 +30,10 @@ Close Proofpage and make a private copy of your Proofpage/data folder before upd
 ## Need help?
 
 [Report a problem](https://github.com/Mehxeo/Proofpage-OpenSource/issues) with your operating system, Proofpage version, and what happened. Remove private page content, passwords, and tokens before sharing logs. For optional CLI installation and advanced backup commands, see [the installation guide](https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/INSTALL.md).
+
+
+## Check for app updates
+
+Open Settings → App updates → Check for updates (or App updates in the desktop launcher). This explicit check contacts GitHub without sending workspace data. When a newer stable release is available, Proofpage offers the download for this computer, or the release page if there is no matching build.
+
+Back up your workspace and quit Proofpage before replacing the app. On Mac, drag the new app into Applications and choose Replace. On Windows/Linux, extract the complete archive into a new app folder. Keep your home-folder Proofpage/data directory: the library lives separately from the application. This is a guided download-and-replace flow, not automatic installation.

@@ -149,6 +149,9 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                     return self.send(200, {'token': token})
                 if self.headers.get('Authorization') != 'Bearer ' + token:
                     return self.send(401, {'error': 'Local session required.'})
+                if path == '/api/updates':
+                    from .updates import check
+                    return self.send(200, check())
                 if path == '/api/mcp-setup':
                     from .mcp_setup import setup
                     return self.send(200, setup(store))
