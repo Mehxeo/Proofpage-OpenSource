@@ -50,9 +50,12 @@ def main():
                         import importlib
                         backend = 'macOS' if sys.platform == 'darwin' else 'Windows' if sys.platform == 'win32' else 'SecretService'
                         importlib.import_module('keyring.backends.' + backend)
-                        assert google_docs.status(store)['installed']
+                        google_status = google_docs.status(store)
+                        assert google_status['installed']
                         report.write_text(json.dumps({'ready': True, 'gui': True, 'shell': 'tauri', 'records': len(state['items']),
-                                                      'offline_verifier': True, 'google_oauth': True, 'mcp': connection['config']['mcpServers']['proofpage']}))
+                                                      'offline_verifier': True, 'google_oauth': True,
+                                                      'google_configuration': google_status['configuration_source'],
+                                                      'mcp': connection['config']['mcpServers']['proofpage']}))
                         print('PROOFPAGE_SMOKE_OK', flush=True)
             except Exception:
                 import traceback

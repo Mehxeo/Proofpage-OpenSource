@@ -1,5 +1,28 @@
 // Portable business context; approvals remain explicit user actions.
 let businessSelection = null;
+function googleDocsPanel(google) {
+  const ready = google.installed && google.configured;
+  const setup = !google.installed ? 'This source build needs the Google optional dependencies.'
+    : !google.configured ? 'This source build needs a Google Desktop client. The official desktop release includes sign-in.'
+    : google.configuration_source === 'bundled' ? 'Google sign-in is included. No developer account or setup file needed.'
+    : 'Your custom Google configuration is ready.';
+  return `<section class="panel">
+    <h3>Google Docs</h3>
+    <p>Sign in, paste a document link, then sync it into your library. Proofpage requests read-only access and fetches only the documents you select. Passwords never enter Proofpage; authorization stays in your OS credential vault.</p>
+    <p>${google.connected ? '<strong>Connected · read-only</strong>' : escape(setup)} ${escape(google.detail)}</p>
+    <div class="actions"><button id="google-connect"${ready ? '' : ' disabled'}>${google.connected ? 'Reconnect Google Docs' : 'Connect Google Docs'}</button>
+    ${google.connected ? '<button id="google-disconnect" class="secondary">Disconnect</button>' : ''}</div>
+    ${!ready ? '<p><a href="https://proofpage.app/docs/#connectors" target="_blank" rel="noopener">Setup help for source builds ↗</a></p>' : ''}
+    <form id="google-select"><fieldset${google.connected ? '' : ' disabled'}><legend>Choose a document</legend>
+      <label>Google Doc link<input name="document" required placeholder="https://docs.google.com/document/d/…"></label>
+      <label>Keep it up to date<select name="interval"><option value="0">Sync when I click</option><option value="3600">Every hour while Proofpage is open</option><option value="21600">Every six hours while Proofpage is open</option><option value="86400">Daily while Proofpage is open</option></select></label>
+      <label><input name="owner_permission" type="checkbox" required>I own this document or its owner permits keeping local snapshots for my personal context.</label>
+      <button>Save selected document</button>
+    </fieldset></form>
+    <p>${google.connected ? 'Saving selects the document. Click Sync below to import it.' : 'Connect Google Docs to choose your first document.'} Google API snapshots are used for personal context and excluded from training exports. <a href="https://proofpage.app/privacy.html" target="_blank" rel="noopener">Google data and privacy ↗</a></p>
+    ${google.documents.map(d => `<article class="panel"><strong>${escape(d.title)}</strong><p>${escape(d.state)} · ${escape(d.detail || d.last_sync || 'Not fetched yet')}</p><button data-google-sync="${escape(d.document_id)}"${google.connected ? '' : ' disabled'}>Sync document</button></article>`).join('')}
+  </section>`;
+}
 async function renderBusiness() {
   const profiles = await api('business');
   let google = null;
@@ -10,7 +33,7 @@ async function renderBusiness() {
     <section class="panel"><h3>Your business, in your words.</h3><p>Import selected files with Import files above. Connect selected Google Docs below when configured, or import text/PDF exports. No folders or accounts are scanned automatically.</p>
     <form id="business-create"><label>New profile name<input name="name" required maxlength="100" placeholder="My agency"></label><button>Create profile</button></form>
     ${profiles.length ? `<label>Profile<select id="business-select">${profiles.map(p => `<option value="${escape(p.id)}"${p.id === businessSelection ? ' selected' : ''}>${escape(p.name)}</option>`).join('')}</select></label>` : ''}</section>
-    ${google ? `<section class="panel"><h3>Google Docs</h3><p><a href="https://proofpage.app/docs/#connectors" target="_blank" rel="noopener">Connection setup guide ↗</a> · Shared sign-in is in testing.</p><p>Connect in your system browser, then select individual document URLs. The Google read-only scope can access your Docs; Proofpage fetches only documents you select. Credentials stay in your OS vault.</p><p>${google.connected ? 'Connected' : google.installed && google.configured ? 'Ready to connect' : google.installed ? 'Google setup file needed. Follow the setup guide below.' : 'Source setup: install Proofpage with the google extra.'} ${escape(google.detail)}</p><button id="google-connect"${google.installed && google.configured ? '' : ' disabled'}>Connect Google Docs</button>${google.connected ? '<button id="google-disconnect" class="secondary">Disconnect</button>' : ''}<form id="google-select"><label>Document URL or ID<input name="document" required placeholder="https://docs.google.com/document/d/…"></label><label>Refresh<select name="interval"><option value="0">Manual only</option><option value="3600">Hourly while app is open</option><option value="21600">Every six hours</option><option value="86400">Daily</option></select></label><label><input name="owner_permission" type="checkbox" required>I own this document or its owner permits keeping local snapshots for my personal context.</label><button>Save selected document</button></form><p>Saving selects the document; click Sync to fetch it. Pausing uses Manual only. After syncing, select its evidence below and review it.</p>${google.documents.map(d => `<article class="panel"><strong>${escape(d.title)}</strong><p>${escape(d.state)} · ${escape(d.detail || d.last_sync || 'Not fetched yet')}</p><button data-google-sync="${escape(d.document_id)}"${google.connected ? '' : ' disabled'}>Sync document</button></article>`).join('')}</section>` : ''}
+    ${google ? googleDocsPanel(google) : ''}
     <details class="panel"><summary>Import bookmarks from Chrome or another browser</summary><p>Choose a bookmark HTML export, preview it, and select references to keep. This does not fetch websites or infer preferences. Add a selected URL in Sources and collect it when you want its actual content.</p><input id="business-bookmarks" type="file" accept=".html,.htm" aria-label="Bookmark HTML export"><div id="business-bookmark-preview"></div></details>
     ${profile ? `<section class="panel"><h3>Choose evidence</h3><p>Assign a role before drafting. Competitor pages belong in Reference material, not Business facts.</p><form id="business-attach"><label>Saved evidence<select name="revision" required>${state.items.filter(i => i.kind !== 'bookmark').map(i => `<option value="${escape(i.current_revision)}">${escape(i.title)}</option>`).join('')}</select></label><label>Role<select name="role"><option value="business">Our business</option><option value="customer">Customer material</option><option value="reference">Reference material</option><option value="writing">Writing example</option></select></label><button${state.items.filter(i => i.kind !== 'bookmark').length ? '' : ' disabled'}>Use this source</button></form>
     <ul>${profile.sources.map(s => `<li>${escape(s.title)} · ${escape(s.role)}${s.current_revision !== s.revision_id ? ' · Old revision' : ''}</li>`).join('')}</ul><button id="business-draft" class="secondary">Suggest passages to review</button></section>

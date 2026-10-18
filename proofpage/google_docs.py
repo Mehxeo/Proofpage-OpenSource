@@ -12,6 +12,7 @@ from .core import now
 
 SCOPE = 'https://www.googleapis.com/auth/documents.readonly'
 SERVICE = 'Proofpage Google Docs'
+BUNDLED_CLIENT_FILE = Path(__file__).with_name('google-desktop-client.json')
 _LOCK = threading.Lock()
 
 
@@ -29,7 +30,45 @@ def vault():
 
 def client_file():
     configured = os.environ.get('PROOFPAGE_GOOGLE_CLIENT_FILE')
-    return Path(configured).expanduser() if configured else Path.home() / '.config' / 'proofpage' / 'google-oauth.json'
+    if configured:
+        return Path(configured).expanduser()
+    custom = Path.home() / '.config' / 'proofpage' / 'google-oauth.json'
+    if custom.is_file() or not BUNDLED_CLIENT_FILE.is_file():
+        return custom
+    return BUNDLED_CLIENT_FILE
+
+
+def load_client_config(path):
+    """Validate native app metadata. Never accept web clients or user tokens."""
+    try:
+        with Path(path).open('rb') as handle:
+            raw = handle.read(16 * 1024 + 1)
+        if len(raw) > 16 * 1024:
+            raise ValueError()
+        config = json.loads(raw)
+        if not isinstance(config, dict) or 'web' in config or not isinstance(config.get('installed'), dict):
+            raise ValueError()
+        def contains_tokens(value):
+            if isinstance(value, dict):
+                return bool(set(value) & {'access_token', 'refresh_token', 'id_token', 'token', 'private_key', 'private_key_id'}) or any(contains_tokens(v) for v in value.values())
+            return isinstance(value, list) and any(contains_tokens(v) for v in value)
+        if contains_tokens(config):
+            raise ValueError()
+        client = config['installed']
+        if not re.fullmatch(r'[A-Za-z0-9_-]+\.apps\.googleusercontent\.com', client.get('client_id', '')):
+            raise ValueError()
+        if not isinstance(client.get('client_secret'), str) or not 1 <= len(client['client_secret']) <= 1024:
+            raise ValueError()
+        if client.get('auth_uri') not in ('https://accounts.google.com/o/oauth2/auth', 'https://accounts.google.com/o/oauth2/v2/auth'):
+            raise ValueError()
+        if client.get('token_uri') != 'https://oauth2.googleapis.com/token':
+            raise ValueError()
+        redirects = client.get('redirect_uris', ['http://localhost'])
+        if not isinstance(redirects, list) or not redirects or any(v not in ('http://localhost', 'http://127.0.0.1', 'http://[::1]') for v in redirects):
+            raise ValueError()
+        return {'installed': {key: client[key] for key in ('client_id', 'client_secret', 'auth_uri', 'token_uri')} | {'redirect_uris': redirects}}
+    except (OSError, ValueError, TypeError, RecursionError):
+        raise ValueError('Use a valid Google Desktop OAuth client configuration without user tokens or private keys.') from None
 
 
 def status(store):
@@ -43,6 +82,7 @@ def status(store):
         except Exception:
             detail = 'OS credential vault is unavailable.'
     return {'installed': installed, 'configured': configured, 'connected': connected, 'detail': detail,
+            'configuration_source': 'bundled' if configured and client_file() == BUNDLED_CLIENT_FILE else 'custom' if configured else 'missing',
             'scope': SCOPE, 'documents': store.rows('SELECT * FROM google_documents ORDER BY title,document_id')}
 
 
@@ -52,12 +92,7 @@ def connect(store):
     config_path = client_file()
     if not config_path.is_file():
         raise ValueError('Install a Google Desktop OAuth client JSON at ~/.config/proofpage/google-oauth.json or set PROOFPAGE_GOOGLE_CLIENT_FILE.')
-    config = json.loads(Path(config_path).read_text())
-    client = config.get('installed', {})
-    if client.get('auth_uri') != 'https://accounts.google.com/o/oauth2/auth' and client.get('auth_uri') != 'https://accounts.google.com/o/oauth2/v2/auth':
-        raise ValueError('Use an official Google Desktop OAuth client configuration.')
-    if client.get('token_uri') != 'https://oauth2.googleapis.com/token':
-        raise ValueError('Unsupported Google token endpoint.')
+    config = load_client_config(config_path)
     if not _LOCK.acquire(blocking=False):
         raise ValueError('A Google connection or sync is already running.')
     try:

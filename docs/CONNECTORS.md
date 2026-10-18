@@ -6,6 +6,19 @@ account or public deployment is connected.
 
 ## Google Docs
 
+The Google project is now **In production**, and its branding is verified and
+published. Read-only Docs scope verification is still being prepared; that review
+must finish before shared sign-in can be offered without an unverified warning
+or temporary user cap. Production status alone is not scope approval.
+
+The next desktop build supports bundled Google sign-in so normal users do not
+need their own Google Cloud project or JSON file. It is being checked in a
+verification build first. The current stable 0.5.0 download still needs the
+configuration below. Public install instructions will change when the shared
+client is approved and that desktop update is released.
+
+### Source builds and custom clients
+
 The 0.5.0 desktop downloads include the Google OAuth library and OS-vault support.
 For a source install, use `python -m pip install -e '.[google]'`.
 In your Google Cloud project enable the Google Docs API, configure the OAuth
@@ -53,9 +66,36 @@ proofpage --home ./workspace google-docs disconnect
 ```
 
 Google auth is local-only. Hosted workspace routes cannot trigger desktop consent
-or access the host's OS vault. The shared Proofpage OAuth project is currently in
-Testing, available only to its configured test accounts. Other users must configure
-their own Google Desktop OAuth client; public verification is not complete.
+or access the host's OS vault. A custom client selected through the environment
+or the existing home-folder configuration takes precedence over bundled metadata.
+Moving the OAuth project to Production does not retrofit a client into existing
+0.5.0 downloads. Shared sign-in needs the updated desktop build as well as Google's
+scope approval.
+
+### Building official preconfigured downloads
+
+Release maintainers can set `PROOFPAGE_DESKTOP_GOOGLE_CLIENT_FILE` to their Google
+**Desktop app** client JSON when running `scripts/build_desktop.py`. They may also
+run the following on an extracted CI build, **before code signing**:
+
+```sh
+python scripts/configure_desktop_google.py /path/to/Proofpage.app --client-file /private/path/native-client.json
+```
+
+Use the extracted `Proofpage` directory on Windows/Linux. The helper validates
+Google endpoints and loopback redirects, rejects web/service-account configs,
+rejects user tokens/private keys, and copies only native app metadata. It is
+idempotent for an identical client and refuses replacing a different identity.
+Never commit the client JSON or place it in source bundles. Native app metadata
+identifies the app and is recoverable from its distributable; it is not a user's
+authorization. PKCE protects each authorization exchange, and user tokens stay
+in the OS vault. Redistributed forks should configure their own Google app.
+
+Finish with signature/notarization and packaged checks using a clean home folder;
+the report must show `google_configuration: bundled`. That proves the release is
+not accidentally relying on the maintainer's home-folder setup file. Review
+builds do not imply Google's approval, and unverified sign-in is not promoted to
+stable users.
 
 ## Remote MCP for web assistants
 
