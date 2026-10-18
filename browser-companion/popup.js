@@ -62,7 +62,10 @@ let connection;
 chrome.storage.local.get('connection').then(saved=>{connection=saved.connection; if(connection){$('port').value=connection.port; $('connection-state').textContent='Pairing saved';}});
 async function request(path, data, port, token) {
  const response=await fetch(`http://127.0.0.1:${port}/api/companion/${path}`, {method:'POST',headers:{'Content-Type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})},body:JSON.stringify(data),signal:AbortSignal.timeout(15000)});
- const result=await response.json(); if(!response.ok)throw new Error(result.error||'Unable to connect.'); return result;
+ const result=await response.json();
+ if(response.status===401&&token){connection=null;await chrome.storage.local.remove('connection');$('connection-state').textContent='Reconnect needed';$('connection-panel').open=true;}
+ if(response.status===404&&path==='import-file')throw new Error('This app version does not support original-file imports. Update Proofpage first.');
+ if(!response.ok)throw new Error(result.error||'Unable to connect.'); return result;
 }
 $('connect').onclick=async()=>{
  try {
@@ -86,3 +89,22 @@ $('save').onclick=async()=>{
 };
 
 for(const kind of ['links','images','tables'])$('include-'+kind).onchange=()=>{$(kind).hidden=!$('include-'+kind).checked;};
+
+function fileReady(){ $('save-file').disabled=!$('original-file').files.length||!$('file-consent').checked; }
+$('original-file').onchange=()=>{$('file-consent').checked=false;fileReady();};
+$('file-consent').onchange=fileReady;
+$('save-file').onclick=async()=>{
+ if(!$('file-consent').checked)return;
+ const file=$('original-file').files[0];if(!file)return;
+ if(!connection){$('connection-panel').open=true;$('status').textContent='Connect your desktop app before saving a file.';return;}
+ $('save-file').disabled=true;
+ try{
+  if(!file.size||file.size>8*1024*1024)throw new Error('Choose a nonempty file up to 8 MiB.');
+  const bytes=new Uint8Array(await file.arrayBuffer());let binary='';
+  for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
+  const result=await request('import-file',{reviewed:true,filename:file.name,data:btoa(binary)},connection.port,connection.token);
+  if(result.errors?.length)throw new Error(result.errors[0].error);
+  $('status').textContent=result.added?'Original file saved. Open your library to preview or download it.':'This original file is already in your library.';
+ }catch(e){$('status').textContent=(e.message||'File import failed.')+' You can also use Import files in the desktop app.';}
+ finally{fileReady();}
+};

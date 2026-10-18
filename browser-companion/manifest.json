@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Proofpage \u2014 Save page evidence",
-  "version": "0.2.3",
-  "description": "Review page text, links, image references and tables, then save to your local Proofpage library. Runs only when you click.",
+  "version": "0.2.4",
+  "description": "Review page evidence or save original images and PDFs to your local Proofpage library. Runs only when you click.",
   "permissions": [
     "activeTab",
     "scripting",

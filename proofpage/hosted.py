@@ -180,7 +180,7 @@ def create_app(root=None, origin=None, development=False, scheduler=True, billin
             request._body = bytes(body)
         response = await call_next(request)
         response.headers.update({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin',
-                                 'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"})
+                                 'Content-Security-Policy':"default-src 'self'; img-src 'self' blob:; script-src 'self'; style-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"})
         if not development:
             response.headers['Strict-Transport-Security']='max-age=31536000'
         return response

@@ -1,13 +1,13 @@
 // Exercise the actual popup code with a deterministic extension/DOM fixture.
 const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
-const nodes={};for(const id of ['preview','status','result','url','text','consent','save','download','port','code','connect','connection-state','connection-panel','capture-count','extras','links','images','tables','links-count','images-count','tables-count','include-links','include-images','include-tables'])nodes[id]={value:'',textContent:'',hidden:false,disabled:false,checked:false};
+const nodes={};for(const id of ['preview','status','result','url','text','consent','save','download','port','code','connect','connection-state','connection-panel','capture-count','extras','links','images','tables','links-count','images-count','tables-count','include-links','include-images','include-tables','original-file','file-consent','save-file'])nodes[id]={value:'',textContent:'',hidden:false,disabled:false,checked:false};
 let artifact,downloaded=false,fail=false;
 const fixture=[['Readable account page',false,true],['password=never-copy',true,true],['hidden token',false,false],['Selected evidence',false,true]];
 let index=0;
 const document={title:'Member page',body:{},querySelectorAll:selector=>selector==='img'?[{closest:()=>false,getClientRects:()=>[{}],alt:'Diagram',currentSrc:'https://example.com/image.png?secret=token'}]:[],getElementById:id=>nodes[id],createElement:()=>({click(){downloaded=true;}}),createTreeWalker:()=>({nextNode(){const row=fixture[index++];return row?{textContent:row[0],parentElement:{closest:()=>row[1],getClientRects:()=>row[2]?[{}]:[]}}:null;}})};
 const NativeURL=URL;class TestURL extends NativeURL{static createObjectURL(blob){artifact=blob;return 'blob:test';}static revokeObjectURL(){}}
 const chrome={storage:{local:{get:async()=>({}),set:async()=>{}}},permissions:{request:async()=>true},tabs:{query:async()=>[{id:123}]},scripting:{executeScript:async({func,target})=>{assert.equal(target.tabId,123);if(fail)throw Error('Protected page');index=0;return [{result:func()}];}}};
-const context={document,chrome,URL:TestURL,Blob,NodeFilter:{SHOW_TEXT:4},location:{href:'https://example.com/private?token=secret#session'},AbortSignal,fetch:async()=>({ok:true,json:async()=>({token:'scoped-test-token',added:1})}),getComputedStyle:()=>({visibility:'visible',display:'block'}),setTimeout:()=>{}};
+const context={document,chrome,URL:TestURL,Blob,NodeFilter:{SHOW_TEXT:4},location:{href:'https://example.com/private?token=secret#session'},AbortSignal,Uint8Array,btoa,fetch:async()=>({ok:true,json:async()=>({token:'scoped-test-token',added:1})}),getComputedStyle:()=>({visibility:'visible',display:'block'}),setTimeout:()=>{}};
 vm.createContext(context);vm.runInContext(fs.readFileSync('browser-companion/popup.js','utf8'),context);
 (async()=>{
  await nodes.preview.onclick();assert.equal(nodes.url.value,'https://example.com/private');assert.equal(nodes.text.value,'Readable account page\n\nSelected evidence');assert.equal(nodes.save.disabled,true);
@@ -18,6 +18,7 @@ vm.createContext(context);vm.runInContext(fs.readFileSync('browser-companion/pop
  nodes['include-images'].checked=true;nodes.images.value='Reviewed diagram — https://example.com/image.png';nodes.download.onclick();
  const rich=JSON.parse(await artifact.text());assert.match(rich.text,/Reviewed diagram/);assert.match(rich.page_parts.images,/image.png/);assert.ok(!JSON.stringify(rich).includes('secret'));
  nodes.port.value='8765';nodes.code.value='ABCD';await nodes.connect.onclick();assert.match(nodes.status.textContent,/Connected/);await nodes.save.onclick();assert.match(nodes.status.textContent,/Saved to your Proofpage/);
+ nodes['original-file'].files=[{name:'image.png',size:4,arrayBuffer:async()=>new Uint8Array([1,2,3,4]).buffer}];nodes['file-consent'].checked=true;nodes['file-consent'].onchange();assert.equal(nodes['save-file'].disabled,false);await nodes['save-file'].onclick();assert.match(nodes.status.textContent,/Original file saved/);
  fail=true;await nodes.preview.onclick();assert.equal(nodes.result.hidden,true);assert.match(nodes.status.textContent,/Protected page/);
  const manifest=JSON.parse(fs.readFileSync('browser-companion/manifest.json'));assert.deepEqual(manifest.permissions,['activeTab','scripting','storage']);assert.equal(manifest.host_permissions,undefined);
  console.log('Browser companion: review gate, text filtering, redaction, URL sanitization, error path and least-privilege manifest passed.');

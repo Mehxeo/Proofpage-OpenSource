@@ -76,8 +76,11 @@ def validate_mapping(mapping):
 def parse_entry(name, data, adapter='auto', mapping=None):
     if adapter not in ADAPTERS:
         raise ValueError('Unknown adapter.')
-    text = data.decode('utf-8-sig')
     suffix = Path(name).suffix.lower()
+    from .media import EXTENSIONS, file_record
+    if suffix in EXTENSIONS:
+        return [file_record(name, data)]
+    text = data.decode('utf-8-sig')
     if suffix == '.csv':
         records = list(csv.DictReader(io.StringIO(text)))
     elif suffix == '.jsonl':

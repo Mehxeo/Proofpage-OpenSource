@@ -73,6 +73,30 @@ class HttpTests(unittest.TestCase):
         self.request('/api/companion-revoke', {})
         self.assertEqual(self.request('/api/companion/import', payload, headers)[0], 401)
 
+    def test_companion_original_file_and_authenticated_download(self):
+        from pathlib import Path
+        original = Path('browser-companion/icons/128.png').read_bytes()
+        code = self.request('/api/companion-code', {})[1]['code']
+        headers = {'Origin': 'chrome-extension://' + 'd' * 32}
+        paired = self.request('/api/companion/pair', {'code': code}, headers)[1]
+        headers['Authorization'] = 'Bearer ' + paired['token']
+        payload = {'filename':'actual.png', 'data':base64.b64encode(original).decode(), 'reviewed':True}
+        self.assertEqual(self.request('/api/companion/import-file', dict(payload, reviewed=False), headers)[0], 400)
+        self.assertEqual(self.request('/api/companion/import-file', dict(payload, filename='fake.pdf'), headers)[0], 400)
+        self.assertEqual(self.request('/api/companion/import-file', dict(payload, data='bad!'), headers)[0], 400)
+        status, saved = self.request('/api/companion/import-file', payload, headers)
+        self.assertEqual((status, saved['added']), (200, 1))
+        self.assertEqual(self.request('/api/companion/import-file', payload, headers)[1]['added'], 0)
+        item = next(i for i in self.request('/api/state')[1]['items'] if i['title']=='actual.png')
+        route = '/api/original-file/' + item['current_revision']
+        self.assertEqual(self.request(route, headers={'Authorization':''})[0], 401)
+        req = urllib.request.Request(self.base+route, headers={'Authorization':'Bearer '+self.token})
+        with urllib.request.urlopen(req) as response:
+            self.assertEqual(response.headers.get_content_type(), 'application/octet-stream')
+            self.assertEqual(response.read(), original)
+        self.request('/api/companion-revoke', {})
+        self.assertEqual(self.request('/api/companion/import-file', payload, headers)[0], 401)
+
     def test_companion_pair_attempt_limit(self):
         code = self.request('/api/companion-code', {})[1]['code']
         headers = {'Origin': 'chrome-extension://' + 'c' * 32}

@@ -1,3 +1,4 @@
+from pathlib import Path
 import base64
 import json
 import secrets
@@ -41,7 +42,7 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
             self.send_header('Content-Length', str(len(body)))
             self.send_header('Cache-Control', 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
-            self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+            self.send_header('Content-Security-Policy', "default-src 'self'; img-src 'self' blob:; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
             if getattr(self, 'companion_origin', None):
                 self.send_header('Access-Control-Allow-Origin', self.companion_origin)
                 self.send_header('Vary', 'Origin')
@@ -73,7 +74,7 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
             return True
 
         def do_OPTIONS(self):
-            if self.path not in ('/api/companion/pair', '/api/companion/import'):
+            if self.path not in ('/api/companion/pair', '/api/companion/import', '/api/companion/import-file'):
                 return self.send(403, {'error': 'Not allowed.'})
             if self.extension_request():
                 self.send(200, {})
@@ -83,7 +84,7 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 return
             try:
                 length = int(self.headers.get('Content-Length', '0'))
-                if not 0 < length <= 3000000:
+                if not 0 < length <= (12 * 1024 * 1024 if self.path == '/api/companion/import-file' else 3000000):
                     raise ValueError('Page exceeds the import limit.')
                 data = json.loads(self.rfile.read(length))
                 if not isinstance(data, dict):
@@ -104,17 +105,25 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                         return self.send(401, {'error': 'Connect the companion again in Proofpage Settings.'})
                     if data.get('reviewed') is not True:
                         raise ValueError('Review this page before importing.')
-                    capture = data.get('capture')
-                    if not isinstance(capture, dict) or capture.get('proofpage_capture') != 'visible-text-v1':
-                        raise ValueError('Expected a visible page capture.')
-                    # Validate before creating a source or persisting anything.
                     from .adapters import parse_entry
                     from .imports import import_archive
-                    payload = json.dumps(capture).encode()
-                    parse_entry('page.json', payload)
+                    filename = 'page.json'
+                    if self.path == '/api/companion/import-file':
+                        from .media import EXTENSIONS
+                        filename = str(data.get('filename', ''))
+                        if Path(filename).name != filename or Path(filename).suffix.lower() not in EXTENSIONS:
+                            raise ValueError('Choose a PNG, JPEG, WebP or PDF file.')
+                        payload = base64.b64decode(data.get('data', ''), validate=True)
+                    else:
+                        capture = data.get('capture')
+                        if not isinstance(capture, dict) or capture.get('proofpage_capture') != 'visible-text-v1':
+                            raise ValueError('Expected a visible page capture.')
+                        payload = json.dumps(capture).encode()
+                    # Validate original bytes before creating a source or persisting anything.
+                    parse_entry(filename, payload)
                     profiles = store.rows("SELECT id FROM import_profiles WHERE provider='browser-companion' AND account='local'")
                     profile_id = profiles[0]['id'] if profiles else create_profile(store, 'Browser pages', 'browser-companion', 'local')['id']
-                    result = import_archive(store, 'page.json', payload, ['page.json'], profile_id)
+                    result = import_archive(store, filename, payload, [filename], profile_id)
                     return self.send(200, result)
             except (ValueError, KeyError, TypeError, OSError) as exc:
                 return self.send(400, {'error': str(exc)})
@@ -144,7 +153,7 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 self.send(400, {'error': str(exc)})
 
         def do_POST(self):
-            if self.path in ('/api/companion/pair', '/api/companion/import'):
+            if self.path in ('/api/companion/pair', '/api/companion/import', '/api/companion/import-file'):
                 return self.companion_post()
             if not self.authorized():
                 return

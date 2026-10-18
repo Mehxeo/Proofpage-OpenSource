@@ -306,14 +306,14 @@ async function showEvidence(id, revision, options = {}) {
     <section role="tabpanel" id="panel-reader" aria-labelledby="tab-reader">
       ${item.is_current === false ? `<p class="callout">${icon('info')}<span>You are viewing an earlier revision. Review and revocation apply to this version.</span></p>` : ''}
       ${findings.length ? `<p class="screening">${icon('alert')}<span>Screening: ${escape(findings.map(f => f.code + ' (' + f.severity + ')').join(', '))}. Original evidence is never changed; redact in a training draft.</span></p>` : ''}
+      ${originalFileView(item, metadata)}
       ${conversationView(metadata)}
       <div class="reader">${escape(item.text) || '<span class="muted">No readable text was captured.</span>'}</div>
       ${branchTargets.length ? `<details><summary>Create an SFT draft from one supplied branch</summary><div class="actions">${branchTargets.map(message => `<button type="button" class="secondary small" data-branch-target="${escape(message.id)}" data-branch-revision="${escape(item.current_revision)}">${icon('branch')}${escape(message.text.slice(0, 80) || message.id)}</button>`).join('')}</div></details>` : ''}
     </section>
     <section role="tabpanel" id="panel-rights" aria-labelledby="tab-rights" hidden>${rightsPanel(item.rights, item.review)}</section>
     <section role="tabpanel" id="panel-original" aria-labelledby="tab-original" hidden>
-      <p class="muted">The response exactly as captured. Proofpage never edits original evidence.</p>
-      <pre>${escape(item.raw)}</pre>
+      ${metadata.asset ? originalFileView(item, metadata) : `<p class="muted">Original evidence as captured or supplied.</p><pre>${escape(item.raw)}</pre>`}
     </section>
     <section role="tabpanel" id="panel-provenance" aria-labelledby="tab-provenance" hidden>
       <dl class="meta-grid">${provenance.map(([term, value]) => `<dt>${term}</dt><dd>${value}</dd>`).join('')}</dl>
@@ -321,6 +321,7 @@ async function showEvidence(id, revision, options = {}) {
     </section>
     <section role="tabpanel" id="panel-proof" aria-labelledby="tab-proof" hidden>${proofPanel(item.proof, item)}</section>
     <section role="tabpanel" id="panel-versions" aria-labelledby="tab-versions" hidden><div class="skeleton"></div></section>`;
+  await loadOriginalPreview(item, metadata);
   $('evidence-foot').innerHTML = `${basisFields(item.rights, item.review)}
     <label><input id="permission" type="checkbox"${item.review.allowed ? ' checked' : ''}> I have permission to include this revision in a dataset.</label>
     <label><input id="approved" type="checkbox"${item.review.approved ? ' checked' : ''}> I reviewed and approve it for a clean corpus.</label>
@@ -442,6 +443,8 @@ document.addEventListener('click', event => {
     await refresh();
   }, b);
   if (b.dataset.schedule) action(async () => { await api('schedule', {source_id: b.dataset.schedule, interval_seconds: Number(b.dataset.interval)}); await refresh(); notice(Number(b.dataset.interval) ? 'Watching hourly while Proofpage runs. Changes will appear in Timeline.' : 'Stopped watching this source.'); }, b);
+  if (b.dataset.originalFile) action(() => download('original-file/' + b.dataset.originalFile, b.dataset.filename), b);
+  if (b.dataset.fileBundle) action(() => download('file-bundle/' + b.dataset.fileBundle, 'proofpage-file-bundle.zip'), b);
   if (b.dataset.export) action(() => download('export/' + b.dataset.export, 'proofpage-' + b.dataset.export + '.jsonl'), b);
 });
 
@@ -543,3 +546,31 @@ action(async () => {
   await applyRoute(true);
   startNotifications();
 });
+
+
+function originalFileView(item, metadata) {
+  const asset = metadata.asset;
+  if (!asset) return '';
+  return `<div class="file-evidence"><h3>${escape(asset.filename)}</h3>
+    <p>${escape(asset.mime)} · ${(asset.bytes / 1024).toFixed(1)} KiB · Original file retained</p>
+    ${asset.mime.startsWith('image/') ? `<img class="original-image" data-original-preview alt="User-supplied image: ${escape(asset.filename)}" loading="lazy">` : '<p>Download the PDF to view it in your trusted PDF reader.</p>'}
+    <button type="button" class="primary" data-original-file="${escape(item.current_revision)}" data-filename="${escape(asset.filename)}">Download original file</button>
+    <button type="button" class="secondary" data-file-bundle="${escape(item.current_revision)}">File + hash manifest</button>
+    <p class="muted">No OCR or PDF text extraction yet. Embedded file metadata is preserved and may contain private information.</p>
+    <details><summary>File SHA-256</summary><code>${escape(asset.sha256)}</code></details></div>`;
+}
+
+let originalPreviewURL;
+async function loadOriginalPreview(item, metadata) {
+  if (originalPreviewURL) URL.revokeObjectURL(originalPreviewURL);
+  originalPreviewURL = null;
+  if (!metadata.asset?.mime.startsWith('image/')) return;
+  const response = await fetch('/api/original-file/' + encodeURIComponent(item.current_revision) + '?preview=1', {headers:{Authorization:'Bearer ' + token}});
+  if (!response.ok) throw new Error('Could not load original image.');
+  const blob = await response.blob();
+  // A later drawer navigation must not attach this image to a different record.
+  if (!document.querySelector(`[data-original-file="${item.current_revision}"]`)) return;
+  originalPreviewURL = URL.createObjectURL(blob);
+  document.querySelectorAll('[data-original-preview]').forEach(image => {image.src=originalPreviewURL;});
+}
+$('evidence-dialog').addEventListener('close', () => {if(originalPreviewURL) URL.revokeObjectURL(originalPreviewURL); originalPreviewURL=null;});

@@ -47,3 +47,7 @@ If a code fails, create a fresh code in Settings. If Save cannot reach the app, 
 The source version has a redesigned light/dark popup and optional reviewed links, image references with alt text, and table text under **Include more from this page**. Each category is off by default and editable. Selected content is added to the searchable evidence text and JSON export; newer app builds also retain the categories in normalized metadata. Direct saving stays compatible with Proofpage 0.2.2.
 
 These are references, not downloaded images, video, audio, PDFs, or complete offline pages. At most 100 links, 50 image references, and 20 tables are previewed. URL query strings are removed. Review resource URLs too: paths can contain personal information. The current store submission and published developer ZIP remain 0.2.2. Submit the newer package and update its listing/privacy description after the initial review is complete.
+
+## Original image/PDF files (0.2.4 source preview)
+
+Open **Save an image or PDF file**, choose a downloaded PNG/JPEG/WebP/PDF, review the file and its embedded metadata, confirm permission, and save. This requires the current source app's file-import endpoint. In Library, open the record to preview images, download exact original bytes, or download a file-plus-hash bundle. PDFs open in your own reader after download. Files are not OCRed or sent to a model automatically. The store submission remains 0.2.2; no newer package has been submitted.

@@ -11,7 +11,7 @@
 
 **Capture it. Keep the evidence. Check the quote.**
 
-Proofpage turns public web pages and your own exported files into **traceable evidence for AI**. Collect material, inspect the original source, review training examples, and export datasets—or let an existing AI assistant search your evidence through MCP. The goal is a workspace for web evidence across formats, with source context, permissions, revisions, and exportable provenance. See the [format roadmap](docs/FORMAT_ROADMAP.md) for what works today and what comes next.
+Proofpage turns public web pages and your own exported files into **traceable evidence for AI**. Collect material, inspect the original source, review training examples, and export datasets—or let an existing AI assistant search your evidence through MCP. The goal is a workspace for web evidence across formats, with source context, permissions, revisions, and exportable provenance. See the [scraper strategy](docs/SCRAPER_STRATEGY.md) and [format roadmap](docs/FORMAT_ROADMAP.md) for what works today and what comes next.
 
 **Free to run on your own computer. MIT licensed. No account, subscription, or model API key required for core features.** Desktop downloads include Python: no Python installation or terminal is needed. This is an early release. The Mac downloads are Developer ID signed and Apple-notarized; Windows signing is still pending.
 

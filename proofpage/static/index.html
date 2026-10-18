@@ -97,13 +97,13 @@
 </form></dialog>
 
 <dialog id="import-dialog">
-  <div class="dialog-top"><h2>Import an archive</h2><button type="button" class="icon-button" data-close="import-dialog" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="/icons.svg#x"></use></svg></button></div>
+  <div class="dialog-top"><h2>Import files</h2><button type="button" class="icon-button" data-close="import-dialog" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="/icons.svg#x"></use></svg></button></div>
   <p>Choose an import profile to keep your accounts separate, then select the files to keep. Browser companion exports are supported.</p>
   <label>Import profile<select id="import-profile" required></select></label>
   <button type="button" class="secondary small" data-new-profile><svg class="icon" aria-hidden="true"><use href="/icons.svg#plus"></use></svg>Create an account profile</button>
-  <label>Choose a ZIP, CSV, JSON, JSONL, Markdown, text, or HTML file<input id="file" type="file" accept=".zip,.csv,.json,.jsonl,.md,.txt,.html"></label>
+  <label>Choose an image, PDF, ZIP, CSV, JSON, Markdown, text, or HTML file<input id="file" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.zip,.csv,.json,.jsonl,.md,.txt,.html"></label>
   <div id="preview" class="preview-list"></div>
-  <p class="muted">8 MiB upload limit. Source roles and branches stay intact. Attachment links remain references. Importing a newer archive under the same profile updates matching records.</p>
+  <p class="muted">8 MiB upload limit. Source roles and branches stay intact. PNG, JPEG, WebP and PDF files retain their original bytes. Attachment links remain references. Importing a newer archive under the same profile updates matching records.</p>
   <div class="actions"><button type="button" id="import-confirm" class="primary" disabled>Import selected</button></div>
 </dialog>
 

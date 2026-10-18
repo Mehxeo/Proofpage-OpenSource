@@ -728,3 +728,7 @@ button.primary{box-shadow:0 3px 8px #0001}button.primary:hover{transform:transla
 @media(max-width:760px){.heading{padding-bottom:18px}.help-link{font-size:11px}.onboarding{padding:22px}.onboarding h2{font-size:29px}.sidebar nav button:hover{transform:none}.topbar #breadcrumb{display:none}}
 @media(prefers-reduced-motion:reduce){.panel{animation:none}.card,.sidebar nav button,button.primary{transition:none;transform:none!important}}
 #claim-report,#claim-preview-panel{scroll-margin-top:90px}
+
+.file-evidence { padding: 16px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 16px; }
+.original-image { display: block; max-width: 100%; max-height: 420px; object-fit: contain; margin: 12px auto; }
+.file-evidence code { overflow-wrap: anywhere; }

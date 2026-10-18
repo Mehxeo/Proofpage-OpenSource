@@ -652,7 +652,7 @@ def archive_entries(filename, data):
                     raise ValueError('Archive exceeds expanded size or file count limit.')
                 if len({e.filename for e in entries}) != len(entries):
                     raise ValueError('Archive contains duplicate entry names.')
-                return [(e.filename, archive.read(e)) for e in entries if Path(e.filename).suffix.lower() in ('.csv', '.json', '.jsonl', '.txt', '.md', '.html')]
+                return [(e.filename, archive.read(e)) for e in entries if Path(e.filename).suffix.lower() in ('.csv', '.json', '.jsonl', '.txt', '.md', '.html', '.png', '.jpg', '.jpeg', '.webp', '.pdf')]
         except (zipfile.BadZipFile, RuntimeError, NotImplementedError) as exc:
             raise ValueError('Archive is invalid, encrypted, or uses unsupported compression.') from exc
     return [(filename, data)]

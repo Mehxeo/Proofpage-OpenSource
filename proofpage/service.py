@@ -20,6 +20,15 @@ def with_blockers(store, datasets):
 
 
 def get(store, path, query):
+    if path.startswith('/api/file-bundle/'):
+        from .media import bundle
+        return response(200, bundle(store, path.rsplit('/', 1)[1]), 'application/zip')
+    if path.startswith('/api/original-file/'):
+        from .media import original
+        body, info = original(store, path.rsplit('/', 1)[1])
+        # PDF is download-only: never embed active PDF content in the workspace origin.
+        mime = info['mime'] if info['mime'].startswith('image/') and query.get('preview') == ['1'] else 'application/octet-stream'
+        return response(200, body, mime)
     if path == '/api/claim-checks':
         return response(200, store.rows('SELECT id,created_at,state,detail FROM claim_checks ORDER BY created_at DESC LIMIT 50'))
     if path.startswith('/api/claim-checks/'):
