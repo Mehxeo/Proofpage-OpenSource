@@ -17,3 +17,12 @@ Both apps passed `codesign --verify --deep --strict`, `stapler validate`, and `s
 - `Proofpage-0.1.3-darwin-x86_64.zip`: `f04ed63fd155201988f56cbb77eb011b7f83533e757b594613fb4ae83864f404`
 
 Download the current files and SHA256SUMS from [v0.1.3](https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.1.3). Older unsigned copies have different hashes. The release remains a preview; normal first-download confirmations and organization-specific security policies may still apply.
+
+## v0.2.0
+
+Both architecture builds from successful CI run 39091698926 (application source df6bf4b) were signed with Developer ID Application: UTTAM SUBODH DAS (44HHGAZ2C4), submitted to Apple, accepted, stapled, and passed Gatekeeper assessment.
+
+- ARM64 submission: `15a7071e-19e5-4b03-836f-f0dad9051578` — Accepted.
+- Intel submission: `f1c8921a-17be-4942-8d63-b8385c25dfa0` — Accepted.
+
+The final signed packages also pass native GUI/HTTP and bundled MCP smoke checks locally (Intel via Rosetta). Release asset hashes are published in `SHA256SUMS`.
