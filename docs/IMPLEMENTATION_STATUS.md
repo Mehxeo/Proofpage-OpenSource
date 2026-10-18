@@ -1,8 +1,10 @@
 # Implementation status
 
-Version 0.2.0 includes the Archival Ink redesign, Rights Radar, Time Machine, Proof Receipts and Claim Check. Hosted service launch and billing activation remain deferred.
+Version 0.3.0 adds local OCR/PDF extraction, original media retention, direct public-file collection, and media folder watches. It also includes the Archival Ink redesign, Rights Radar, Time Machine, Proof Receipts and Claim Check. Hosted service launch and billing activation remain deferred.
 
 ## Implemented
+
+- Original PNG/JPEG/WebP/PDF imports, image preview, authenticated downloads, and hash bundles with extracted text. Local PDFium text extraction and RapidOCR for images/scanned pages, bundled in desktop packages. See [limits and automation](MEDIA.md).
 
 - Public HTML/plain-text capture, bounded crawling, scheduling, supplied archive imports, preserved conversations, original responses and immutable revisions.
 - A responsive light/dark evidence workspace, keyboard command palette, deep links, evidence drawer, onboarding, training review, dataset exports and copied MCP setup.
@@ -16,7 +18,7 @@ Version 0.2.0 includes the Archival Ink redesign, Rights Radar, Time Machine, Pr
 
 ## Verification for this branch
 
-- 108 local tests pass, including Unicode quote offsets, citation extraction, drift, blocked/unreachable outcomes, report escaping, explicit model review, durable jobs, cancellation, cooldowns and safe restore, plus the earlier rights/history/receipt/hosted/training checks.
+- 122 tests pass, including Unicode quote offsets, citation extraction, drift, blocked/unreachable outcomes, report escaping, explicit model review, durable jobs, cancellation, cooldowns and safe restore, plus the earlier rights/history/receipt/hosted/training checks.
 - Receipt tests include RFC 8032 vectors and independent OpenSSL signature/timestamp interoperability. Cryptographic review is not claimed.
 - A live example.com quote check in the browser matched a real passage, rejected an invented passage, and opened the captured revision and signed receipt. No paid model request was made.
 - Desktop light and 375px mobile dark layouts were inspected; the mobile page had no horizontal document overflow. No browser console errors were observed in the tested flow.

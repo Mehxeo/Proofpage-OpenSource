@@ -51,3 +51,7 @@ These are references, not downloaded images, video, audio, PDFs, or complete off
 ## Original image/PDF files (0.2.4 source preview)
 
 Open **Save an image or PDF file**, choose a downloaded PNG/JPEG/WebP/PDF, review the file and its embedded metadata, confirm permission, and save. This requires the current source app's file-import endpoint. In Library, open the record to preview images, download exact original bytes, or download a file-plus-hash bundle. PDFs open in your own reader after download. Files are not OCRed or sent to a model automatically. The store submission remains 0.2.2; no newer package has been submitted.
+
+## 0.3 original files and local extraction
+
+The release companion can now save a public image or PDF URL directly. Use Preview → Save an image directly from this page. The app retains bytes and runs local OCR/PDF extraction. See [Media and automation](MEDIA.md). The pending 0.2.2 Chrome Web Store package does not yet include this feature.
