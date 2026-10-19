@@ -260,6 +260,7 @@ main>.workspace-details{padding-top:25px}
 .screenshot-card>a{display:block;position:relative;overflow:hidden;border:1px solid var(--line);background:var(--surface);box-shadow:5px 5px 0 var(--soft)}
 .screenshot-card img{display:block;width:100%;height:auto;aspect-ratio:1.43;object-fit:cover;object-position:top;transition:transform .55s cubic-bezier(.2,.7,.2,1)}
 .screenshot-card>a:hover img{transform:scale(1.025)}
+.screenshot-card:nth-child(2) img{aspect-ratio:auto}
 .screenshot-card>a>span{display:block;font:9px/1.5 var(--mono);padding:12px 15px;border-top:1px solid var(--line);color:var(--muted)}
 .screenshot-card figcaption{padding:24px 2px 0}.screenshot-card h3{font-size:24px;letter-spacing:-.7px;margin:0 0 10px}
 .screenshot-card p{font-size:14px;line-height:1.65;color:var(--muted);max-width:450px;margin:0 0 14px}.screenshot-card figcaption>a{font:10px/1.8 var(--mono);color:var(--accent)}
