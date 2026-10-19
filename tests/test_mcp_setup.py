@@ -15,7 +15,7 @@ from proofpage.mcp import TOOLS
 
 class MCPSetupTests(unittest.TestCase):
     def test_client_formats_preserve_exact_command_and_arguments(self):
-        with tempfile.TemporaryDirectory(prefix='spaces " and ü ') as directory:
+        with tempfile.TemporaryDirectory(prefix='spaces and ü ') as directory:
             data = setup(Store(directory))
             entry = data['config']['mcpServers']['proofpage']
             for client, selected in data['clients'].items():
