@@ -99,8 +99,9 @@
 
 <dialog id="import-dialog">
   <div class="dialog-top"><h2>Import files</h2><button type="button" class="icon-button" data-close="import-dialog" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="/icons.svg#x"></use></svg></button></div>
-  <p>Choose an import profile to keep your accounts separate, then select the files to keep. Browser companion exports are supported.</p>
-  <label>Import profile<select id="import-profile" required></select></label>
+  <p>Choose a file, review the preview, then import. Documents, images and PDFs work without account setup.</p>
+  <label>Save into<select id="import-profile"></select></label>
+  <p class="help">For conversation exports, JSON, CSV or ZIP archives, choose a separate account profile to preserve the source and roles.</p>
   <button type="button" class="secondary small" data-new-profile><svg class="icon" aria-hidden="true"><use href="/icons.svg#plus"></use></svg>Create an account profile</button>
   <label>Choose an image, PDF, ZIP, CSV, JSON, Markdown, text, or HTML file<input id="file" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.zip,.csv,.json,.jsonl,.md,.txt,.html"></label>
   <div id="preview" class="preview-list"></div>

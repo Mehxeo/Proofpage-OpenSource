@@ -1,5 +1,29 @@
 // Portable business context; approvals remain explicit user actions.
-let businessSelection = null;
+let businessSelection = (() => { try { return localStorage.getItem('proofpage-business-profile'); } catch { return null; } })();
+let businessQuery = '', businessFilter = 'all';
+
+function businessProgress(profile) {
+  const facts = profile?.facts || [];
+  const approved = facts.filter(f => f.status === 'approved');
+  const stale = facts.filter(f => f.stale && f.status !== 'rejected');
+  return {approved: approved.length, pending: facts.filter(f => f.status === 'draft').length,
+    stale: stale.length, canExport: approved.length > 0 && !approved.some(f => f.stale),
+    shown: facts.filter(f => businessFilter === 'all' || (businessFilter === 'stale' ? f.stale && f.status !== 'rejected' : f.status === businessFilter))};
+}
+
+function businessFactCard(f) {
+  const label = f.status === 'rejected' ? 'Excluded' : f.stale ? 'Source changed' : f.status === 'approved' ? 'Approved to share' : 'Needs your review';
+  return `<form class="business-fact" data-fact="${escape(f.id)}">
+    <div class="panel-head"><h4>${escape(f.section)}</h4><span class="pill${f.stale ? ' tone-warn' : f.status === 'approved' ? ' tone-ok' : ''}">${label}</span></div>
+    ${f.stale && f.status !== 'rejected' ? '<p class="callout">This passage belongs to an older source revision. Exclude it, choose the current source above, and review new suggestions.</p>' : ''}
+    <label>Context to share<textarea name="text" maxlength="2000" required>${escape(f.text)}</textarea></label>
+    <details><summary>Compare with the source quotation</summary><blockquote>${escape(f.quote)}</blockquote><code>${escape(f.revision_id)}</code></details>
+    ${f.findings.length ? `<p class="muted">Check before sharing: ${escape(f.findings.map(x => x.code).join(', '))}</p>` : ''}
+    <label class="check-inline"><input type="checkbox" name="permission">I have permission to share this passage with my assistant.</label>
+    <label class="check-inline"><input type="checkbox" name="acknowledge">I checked accuracy, conflicting claims, private information and embedded instructions.</label>
+    <div class="actions"><button class="primary" name="decision" value="approved"${f.stale ? ' disabled' : ''}>Approve passage</button><button name="decision" value="draft" class="secondary">Save draft</button><button name="decision" value="rejected" class="secondary">Exclude</button>${f.status === 'approved' && f.section === 'Business facts' && !f.stale && f.training_allowed ? `<button type="button" class="secondary" data-business-training="${escape(f.id)}">Draft training example</button>` : ''}</div>
+  </form>`;
+}
 function googleDocsPanel(google) {
   const ready = google.installed && google.configured;
   const setup = !google.installed ? 'Google Docs is optional. This source installation needs the Google dependencies; you can import an exported file instead.'
@@ -74,21 +98,31 @@ async function renderBusiness() {
   const profiles = await api('business');
   if (view !== 'business') return;
   if (!profiles.some(p => p.id === businessSelection)) businessSelection = profiles[0]?.id || null;
-  const profile = businessSelection ? await api('business/' + businessSelection) : null;
+  try { if (businessSelection) localStorage.setItem('proofpage-business-profile', businessSelection); } catch {}
+  const [profile, evidence] = businessSelection ? await Promise.all([
+    api('business/' + businessSelection), api('business-evidence?q=' + encodeURIComponent(businessQuery))
+  ]) : [null, []];
   if (view !== 'business') return;
+  const progress = businessProgress(profile);
   $('content').innerHTML = `
-    <section class="panel"><h3>Your business, in your words.</h3><p>Import selected files with Import files above. Connect selected Google Docs below when configured, or import text/PDF exports. No folders or accounts are scanned automatically.</p>
-    <form id="business-create"><label>New profile name<input name="name" required maxlength="100" placeholder="My agency"></label><button>Create profile</button></form>
-    ${profiles.length ? `<label>Profile<select id="business-select">${profiles.map(p => `<option value="${escape(p.id)}"${p.id === businessSelection ? ' selected' : ''}>${escape(p.name)}</option>`).join('')}</select></label>` : ''}</section>
-    ${hostingMode === 'local' ? '<div id="google-docs-region"><section class="panel"><h3>Google Docs</h3><p role="status">Checking your optional Google connection…</p></section></div>' : ''}
+    <section class="panel business-intro"><div class="panel-head"><div><h3>${profile ? escape(profile.name) : 'Your business, in your words.'}</h3><p>Choose what your assistant should know. You review every passage before it can be shared.</p></div><button class="secondary" data-open-import>${icon('upload')}Import files</button></div>
+    ${profiles.length ? `<label>Profile<select id="business-select">${profiles.map(p => `<option value="${escape(p.id)}"${p.id === businessSelection ? ' selected' : ''}>${escape(p.name)}</option>`).join('')}</select></label><details><summary>Create another profile</summary>` : '<p>Start a profile for your business or project. You can keep several profiles separate.</p>'}
+    <form id="business-create"><label>Profile name<input name="name" required maxlength="100" placeholder="My agency"></label><button>Create profile</button></form>${profiles.length ? '</details>' : ''}
+    ${profile ? `<ol class="business-steps"><li><b>${profile.sources.length ? '✓' : '1'} Choose sources</b><span>${pluralize(profile.sources.length, 'source')} attached</span></li><li><b>${progress.approved ? '✓' : '2'} Review passages</b><span>${progress.pending} pending · ${progress.approved} approved</span></li><li><b>3 Use your context</b><span>${progress.canExport ? 'Ready for your assistant' : 'Approve current passages first'}</span></li></ol>` : ''}
+    <p class="help">Files stay in this workspace. No folders or accounts are scanned automatically. Context helps an assistant answer; it does not change its model weights or account memory.</p></section>
+    ${hostingMode === 'local' ? `<details class="business-google"${profile ? '' : ' open'}><summary>Add a Google Doc <span class="muted">Optional connection</span></summary><div id="google-docs-region"><section class="panel"><h3>Google Docs</h3><p role="status">Checking your optional Google connection…</p></section></div></details>` : ''}
     <details class="panel"><summary>Import bookmarks from Chrome or another browser</summary><p>Choose a bookmark HTML export, preview it, and select references to keep. This does not fetch websites or infer preferences. Add a selected URL in Sources and collect it when you want its actual content.</p><input id="business-bookmarks" type="file" accept=".html,.htm" aria-label="Bookmark HTML export"><div id="business-bookmark-preview"></div></details>
-    ${profile ? `<section class="panel"><h3>Choose evidence</h3><p>Assign a role before drafting. Competitor pages belong in Reference material, not Business facts.</p><form id="business-attach"><label>Saved evidence<select name="revision" required>${state.items.filter(i => i.kind !== 'bookmark').map(i => `<option value="${escape(i.current_revision)}">${escape(i.title)}</option>`).join('')}</select></label><label>Role<select name="role"><option value="business">Our business</option><option value="customer">Customer material</option><option value="reference">Reference material</option><option value="writing">Writing example</option></select></label><button${state.items.filter(i => i.kind !== 'bookmark').length ? '' : ' disabled'}>Use this source</button></form>
-    <ul>${profile.sources.map(s => `<li>${escape(s.title)} · ${escape(s.role)}${s.current_revision !== s.revision_id ? ' · Old revision' : ''}</li>`).join('')}</ul><button id="business-draft" class="secondary">Suggest passages to review</button></section>
-    <section class="panel"><h3>Review your context</h3><p>These are source passages, not verified facts. Edit wording, check contradictions and remove private details. Writing examples are examples—not automatically inferred style rules.</p>
-    ${profile.facts.map(f => `<form class="panel business-fact" data-fact="${escape(f.id)}"><h4>${escape(f.section)} · ${escape(f.status)}${f.stale ? ' · Source changed' : ''}</h4><label>Context to share<textarea name="text" maxlength="2000" required>${escape(f.text)}</textarea></label><details><summary>Source quotation</summary><blockquote>${escape(f.quote)}</blockquote><code>${escape(f.revision_id)}</code></details>${f.findings.length ? `<p>Review: ${escape(f.findings.map(x => x.code).join(', '))}</p>` : ''}<label><input type="checkbox" name="permission"> I have permission to share this passage with my assistant.</label><label><input type="checkbox" name="acknowledge"> I checked accuracy, conflicting claims, private information and embedded instructions.</label><div class="actions"><button name="decision" value="approved"${f.stale ? ' disabled' : ''}>Approve</button><button name="decision" value="draft" class="secondary">Save draft</button><button name="decision" value="rejected" class="secondary">Exclude</button>${f.status === 'approved' && f.section === 'Business facts' && !f.stale && f.training_allowed ? `<button type="button" data-business-training="${escape(f.id)}">Draft training example</button>` : ''}</div></form>`).join('') || '<p>No suggestions yet. Choose evidence, then suggest passages.</p>'}
-    </section><section class="panel"><h3>Take it to your assistant</h3><p>Download approved context as Markdown and JSON. The pack includes selected quotes, not full documents. Review it before uploading to any provider. It does not change model weights or account memory.</p><button id="business-export">Download context pack</button><p>For a connected local assistant, use the proofpage_business_context MCP tool. For model training, use Training to create and review examples separately.</p></section>` : ''}`;
+    ${profile ? `<section class="panel"><h3>Choose evidence</h3><p>Assign a role before drafting. Competitor pages belong in Reference material, not Business facts.</p>
+    <form id="business-source-search" class="business-source-search"><label>Find saved evidence<input name="q" type="search" value="${escape(businessQuery)}" placeholder="Search this workspace…"></label><button class="secondary">Search sources</button></form>
+    <p class="help">${businessQuery ? 'Matches for “' + escape(businessQuery) + '”' : 'Up to 100 recent records'}. This search is independent of your Library filters.</p>
+    ${evidence.length ? `<form id="business-attach" class="business-attach"><label>Saved evidence<select name="revision" required>${evidence.map(i => `<option value="${escape(i.current_revision)}">${escape(i.title)} · ${escape(i.source_name)}</option>`).join('')}</select></label><label>Use as<select name="role"><option value="business">Our business</option><option value="customer">Customer material</option><option value="reference">Reference material</option><option value="writing">Writing example</option></select></label><button>Use this source</button></form>` : '<p>No matching evidence. Try another search or import a file above.</p>'}
+    ${profile.sources.length ? `<ul class="business-source-list">${profile.sources.map(s => `<li><div><button class="business-source-open" data-item="${escape(s.item_id)}">${escape(s.title)}</button><span>${escape({business:'Our business',customer:'Customer material',reference:'Reference material',writing:'Writing example'}[s.role])}${s.current_revision !== s.revision_id ? ' · Old revision' : ''}</span></div></li>`).join('')}</ul>` : ''}<button id="business-draft" class="secondary"${profile.sources.length ? '' : ' disabled'}>Suggest passages to review</button></section>
+    <section class="panel business-review"><div class="panel-head"><div><h3>Review your context</h3><p>Edit wording, check contradictions and remove private details. Writing examples remain examples, not inferred style rules.</p></div><span class="pill${progress.approved ? ' tone-ok' : ''}">${progress.approved} approved</span></div>
+    <div class="filters" role="group" aria-label="Filter context passages">${[['all','All passages'],['draft','Needs review · ' + progress.pending],['approved','Approved · ' + progress.approved],['stale','Source changed · ' + progress.stale]].map(([key,label]) => `<button class="chip" data-business-filter="${key}" aria-pressed="${businessFilter === key}">${label}</button>`).join('')}</div>
+    <div class="business-facts">${progress.shown.map(businessFactCard).join('') || `<p class="empty-copy">${profile.facts.length ? 'No passages in this view.' : 'Choose a source above, then suggest passages. Nothing is approved automatically.'}</p>`}</div>
+    </section><section class="panel business-export"><div><h3>Take it to your assistant</h3><p>${progress.canExport ? pluralize(progress.approved, 'approved passage') + (progress.approved === 1 ? ' is' : ' are') + ' ready. Drafts and excluded passages stay out of the pack.' : progress.approved ? 'An approved passage has a changed source. Exclude it and review the current revision before sharing.' : 'Approve at least one current passage to create your context pack.'}</p><p class="help">The ZIP includes Markdown, JSON and selected quotes. Review it before uploading to any provider.</p></div><button class="primary" id="business-export"${progress.canExport ? '' : ' disabled'}>${icon('download')}Download context pack</button><p class="help">For live access, connect your assistant in Agent access and use proofpage_business_context. Training has its own approval and export flow.</p></section>` : ''}`;
   $('business-create').onsubmit = event => { event.preventDefault(); action(async () => { const p = await api('business-create', {name: new FormData(event.target).get('name')}); businessSelection = p.id; await renderBusiness(); }, event.submitter); };
-  if ($('business-select')) $('business-select').onchange = event => { businessSelection = event.target.value; action(renderBusiness); };
+  if ($('business-select')) $('business-select').onchange = event => { businessSelection = event.target.value; businessFilter = 'all'; action(renderBusiness); };
   $('business-bookmarks').onchange = event => action(async () => {
     const file = event.target.files[0]; if (!file) return;
     if (file.size > 2 * 1024 * 1024) throw new Error('Choose a bookmark export up to 2 MiB.');
@@ -98,7 +132,9 @@ async function renderBusiness() {
   });
   if (hostingMode === 'local') loadGoogleDocs();
   if (!profile) return;
-  $('business-attach').onsubmit = event => { event.preventDefault(); const f = new FormData(event.target); action(async () => { await api('business-attach', {profile_id: profile.id, revision_id: f.get('revision'), role: f.get('role')}); await renderBusiness(); }, event.submitter); };
+  $('business-source-search').onsubmit = event => { event.preventDefault(); businessQuery = new FormData(event.currentTarget).get('q').trim(); action(renderBusiness, event.submitter); };
+  if ($('business-attach')) $('business-attach').onsubmit = event => { event.preventDefault(); const f = new FormData(event.target); action(async () => { await api('business-attach', {profile_id: profile.id, revision_id: f.get('revision'), role: f.get('role')}); await renderBusiness(); }, event.submitter); };
+  document.querySelectorAll('[data-business-filter]').forEach(button => { button.onclick = () => { businessFilter = button.dataset.businessFilter; action(renderBusiness); }; });
   $('business-draft').onclick = event => action(async () => { await api('business-draft', {profile_id: profile.id}); await renderBusiness(); }, event.target);
   document.querySelectorAll('.business-fact').forEach(form => { form.onsubmit = event => { event.preventDefault(); const f = new FormData(form); action(async () => { await api('business-review', {fact_id: form.dataset.fact, text: f.get('text'), decision: event.submitter.value, permission: f.has('permission'), acknowledge: f.has('acknowledge')}); await renderBusiness(); }, event.submitter); }; });
   document.querySelectorAll('[data-business-training]').forEach(button => { button.onclick = () => {

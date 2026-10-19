@@ -476,7 +476,8 @@ function profileOptions(selected) {
   for (const id of ['import-profile', 'watch-profile']) {
     const select = $(id);
     const previous = selected || select.value;
-    select.innerHTML = '<option value="">Choose an account profile</option>' + state.profiles.map(profile => `<option value="${escape(profile.id)}">${escape(profile.name)} · ${escape(profile.account)}</option>`).join('');
+    const profiles = state.profiles.filter(profile => id !== 'import-profile' || profile.provider !== 'Proofpage local files' || profile.account !== 'selected-files');
+    select.innerHTML = '<option value="">' + (id === 'import-profile' ? 'Local files · no account setup' : 'Choose an account profile') + '</option>' + profiles.map(profile => `<option value="${escape(profile.id)}">${escape(profile.name)} · ${escape(profile.account)}</option>`).join('');
     select.value = previous;
   }
 }
@@ -537,9 +538,14 @@ $('file').onchange = () => action(async () => {
   for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
   pendingFile = {filename: file.name, data: btoa(binary)};
   const entries = await api('preview', pendingFile);
-  $('preview').innerHTML = entries.map(entry => `<label><input type="checkbox" name="entry" value="${escape(entry.name)}"> <span><b>${escape(entry.name)}</b><br><span class="muted">${Math.ceil(entry.bytes / 1024)} KB · ${pluralize(entry.records, 'record')}${entry.error ? ' · ' + escape(entry.error) : ''}</span></span></label>`).join('') || '<p>No supported files found.</p>';
-  $('import-confirm').disabled = !entries.length;
+  $('preview').innerHTML = entries.map(entry => `<label><input type="checkbox" name="entry" value="${escape(entry.name)}"${entry.error ? ' disabled' : entries.length === 1 ? ' checked' : ''}> <span><b>${escape(entry.name)}</b><br><span class="muted">${Math.ceil(entry.bytes / 1024)} KB · ${pluralize(entry.records, 'record')}${entry.error ? ' · ' + escape(entry.error) : ''}</span></span></label>`).join('') || '<p>No supported files found.</p>';
+  updateImportReady();
 });
+
+function updateImportReady() {
+  $('import-confirm').disabled = !pendingFile || !document.querySelector('[name=entry]:checked');
+}
+$('preview').addEventListener('change', updateImportReady);
 
 $('import-confirm').onclick = () => action(async () => {
   const selected = [...document.querySelectorAll('[name=entry]:checked')].map(entry => entry.value);

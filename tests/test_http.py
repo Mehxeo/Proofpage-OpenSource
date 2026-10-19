@@ -170,7 +170,8 @@ class HttpTests(unittest.TestCase):
         data = {'filename': 'record.md', 'data': base64.b64encode(b'Synthetic local evidence for API validation.').decode()}
         status, preview = self.request('/api/preview', data)
         self.assertEqual((status, preview[0]['records']), (200, 1))
-        self.assertEqual(self.request('/api/import', {**data, 'selected': ['record.md']})[0], 400)
+        structured = {'filename': 'record.json', 'data': base64.b64encode(b'[]').decode(), 'selected': ['record.json']}
+        self.assertEqual(self.request('/api/import', structured)[0], 400)
         status, result = self.request('/api/import', {**data, 'selected': ['record.md'], 'profile_id': profile['id']})
         self.assertEqual((status, result['added']), (200, 1))
         _, state = self.request('/api/state?q=Synthetic')
@@ -185,6 +186,19 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(json.loads(exported)['text'], 'Synthetic local evidence for API validation.')
         self.request('/api/review', {**review, 'allowed': False})
         self.assertEqual(self.request('/api/export/' + dataset['id'])[0], 400)
+
+    def test_plain_file_import_without_account_setup_is_authenticated(self):
+        payload = {'filename': 'local-onboarding.txt', 'data': base64.b64encode(b'Unique onboarding file for plain local import.').decode(), 'selected': ['local-onboarding.txt'], 'profile_id': ''}
+        self.assertEqual(self.request('/api/import', payload, {'Authorization': ''})[0], 401)
+        status, result = self.request('/api/import', payload)
+        self.assertEqual((status, result['added']), (200, 1))
+        self.assertEqual(self.request('/api/import', payload)[1]['added'], 0)
+        self.assertEqual(self.request('/api/business-evidence', headers={'Authorization': ''})[0], 401)
+        status, evidence = self.request('/api/business-evidence?q=onboarding')
+        self.assertEqual(status, 200)
+        self.assertEqual(evidence[0]['title'], 'local-onboarding')
+        detail = self.request('/api/items/' + evidence[0]['id'])[1]
+        self.assertFalse(detail['review']['approved'])
 
     def test_training_api_flow(self):
         _, profile = self.request('/api/profiles', {'name':'Training fixture','provider':'fixture','account':'training','adapter':'generic'})

@@ -20,6 +20,12 @@ def with_blockers(store, datasets):
 
 
 def get(store, path, query):
+    if path == '/api/business-evidence':
+        # A profile's source picker has its own search, independent of Library.
+        keys = ('id', 'current_revision', 'title', 'source_name')
+        return response(200, [{key: item[key] for key in keys}
+                              for item in store.search(query.get('q', [''])[0])
+                              if item['kind'] != 'bookmark'])
     if path == '/api/business':
         return response(200, store.rows('SELECT * FROM business_profiles ORDER BY created_at DESC'))
     if path.startswith('/api/business/'):
@@ -187,7 +193,8 @@ def post(store, path, data):
     elif path in ('/api/preview', '/api/import'):
         content = base64.b64decode(data['data'], validate=True)
         if path == '/api/import' and not data.get('profile_id'):
-            raise ValueError('Choose an account-specific import profile.')
+            from .imports import local_file_profile
+            data = {**data, 'profile_id': local_file_profile(store, data['filename'])['id']}
         result = preview(data['filename'], content) if path == '/api/preview' else import_file(store, data['filename'], content, data['selected'], data['profile_id'])
     elif path == '/api/review':
         store.review(data['revision_id'], data['allowed'] is True, data['approved'] is True, data.get('rights_basis'), data.get('rights_note'))
