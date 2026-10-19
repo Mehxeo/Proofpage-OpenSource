@@ -566,9 +566,11 @@ class Store:
         return result[0]
 
     def review(self, revision_id, allowed, approved, rights_basis=None, rights_note=None):
-        revisions = self.rows('SELECT id,text FROM revisions WHERE id=?', (revision_id,))
+        revisions = self.rows('SELECT id,text,metadata FROM revisions WHERE id=?', (revision_id,))
         if not revisions:
             raise ValueError('Revision not found.')
+        if (allowed or approved) and json.loads(revisions[0]['metadata']).get('adapter') == 'google_docs':
+            raise ValueError('Google Docs API snapshots are limited to personal context and cannot be approved for datasets.')
         from .quality import findings
         if approved and any(f['severity'] == 'block' for f in findings(revisions[0]['text'])):
             raise ValueError('This revision contains detected credentials. Grant source permission separately and create a redacted training example.')
@@ -609,6 +611,8 @@ class Store:
             raise ValueError('Approve at least one revision and confirm permission before freezing a corpus.')
         seen, lines, ids = set(), [], []
         for r in records:
+            if json.loads(r['metadata']).get('adapter') == 'google_docs':
+                raise ValueError('Google Docs API snapshots are limited to personal context and cannot be frozen into a corpus.')
             if not r['text'].strip():
                 continue
             key = digest(r['text'])
@@ -641,6 +645,9 @@ class Store:
                     if not db.execute("SELECT 1 FROM candidates WHERE id=? AND status='approved'", (candidate_id,)).fetchone():
                         raise ValueError('Export blocked: an example approval was revoked.')
             for revision_id in json.loads(dataset['revision_ids']):
+                revision = db.execute('SELECT metadata FROM revisions WHERE id=?', (revision_id,)).fetchone()
+                if revision and json.loads(revision['metadata']).get('adapter') == 'google_docs':
+                    raise ValueError('Export blocked: Google Docs API snapshots are limited to personal context, not datasets.')
                 permission = db.execute('SELECT * FROM reviews WHERE revision_id=? AND allowed=1', (revision_id,)).fetchone()
                 if not permission or (not training and not permission['approved']):
                     raise ValueError('Export blocked: a frozen revision no longer has permission and approval.')

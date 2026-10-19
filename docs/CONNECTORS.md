@@ -42,8 +42,11 @@ Up to 8 MiB is accepted. Failed/empty responses preserve previous evidence.
 Automatic schedules require the app/server to remain open. Changed revisions
 invalidate approved business context rather than silently altering it.
 
-Google API snapshots are for personal context in this release; the Training
-workflow rejects them. Google Workspace data cannot be used to train shared or
+Google API snapshots are for personal context in this release. Dataset approval,
+corpus freezing, training examples, and existing dataset downloads reject them.
+Training-draft model calls are blocked before transmitting the source text.
+Business context keeps its separate passage review and export workflow.
+Google Workspace data cannot be used to train shared or
 general-purpose models. Only retain snapshots with express owner permission.
 See [Google Workspace data policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy)
 and [Google API content terms](https://developers.google.com/terms#section_5_content).

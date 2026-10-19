@@ -1,8 +1,9 @@
 import tempfile
+import json
 import unittest
 from unittest.mock import patch
 from proofpage import google_docs, business
-from proofpage.core import Store
+from proofpage.core import Store, digest, now
 
 DOC = 'abc123_def456'
 def document(text, revision='r1'):
@@ -58,3 +59,34 @@ class GoogleDocsTests(unittest.TestCase):
         with patch('proofpage.google_docs.fetch_document', return_value={'documentId': 'different'}):
             with self.assertRaises(ValueError): google_docs.sync(self.store, DOC)
         self.assertEqual(self.store.rows('SELECT * FROM items'), [])
+
+    def test_google_snapshots_stay_out_of_corpora_and_model_training(self):
+        google_docs.select(self.store, DOC, owner_permission=True)
+        with patch('proofpage.google_docs.fetch_document', return_value=document('We build websites.')):
+            revision_id = google_docs.sync(self.store, DOC)['revision_id']
+        with self.assertRaisesRegex(ValueError, 'personal context'):
+            self.store.review(revision_id, True, True)
+        from proofpage import models
+        with patch('proofpage.models.configuration', return_value={'configured': True}), patch('proofpage.models.complete_json') as complete:
+            with self.assertRaisesRegex(ValueError, 'personal context'):
+                models.assist(self.store, revision_id, 'sft')
+            complete.assert_not_called()
+
+        # Old databases may already contain approvals and frozen corpus rows.
+        payload = 'legacy Google corpus\n'
+        with self.store.db() as db:
+            db.execute('INSERT INTO reviews(revision_id,allowed,approved) VALUES(?,1,1)', (revision_id,))
+            db.execute('INSERT INTO datasets VALUES(?,?,?,?,?,?)', ('legacy-google', 'Legacy', now(), payload, json.dumps([revision_id]), digest(payload)))
+        with self.assertRaisesRegex(ValueError, 'personal context'):
+            self.store.freeze('Google corpus')
+        with self.assertRaisesRegex(ValueError, 'personal context'):
+            self.store.export('legacy-google')
+
+        profile_id = business.create(self.store, 'Context only')['id']
+        business.attach(self.store, profile_id, revision_id, 'business')
+        result = business.draft(self.store, profile_id)
+        self.assertTrue(result['facts'])
+        self.assertTrue(all(not fact['training_allowed'] for fact in result['facts']))
+        fact = result['facts'][0]
+        business.review(self.store, fact['id'], fact['text'], 'approved', True, True)
+        self.assertEqual(len(business.approved(self.store, profile_id)['facts']), 1)

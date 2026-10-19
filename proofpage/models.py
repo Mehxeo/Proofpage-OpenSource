@@ -64,6 +64,8 @@ def assist(store, revision_id, purpose, recipe_id=None):
     if not config['configured']:
         raise ValueError(config['detail'])
     revision = store.revision(revision_id)
+    if purpose == 'sft' and json.loads(revision['metadata']).get('adapter') == 'google_docs':
+        raise ValueError('Google Docs API snapshots are limited to personal context and cannot be sent to a model for training drafts.')
     evidence = revision['text'][:20000]
     if any(f['severity'] == 'block' for f in findings(evidence)):
         raise ValueError('Detected credentials in the selected evidence. Do not transmit this revision to a model.')

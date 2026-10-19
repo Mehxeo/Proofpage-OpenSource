@@ -286,6 +286,7 @@ async function showEvidence(id, revision, options = {}) {
   const item = await api(revision ? 'revisions/' + revision : 'items/' + id);
   evidenceContext = {id, revision, options};
   const metadata = JSON.parse(item.metadata || '{}');
+  const contextOnly = metadata.adapter === 'google_docs';
   const findings = item.findings || [];
   const branchTargets = (metadata.normalized?.messages || []).filter(message => message.role === 'assistant' && message.id);
   $('evidence-title').textContent = item.title || 'Untitled record';
@@ -324,7 +325,7 @@ async function showEvidence(id, revision, options = {}) {
     <section role="tabpanel" id="panel-proof" aria-labelledby="tab-proof" hidden>${proofPanel(item.proof, item)}</section>
     <section role="tabpanel" id="panel-versions" aria-labelledby="tab-versions" hidden><div class="skeleton"></div></section>`;
   await loadOriginalPreview(item, metadata);
-  $('evidence-foot').innerHTML = `${basisFields(item.rights, item.review)}
+  $('evidence-foot').innerHTML = contextOnly ? `<p class="callout">${icon('info')}<span>Google Docs snapshots are for personal context. Review passages in Business context; training and corpus exports are unavailable.</span></p><button type="button" class="primary small" data-close="evidence-dialog" data-go="business">Review in Business context</button>` : `${basisFields(item.rights, item.review)}
     <label><input id="permission" type="checkbox"${item.review.allowed ? ' checked' : ''}> I have permission to include this revision in a dataset.</label>
     <label><input id="approved" type="checkbox"${item.review.approved ? ' checked' : ''}> I reviewed and approve it for a clean corpus.</label>
     <div class="actions">
@@ -333,13 +334,13 @@ async function showEvidence(id, revision, options = {}) {
       <button type="button" class="small danger-text" id="revoke">Revoke permission</button>
       <button type="button" class="primary small" id="review">${icon('check')}Save review</button>
     </div>`;
-  $('review').onclick = () => action(async () => {
+  if ($('review')) $('review').onclick = () => action(async () => {
     await api('review', {revision_id: item.current_revision, allowed: $('permission').checked, approved: $('approved').checked, ...basisPayload()});
     $('evidence-dialog').close();
     notice('Review saved for this revision.');
     await refresh();
   }, $('review'));
-  $('revoke').onclick = () => action(async () => {
+  if ($('revoke')) $('revoke').onclick = () => action(async () => {
     await api('review', {revision_id: item.current_revision, allowed: false, approved: false});
     $('evidence-dialog').close();
     notice('Permission revoked. Managed exports containing this revision are blocked.');
