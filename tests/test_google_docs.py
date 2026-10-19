@@ -1,7 +1,7 @@
 import tempfile
 import json
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, Mock, patch
 from proofpage import google_docs, business
 from proofpage.core import Store, digest, now
 
@@ -59,6 +59,38 @@ class GoogleDocsTests(unittest.TestCase):
         with patch('proofpage.google_docs.fetch_document', return_value={'documentId': 'different'}):
             with self.assertRaises(ValueError): google_docs.sync(self.store, DOC)
         self.assertEqual(self.store.rows('SELECT * FROM items'), [])
+
+    def test_safe_sync_error_is_actionable_and_previous_revision_is_retained(self):
+        google_docs.select(self.store, DOC, owner_permission=True)
+        with patch('proofpage.google_docs.fetch_document', return_value=document('Original evidence.')):
+            revision = google_docs.sync(self.store, DOC)['revision_id']
+        error = google_docs.GoogleDocsError('Google authorization expired. Reconnect Google, then retry this document.')
+        with patch('proofpage.google_docs.fetch_document', side_effect=error):
+            with self.assertRaisesRegex(google_docs.GoogleDocsError, 'Reconnect Google.*Existing evidence was retained'):
+                google_docs.sync(self.store, DOC)
+        row = self.store.rows('SELECT state,detail FROM google_documents')[0]
+        self.assertEqual(row['state'], 'error')
+        self.assertIn('Reconnect Google', row['detail'])
+        self.assertEqual(self.store.rows('SELECT current_revision FROM items')[0]['current_revision'], revision)
+
+    def test_google_http_failures_show_safe_recovery_without_updating_tokens(self):
+        google_docs.select(self.store, DOC, owner_permission=True)
+        for status, message in [(401, 'Reconnect Google'), (403, 'Check the link'),
+                                (404, 'Check the link'), (429, 'Wait a few minutes'),
+                                (503, 'Retry later')]:
+            backend = Mock()
+            backend.get_password.return_value = '{"refresh_token":"private-fixture-token"}'
+            session = MagicMock()
+            session.get.return_value.__enter__.return_value.status_code = status
+            with patch.object(google_docs, 'vault', return_value=backend), patch('google.oauth2.credentials.Credentials.from_authorized_user_info'), patch('google.auth.transport.requests.AuthorizedSession') as auth:
+                auth.return_value.__enter__.return_value = session
+                with self.assertRaisesRegex(google_docs.GoogleDocsError, message):
+                    google_docs.sync(self.store, DOC)
+            backend.set_password.assert_not_called()
+            detail = self.store.rows('SELECT detail FROM google_documents')[0]['detail']
+            self.assertIn(message, detail)
+            self.assertNotIn('private-fixture-token', detail)
+            self.assertEqual(self.store.rows('SELECT * FROM items'), [])
 
     def test_google_snapshots_stay_out_of_corpora_and_model_training(self):
         google_docs.select(self.store, DOC, owner_permission=True)

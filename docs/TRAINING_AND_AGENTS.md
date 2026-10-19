@@ -25,7 +25,7 @@ Exact payload duplicates are removed. Source groups and near duplicates (0.85 Ja
 
 ## Existing models through MCP
 
-Configure your MCP-capable assistant with the command in README. Twenty-nine tools support source inspection, collection, cited retrieval, freshness checks, durable bounded crawls, extraction submissions, and training drafts. No approval/export tool is exposed. Configure source URLs in Proofpage or authorize your agent to add them with proofpage_add_source.
+Configure your MCP-capable assistant with Agent access or the command in README. Tools support source inspection, collection, cited retrieval, freshness checks, durable bounded crawls, extraction submissions, and training drafts. No approval/export tool is exposed. Configure source URLs in Proofpage or authorize your agent to add them with proofpage_add_source.
 
 Typical sequence:
 
@@ -67,6 +67,17 @@ Enable rendering in a crawl. Chromium executes captured inline JavaScript with e
 ## Connect by copying a prompt
 
 In the local workspace, open **Agent access → Copy setup prompt**, then paste it into an MCP-capable AI assistant. The prompt includes the actual executable and workspace paths. **Copy MCP configuration** provides the raw JSON instead. If clipboard access is denied, Proofpage displays selectable text for manual copying.
+
+The upcoming 0.5.1 interface starts by asking which assistant you use. It provides
+Codex / ChatGPT desktop TOML or Claude JSON, matching instructions, and a
+downloadable setup kit with the workflow skill. The web-chat option explains how
+to export reviewed context instead of showing an unusable local command.
+**Test local server** checks initialization, all advertised tools, source listing,
+and business-profile listing without collecting anything. Only a successful tool
+call in your assistant verifies that client's connection.
+
+Configuration formats follow the [official OpenAI MCP guide](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
+and [Claude Code MCP guide](https://code.claude.com/docs/en/mcp).
 
 Desktop downloads include a separate console MCP helper, so the assistant does not need a system Python installation. Keep the app's support files together and recopy settings after moving the app. The assistant must support local stdio MCP and be permitted to configure integrations; a prompt cannot add support to clients that lack it. It should preserve existing configuration and verify the connection with `proofpage_list_sources`. A normal web-chat model may only be able to explain the setup.
 

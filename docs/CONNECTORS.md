@@ -42,6 +42,12 @@ Up to 8 MiB is accepted. Failed/empty responses preserve previous evidence.
 Automatic schedules require the app/server to remain open. Changed revisions
 invalidate approved business context rather than silently altering it.
 
+In the upcoming 0.5.1 interface, **Import document** combines selection and the
+first sync. It keeps the entered link when importing fails and shows a retry or
+reconnect action. A failed optional Google connection does not prevent using
+other business sources. Missing/invalid client setup does not request access to
+the OS credential vault.
+
 Google API snapshots are for personal context. In the 0.5.1 review build, dataset
 approval, corpus freezing, training examples, and existing dataset downloads reject them.
 Training-draft model calls are blocked before transmitting the source text.
@@ -148,6 +154,17 @@ keys; it is not a substitute for this OAuth connector.
 
 ## Skills that install without clobbering work
 
+In the upcoming desktop build, choose your client in **Agent access**, then
+**Download setup kit**. Codex kits include TOML and
+`.agents/skills/proofpage/SKILL.md`; Claude Code kits include JSON and
+`.claude/skills/proofpage/SKILL.md`. Claude Desktop and other clients receive
+generic skill files for their supported installation flow. Follow SETUP.md,
+merge the configuration snippet, and copy the skill into your selected project.
+The kit contains local paths; keep it private. It contains no credentials or
+library content and does not overwrite a live client configuration.
+
+The source-edition CLI also installs the bundled skill directly:
+
 ```sh
 proofpage install-skill --project /path/to/project --client codex
 proofpage install-skill --project /path/to/project --client claude
@@ -157,7 +174,10 @@ The installer writes `.agents/skills/proofpage/SKILL.md` or
 `.claude/skills/proofpage/SKILL.md`, recognizes an identical existing installation,
 and refuses to overwrite custom content. A skill provides workflow guidance;
 it does not establish MCP connectivity. Use Agent access's configuration and
-Test MCP connection separately. The shipped skill names only existing tools.
+**Test local server** separately (called **Test MCP connection** in 0.5.0).
+The shipped skill names only existing tools. Verify your assistant itself by
+listing its tools and calling `proofpage_list_sources`; a local helper test
+does not establish that a particular assistant is connected.
 
 ## Verification and boundaries
 
@@ -168,9 +188,12 @@ wrong-subject/wrong-audience/wrong-scope tokens, allowed reads, absent write too
 and cross-origin denial. Google fixtures cover multi-tab/table extraction,
 selection, deduplication, revision drift and failed refresh preservation.
 
-Live Google account consent and ChatGPT/Claude connector installation still
-require a configured OAuth project, public deployment, and user consent. Tests
-with fixture tokens do not verify your provider's registration or consent flow.
+The packaged review build completed real Google account consent and selected
+fictional-document sync, including retained authorization after restart.
+Google's public scope approval is still pending. Web-based ChatGPT/Claude remote
+connectors separately require a public OAuth-protected deployment and consent;
+local client configuration does not activate one. Fixture-token tests do not
+verify your authorization provider's registration or a third-party account.
 
 Primary references:
 - https://developers.google.com/identity/protocols/oauth2/native-app

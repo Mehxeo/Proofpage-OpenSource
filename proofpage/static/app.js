@@ -4,6 +4,7 @@ const filters = {kind: '', source: '', review: '', rights: ''};
 let layout = (() => { try { return localStorage.getItem('proofpage-layout') === 'list' ? 'list' : 'grid'; } catch { return 'grid'; } })();
 
 const VIEWS = {
+  start: ['Getting started', 'Make your first useful capture.', 'Choose something to save. Connect an assistant when you’re ready.'],
   business: ['Business context', 'Give your assistant the right background.', 'Choose sources, review passages, and take your context to another assistant.'],
   verify: ['Check quotes', 'Does the source say that?', 'Check quoted passages against captured evidence. Review the source before trusting the answer.'],
   library: ['Library', 'A library you can trace.', 'Collect useful material. Keep the evidence behind it.'],
@@ -60,6 +61,7 @@ function render() {
     renderedView = view;
     window.scrollTo(0, 0);
   }
+  if (view === 'start') { setHeading(...VIEWS.start); $('content').innerHTML = onboarding(); return; }
   if (view === 'business') { setHeading(...VIEWS.business); action(renderBusiness); return; }
   if (view === 'verify') { setHeading(...VIEWS.verify); action(renderClaims); return; }
   if (view === 'training' || view === 'agents') {
@@ -88,23 +90,18 @@ function itemCard(item) {
 }
 
 function onboarding() {
-  return `<section class="panel onboarding">
-    <div>
-      
-      <h2>Start a library you can trace.</h2>
-      <p>Save a page, check a quote, or bring your own files. Every record keeps its source and revision history.</p>
-      <div class="actions">
-        <button type="button" class="primary" id="try-example">${icon('collect')}Try with example.com</button>
-        <button type="button" class="secondary" data-open="source-dialog">${icon('plus')}Add your own page</button>
-        <button type="button" data-open-import>${icon('upload')}Import files</button><button type="button" class="secondary" data-go="verify">${icon('check')}Check a quoted answer</button>
-      </div>
+  const saved = (state.total ?? state.items.length) > 0;
+  return `<section class="panel start-intro"><div><h2>${saved ? 'Your first source is saved.' : 'Start with something you want to keep.'}</h2><p>Pages, images, PDFs and your own files become evidence you can revisit. No account or AI API key is needed to start.</p></div>${saved ? `<button class="primary" data-go="library">${icon('library')}Open your library</button>` : '<button class="secondary" id="try-example">Try with example.com</button>'}</section>
+    <div class="start-choices">
+      <section class="panel"><div class="settings-symbol">${icon('globe')}</div><h3>Save a public page</h3><p>Paste a page, image or PDF URL. Inspect the original and see when it was captured.</p><button class="primary" data-open="source-dialog">${icon('plus')}Add a web source</button></section>
+      <section class="panel"><div class="settings-symbol">${icon('folder')}</div><h3>Bring your own material</h3><p>Choose a file to preview and import. Your library stays on this computer in the local edition.</p><button class="secondary" data-open-import>${icon('upload')}Import files</button></section>
+      <section class="panel"><div class="settings-symbol">${icon('file')}</div><h3>${hostingMode === 'local' ? 'Use a Google Doc' : 'Review business context'}</h3><p>${hostingMode === 'local' ? 'Sign in, choose a document, and import it as personal context. Other sources work without Google.' : 'Choose imported evidence and review passages before sharing context with your assistant.'}</p><button class="secondary" data-go="business">${hostingMode === 'local' ? 'Set up Google Docs' : 'Create a business profile'}</button></section>
     </div>
-    <ol class="steps">
-      <li><b>Add a public page</b><span>Paste a URL. Robots rules, cooldowns, and daily budgets are respected.</span></li>
-      <li><b>Collect it</b><span>Proofpage stores the readable text, the original response, and the publisher’s AI-usage signals.</span></li>
-      <li><b>Inspect the evidence</b><span>Read it, confirm permission, and turn it into reviewed training data.</span></li>
-    </ol>
-  </section>`;
+    <section class="panel start-next"><div><h3>Then put your evidence to work.</h3><p>Ask a local assistant to search, cite and watch your sources. Or review passages into a portable business context pack. Training uses a separate review and export flow.</p></div><div class="actions"><button class="secondary" data-go="agents">${icon('plug')}Connect an assistant</button><button data-go="business">Review business context</button><button data-go="verify">Check a quoted answer</button></div></section>`;
+}
+
+function showStartHint() {
+  try { return localStorage.getItem('proofpage-hide-start-hint') !== 'yes'; } catch { return true; }
 }
 
 function renderLibrary() {
@@ -126,6 +123,7 @@ function renderLibrary() {
   const chip = (group, value, label, count) => `<button type="button" class="chip" data-filter="${group}" data-value="${escape(value)}" aria-pressed="${filters[group] === value}">${escape(label)}${count === undefined ? '' : ` <span class="count">${count}</span>`}</button>`;
 
   $('content').innerHTML = `
+    ${items.length > 0 && (state.total ?? items.length) <= 3 && !query && showStartHint() ? `<section class="panel library-next"><div><h3>Your evidence is ready to explore.</h3><p>Open a record to inspect its source, then connect an assistant or review context for your business.</p><div class="actions"><button class="secondary small" data-item="${escape(items[0]?.id || '')}">Inspect a record</button><button class="small" data-go="agents">Connect an assistant</button><button class="small" data-go="start">Getting started</button></div></div><button class="icon-button small" id="dismiss-start-hint" aria-label="Dismiss getting started tips">${icon('x')}</button></section>` : ''}
     <div class="metrics">
       <div class="metric"><b>${state.total ?? items.length}</b><span>Records in your library</span></div>
       <div class="metric"><b>${state.sources.length}</b><span>Configured sources</span></div>
@@ -420,6 +418,7 @@ document.addEventListener('click', event => {
   if (b.hasAttribute('data-open-import')) $('import-open').click();
   if (b.hasAttribute('data-new-profile')) $('profile-dialog').showModal();
   if (b.id === 'try-example') tryExample(b);
+  if (b.id === 'dismiss-start-hint') { try { localStorage.setItem('proofpage-hide-start-hint', 'yes'); } catch {} b.closest('.library-next').remove(); }
   if (b.id === 'clear-search') { query = ''; Object.keys(filters).forEach(key => { filters[key] = ''; }); action(refresh); }
   if (b.dataset.filter) { filters[b.dataset.filter] = b.dataset.value; renderLibrary(); }
   if (b.dataset.layout) { layout = b.dataset.layout; try { localStorage.setItem('proofpage-layout', layout); } catch {} renderLibrary(); }

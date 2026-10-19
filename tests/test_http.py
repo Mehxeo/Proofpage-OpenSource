@@ -55,6 +55,29 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(result['ok'], result)
         self.assertGreater(result['tools'], 0)
+        self.assertIn('proofpage_business_profiles', result['checks'])
+
+    def test_assistant_kit_download_is_authenticated_and_client_specific(self):
+        import io
+        import tomllib
+        import zipfile
+        from pathlib import Path
+        self.assertEqual(self.request('/api/assistant-kit?client=codex', headers={'Authorization': ''})[0], 401)
+        self.assertEqual(self.request('/api/assistant-kit?client=web')[0], 400)
+        request = urllib.request.Request(self.base + '/api/assistant-kit?client=codex', headers={'Authorization': 'Bearer ' + self.token})
+        with urllib.request.urlopen(request) as response:
+            self.assertEqual(response.headers.get_content_type(), 'application/zip')
+            body = response.read()
+        with zipfile.ZipFile(io.BytesIO(body)) as archive:
+            self.assertIn('.agents/skills/proofpage/SKILL.md', archive.namelist())
+            config = tomllib.loads(archive.read('mcp-config.toml').decode())
+            self.assertIn(str(Path(self.temp.name).resolve()), config['mcp_servers']['proofpage']['args'])
+
+    def test_google_selection_errors_are_specific_without_fetching(self):
+        status, result = self.request('/api/google-docs/select', {'document': 'bad-link', 'owner_permission': True})
+        self.assertEqual(status, 400)
+        self.assertIn('valid Google Docs document', result['error'])
+        self.assertNotIn('bad-link', result['error'])
 
     def test_companion_pair_import_and_revocation(self):
         origin = 'chrome-extension://' + 'a' * 32

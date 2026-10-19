@@ -120,6 +120,18 @@ class GoogleClientTests(unittest.TestCase):
                 load.assert_called_once_with(name)
                 getattr(module, implementation).assert_called_once_with()
 
+    def test_missing_or_invalid_configuration_does_not_request_vault_access(self):
+        store = Store(self.root / 'workspace')
+        for content in (None, '{invalid', json.dumps({'web': CLIENT['installed']})):
+            if content is not None: self.client.write_text(content)
+            else: self.client.unlink(missing_ok=True)
+            with patch.object(google_docs, 'client_file', return_value=self.client), patch.object(google_docs, 'vault') as vault:
+                result = google_docs.status(store)
+                self.assertFalse(result['configured'])
+                self.assertFalse(result['connected'])
+                self.assertNotIn(CLIENT['installed']['client_secret'], json.dumps(result))
+                vault.assert_not_called()
+
     def test_vault_failure_is_closed_without_an_alternative_backend(self):
         for failure in (ImportError('missing native backend'), RuntimeError('private backend details')):
             with patch.object(google_docs.sys, 'platform', 'darwin'), patch.object(google_docs.importlib, 'import_module', side_effect=failure) as load:

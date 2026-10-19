@@ -206,6 +206,7 @@ function parseRoute() {
 
 function routeView(name) {
   if (name === 'item') return 'library';
+  if (name === 'start') return 'start';
   return document.querySelector(`[data-view="${name}"]`) ? name : 'library';
 }
 

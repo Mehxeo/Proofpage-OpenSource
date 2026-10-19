@@ -5,7 +5,7 @@ description: Collect and monitor authorized public sources, retrieve cited local
 
 # Proofpage
 
-Use the connected Proofpage MCP tools. A skill is workflow guidance, not a connection or a background worker. If tools are unavailable, direct the user to **Proofpage → Agent access → Copy setup prompt**, then **Test MCP connection**. The local test verifies the server, not that the assistant has connected. Verify client access by listing tools and calling `proofpage_list_sources`; an empty list is valid. Never claim a connection based on copied configuration alone.
+Use the connected Proofpage MCP tools. A skill is workflow guidance, not a connection or a background worker. If tools are unavailable, direct the user to **Proofpage → Agent access**, choose their assistant, and use **Copy setup prompt** or **Download setup kit**. **Test local server** checks the helper, not whether the assistant is connected. Verify client access by listing tools and calling `proofpage_list_sources`; an empty list is valid. Never claim a connection based on copied configuration alone. Keep other MCP servers and custom skills when setting up a client.
 
 ## Collect and watch
 
@@ -34,6 +34,8 @@ Use `proofpage_draft_example(revision_id, kind, payload, quote, notes)` with an 
 - `evaluation`: payload `{"prompt":"Question","reference":"Expected answer"}`.
 
 Inspect OCR/PDF extraction for errors and check source rights. Never invent evidence quotes. Drafts require human review of correctness, privacy and permission in **Training**, followed by approval, freezing and export. No MCP tool approves or exports training data. Proofpage prepares reproducible datasets; it does not train weights or provide native audio/video/multimodal training formats.
+
+Google Docs API snapshots carry `data_use: personal_context_only` in revision metadata. Use these for reviewed business context, never training drafts or corpus exports. If the user wants training data, explain this boundary and use other eligible, authorized sources; do not relabel a Google snapshot to bypass it.
 
 ## Client boundaries
 
@@ -71,16 +73,19 @@ model or updates ChatGPT/Claude account memory. Training approval is separate.
 
 ## Google Docs and installation
 
-The optional local Google Docs connector requires a configured Google Desktop
-OAuth client and an OS credential vault. The user completes consent in the
-system browser. Only explicitly selected document IDs are synced; the Docs
+The optional local Google Docs connector uses bundled sign-in in preconfigured
+desktop builds; source installations can supply their own Desktop OAuth client.
+An OS credential vault is required. The user completes consent in the system
+browser, then selects a link and chooses Import document. Only explicitly selected document IDs are synced; the Docs
 read-only grant itself covers account documents, so do not describe the OAuth
 scope as per-file. Schedules run only while the local app/server is open.
 Do not request tokens or client secrets in chat. Google imports are authorized
 API snapshots, not signed HTTP captures. Changed documents invalidate reviewed
 business context until reviewed again.
 
-Install this skill into an explicitly selected project with
+In the desktop app, download the setup kit for the user's assistant and copy its
+skill folder into their chosen project, preserving existing custom files. In a
+source/CLI installation, install this skill into an explicitly selected project with
 `proofpage install-skill --project /path/to/project --client codex` (or `claude`).
 It refuses to overwrite a different skill. Reload the client if required, then
 verify MCP separately by listing tools and reading the workspace.

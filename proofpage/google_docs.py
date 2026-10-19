@@ -17,6 +17,10 @@ BUNDLED_CLIENT_FILE = Path(__file__).with_name('google-desktop-client.json')
 _LOCK = threading.Lock()
 
 
+class GoogleDocsError(ValueError):
+    """A connector-owned, credential-free message safe to show in the UI."""
+
+
 def account(store):
     return hashlib.sha256(str(store.directory.resolve()).encode()).hexdigest()
 
@@ -84,16 +88,23 @@ def load_client_config(path):
 
 def status(store):
     installed = all(importlib.util.find_spec(name) is not None for name in ('google_auth_oauthlib', 'keyring'))
-    configured = client_file().is_file()
+    path = client_file()
+    configured = path.is_file()
     connected = False
     detail = ''
-    if installed:
+    if configured:
+        try:
+            load_client_config(path)
+        except ValueError:
+            configured = False
+            detail = 'The Google client file is invalid. Choose a valid Desktop OAuth client in the setup guide.'
+    if installed and configured:
         try:
             connected = bool(vault().get_password(SERVICE, account(store)))
         except Exception:
             detail = 'OS credential vault is unavailable.'
     return {'installed': installed, 'configured': configured, 'connected': connected, 'detail': detail,
-            'configuration_source': 'bundled' if configured and client_file() == BUNDLED_CLIENT_FILE else 'custom' if configured else 'missing',
+            'configuration_source': 'bundled' if configured and path == BUNDLED_CLIENT_FILE else 'custom' if configured else 'missing',
             'scope': SCOPE, 'documents': store.rows('SELECT * FROM google_documents ORDER BY title,document_id')}
 
 
@@ -114,7 +125,7 @@ def connect(store):
         backend.set_password(SERVICE, account(store), credentials.to_json())
         return {'connected': True}
     except Exception as exc:
-        raise ValueError('Google connection did not finish. Check the OAuth app and try again; no document was imported.') from exc
+        raise GoogleDocsError('Google sign-in did not finish. Retry sign-in in your system browser; no document was imported.') from None
     finally:
         _LOCK.release()
 
@@ -132,20 +143,20 @@ def disconnect(store):
 
 def document_id(value):
     if not isinstance(value, str):
-        raise ValueError('Provide a Google Docs document ID or URL.')
+        raise GoogleDocsError('Provide a Google Docs document ID or URL.')
     match = re.fullmatch(r'https://docs\.google\.com/document/d/([A-Za-z0-9_-]+)(?:/[^\s]*)?', value.strip())
     identifier = match[1] if match else value.strip()
     if not re.fullmatch(r'[A-Za-z0-9_-]{10,200}', identifier):
-        raise ValueError('Provide a valid Google Docs document ID or docs.google.com/document/d/ URL.')
+        raise GoogleDocsError('Provide a valid Google Docs document ID or docs.google.com/document/d/ URL.')
     return identifier
 
 
 def select(store, value, interval_seconds=0, owner_permission=False):
     identifier = document_id(value)
     if owner_permission is not True:
-        raise ValueError('Confirm that you own this document or its owner permits keeping local snapshots for your personal context.')
+        raise GoogleDocsError('Confirm that you own this document or its owner permits keeping local snapshots for your personal context.')
     if type(interval_seconds) is not int or interval_seconds not in (0, 3600, 21600, 86400):
-        raise ValueError('Choose manual, hourly, six-hourly, or daily refresh.')
+        raise GoogleDocsError('Choose manual, hourly, six-hourly, or daily refresh.')
     with store.db() as db:
         db.execute("INSERT INTO google_documents(document_id,title,interval_seconds,next_run,state,owner_permission,permission_at) VALUES(?,?,?,?,'selected',1,?) ON CONFLICT(document_id) DO UPDATE SET interval_seconds=excluded.interval_seconds,next_run=excluded.next_run,owner_permission=1,permission_at=excluded.permission_at", (identifier, identifier, interval_seconds, time.time() + interval_seconds if interval_seconds else 0, now()))
     return {'document_id': identifier, 'interval_seconds': interval_seconds, 'fetched': False}
@@ -183,19 +194,25 @@ def fetch_document(store, identifier):
     backend = vault()
     saved = backend.get_password(SERVICE, account(store))
     if not saved:
-        raise ValueError('Connect Google Docs first.')
+        raise GoogleDocsError('Sign in with Google, then retry importing your selected document.')
     credentials = Credentials.from_authorized_user_info(json.loads(saved), scopes=[SCOPE])
     with AuthorizedSession(credentials) as session:
         with session.get('https://docs.googleapis.com/v1/documents/' + identifier,
                          params={'includeTabsContent': 'true', 'suggestionsViewMode': 'PREVIEW_WITHOUT_SUGGESTIONS'},
                          timeout=30, allow_redirects=False, stream=True) as response:
             if response.status_code != 200:
-                raise ValueError('Google could not read this document. Check access and reconnect if needed.')
+                if response.status_code == 401:
+                    raise GoogleDocsError('Google authorization expired. Reconnect Google, then retry this document.')
+                if response.status_code in (403, 404):
+                    raise GoogleDocsError('Google could not open this document. Check the link and whether the connected Google account can read it.')
+                if response.status_code == 429:
+                    raise GoogleDocsError('Google is limiting requests. Wait a few minutes, then retry this document.')
+                raise GoogleDocsError('Google could not read this document. Retry later; no new evidence was saved.')
             chunks, size = [], 0
             for chunk in response.iter_content(65536):
                 size += len(chunk)
                 if size > 8 * 1024 * 1024:
-                    raise ValueError('Google document exceeds the 8 MiB import limit.')
+                    raise GoogleDocsError('Google document exceeds the 8 MiB import limit. Import a smaller document or an exported file.')
                 chunks.append(chunk)
             result = json.loads(b''.join(chunks))
     backend.set_password(SERVICE, account(store), credentials.to_json())
@@ -227,9 +244,10 @@ def sync(store, value):
         revision = store.rows('SELECT current_revision FROM items WHERE source_id=? AND external_id=?', (source['id'], identifier))[0]['current_revision']
         return {'document_id': identifier, 'revision_id': revision, 'state': 'available'}
     except Exception as exc:
+        message = str(exc) if isinstance(exc, GoogleDocsError) else 'Google Docs sync failed. Check your connection, reconnect Google if needed, and retry this document.'
         with store.db() as db:
-            db.execute("UPDATE google_documents SET state='error',detail='Sync failed. Check Google access and retry.',next_run=?+MAX(interval_seconds,3600) WHERE document_id=?", (time.time(), identifier))
-        raise ValueError('Google Docs sync failed. Existing evidence was retained. Check connection, document access and size.') from exc
+            db.execute("UPDATE google_documents SET state='error',detail=?,next_run=?+MAX(interval_seconds,3600) WHERE document_id=?", (message, time.time(), identifier))
+        raise GoogleDocsError(message + ' Existing evidence was retained.') from None
     finally:
         _LOCK.release()
 

@@ -733,6 +733,37 @@ button.primary{box-shadow:0 3px 8px #0001}button.primary:hover{transform:transla
 .original-image { display: block; max-width: 100%; max-height: 420px; object-fit: contain; margin: 12px auto; }
 .file-evidence code { overflow-wrap: anywhere; }
 
+/* Getting started and assistant connections. */
+.start-intro, .start-next, .library-next { display: flex; gap: 24px; align-items: center; justify-content: space-between; }
+.start-intro h2 { font-size: 32px; line-height: 1.2; margin-bottom: 10px; }
+.start-intro p, .start-next p, .library-next p { max-width: 64ch; color: var(--muted); }
+.start-intro > button { flex-shrink: 0; }
+.start-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.start-choices .panel { display: flex; flex-direction: column; align-items: flex-start; }
+.start-choices p { color: var(--muted); flex: 1; }
+.start-next { align-items: flex-start; }
+.start-next .actions { flex: 0 0 240px; }
+.library-next { align-items: flex-start; border-color: var(--line-strong); }
+.library-next .actions { margin-top: 12px; }
+.assistant-picker { max-width: 420px; margin: 20px 0 12px; }
+.assistant-check { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-top: 20px; margin-top: 24px; border-top: 1px solid var(--line); }
+.assistant-check p { color: var(--muted); margin-bottom: 0; max-width: 65ch; }
+.assistant-check > button { flex-shrink: 0; }
+#mcp-test-status, #google-action-status { overflow-wrap: anywhere; }
+.google-connection fieldset { border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; margin-top: 24px; }
+.google-connection legend { padding: 0 8px; font-weight: 600; }
+.google-document { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 0; border-top: 1px solid var(--line); }
+.google-document > div { min-width: 0; }
+.google-document strong { overflow-wrap: anywhere; }
+.google-document p { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+.google-document .actions { flex-shrink: 0; }
+@media (max-width: 850px) {
+  .start-choices { grid-template-columns: 1fr; }
+  .start-intro, .start-next { align-items: flex-start; flex-direction: column; }
+  .start-next .actions { flex-basis: auto; }
+  .assistant-check, .google-document { align-items: flex-start; flex-direction: column; gap: 12px; }
+}
+
 /* Settings: everyday connections first, proof controls on demand. */
 .settings-home { max-width: 980px; margin: 0 auto; }
 .settings-intro { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:12px 0 32px; }
