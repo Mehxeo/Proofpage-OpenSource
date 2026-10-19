@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 import re
+import sys
 import threading
 import time
 from pathlib import Path
@@ -21,11 +22,20 @@ def account(store):
 
 
 def vault():
-    import keyring
-    backend = keyring.get_keyring()
-    if not type(backend).__module__.startswith(('keyring.backends.macOS', 'keyring.backends.Windows', 'keyring.backends.SecretService')):
+    # Discovery scans third-party plugins and can stall in a frozen HTTP worker.
+    # Select only the native vault we support; never fall back to another backend.
+    native = {'darwin': ('keyring.backends.macOS', 'Keyring'),
+              'win32': ('keyring.backends.Windows', 'WinVaultKeyring'),
+              'linux': ('keyring.backends.SecretService', 'Keyring')}.get(sys.platform)
+    if native is None:
         raise ValueError('Configure a supported OS credential vault (Keychain, Windows Credential Locker, or Secret Service). Plaintext token storage is not supported.')
-    return backend
+    try:
+        backend = getattr(importlib.import_module(native[0]), native[1])()
+        if backend.priority <= 0:
+            raise ValueError('OS credential vault is unavailable.')
+        return backend
+    except Exception:
+        raise ValueError('OS credential vault is unavailable. Unlock or configure your system vault; plaintext token storage is not supported.') from None
 
 
 def client_file():

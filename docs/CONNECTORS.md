@@ -7,14 +7,14 @@ account or public deployment is connected.
 ## Google Docs
 
 The Google project is now **In production**, and its branding is verified and
-published. Read-only Docs scope verification is still being prepared; that review
-must finish before shared sign-in can be offered without an unverified warning
+published. Read-only Docs scope verification has been submitted and is under
+review. That review must finish before shared sign-in can be offered without an unverified warning
 or temporary user cap. Production status alone is not scope approval.
 
 The next desktop build supports bundled Google sign-in so normal users do not
-need their own Google Cloud project or JSON file. It is being checked in a
-verification build first. The current stable 0.5.0 download still needs the
-configuration below. Public install instructions will change when the shared
+need their own Google Cloud project or JSON file. A packaged review build completed
+Google authorization and imported a selected fictional demo document. The current
+stable 0.5.0 download still needs the configuration below. Public install instructions will change when the shared
 client is approved and that desktop update is released.
 
 ### Source builds and custom clients
@@ -42,8 +42,8 @@ Up to 8 MiB is accepted. Failed/empty responses preserve previous evidence.
 Automatic schedules require the app/server to remain open. Changed revisions
 invalidate approved business context rather than silently altering it.
 
-Google API snapshots are for personal context in this release. Dataset approval,
-corpus freezing, training examples, and existing dataset downloads reject them.
+Google API snapshots are for personal context. In the 0.5.1 review build, dataset
+approval, corpus freezing, training examples, and existing dataset downloads reject them.
 Training-draft model calls are blocked before transmitting the source text.
 Business context keeps its separate passage review and export workflow.
 Google Workspace data cannot be used to train shared or

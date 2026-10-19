@@ -108,3 +108,26 @@ class GoogleClientTests(unittest.TestCase):
             status = google_docs.status(store)
             self.assertEqual(status['configuration_source'], 'bundled')
             self.assertNotIn(CLIENT['installed']['client_secret'], json.dumps(status))
+
+    def test_vault_selects_only_the_platform_backend_without_plugin_discovery(self):
+        for platform, name, implementation in [('darwin', 'keyring.backends.macOS', 'Keyring'),
+                                                ('win32', 'keyring.backends.Windows', 'WinVaultKeyring'),
+                                                ('linux', 'keyring.backends.SecretService', 'Keyring')]:
+            backend = Mock(priority=5)
+            module = Mock(**{implementation + '.return_value': backend})
+            with patch.object(google_docs.sys, 'platform', platform), patch.object(google_docs.importlib, 'import_module', return_value=module) as load:
+                self.assertIs(google_docs.vault(), backend)
+                load.assert_called_once_with(name)
+                getattr(module, implementation).assert_called_once_with()
+
+    def test_vault_failure_is_closed_without_an_alternative_backend(self):
+        for failure in (ImportError('missing native backend'), RuntimeError('private backend details')):
+            with patch.object(google_docs.sys, 'platform', 'darwin'), patch.object(google_docs.importlib, 'import_module', side_effect=failure) as load:
+                with self.assertRaisesRegex(ValueError, 'plaintext token storage is not supported'):
+                    google_docs.vault()
+                load.assert_called_once_with('keyring.backends.macOS')
+        with patch.object(google_docs.sys, 'platform', 'darwin'), patch.object(google_docs.importlib, 'import_module', return_value=Mock(Keyring=Mock(return_value=Mock(priority=0)))):
+            with self.assertRaises(ValueError): google_docs.vault()
+        with patch.object(google_docs.sys, 'platform', 'unsupported'), patch.object(google_docs.importlib, 'import_module') as load:
+            with self.assertRaises(ValueError): google_docs.vault()
+            load.assert_not_called()
