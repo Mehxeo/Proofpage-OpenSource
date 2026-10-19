@@ -271,3 +271,27 @@ main>.workspace-details{padding-top:25px}
 @media(max-width:360px){.forest-canopy{height:440px}.note-web{width:126px;left:8px}.note-pdf{width:116px;right:8px}.note-image{width:125px;top:209px}.note-quote{width:142px;top:216px}.forest-note{padding:16px 12px 13px}.forest-note strong{font-size:17px}.forest-caption{grid-template-columns:1fr}.forest-caption a{padding-top:0}}
 @media(prefers-reduced-motion:reduce){.forest-trunk{stroke-dashoffset:0}.forest-canopy{transform:none}.forest-note:hover,.forest-note:focus-visible{transform:rotate(var(--note-angle))}.screenshot-card>a:hover img{transform:none}}
 .motion-paused .forest-trunk{stroke-dashoffset:0}.motion-paused .forest-canopy{transform:none}
+
+/* A folded note leaves the forest and follows a mouse without replacing the cursor. */
+.hero-heading{position:relative}
+.paper-aircraft{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:clip}
+.paper-aircraft.is-enhanced{position:fixed;width:100%;height:100%;contain:strict}
+.paper-aircraft *{pointer-events:none}
+.paper-airplane{position:absolute;left:70%;top:38%;display:block;width:86px;height:66px;transform:rotate(-18deg);transform-origin:0 0;filter:drop-shadow(0 8px 6px #0003)}
+.is-enhanced .paper-airplane{left:0;top:0;margin-left:-43px;margin-top:-33px;will-change:transform}
+.paper-airplane svg{display:block;width:100%;height:100%;overflow:visible}
+.plane-folds{transform:skewY(var(--plane-bank,0deg));transform-origin:center}
+.plane-wing{fill:#f7f1d9}.plane-underwing{fill:#dfd8bc}.plane-fold{fill:#bdb595}
+.plane-crease{stroke:#92896e;stroke-width:.7;stroke-linecap:round;stroke-linejoin:round}
+.plane-pencil{stroke:#849472;stroke-width:.8;stroke-linecap:round;opacity:.75}
+.flight-trail{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:.5;transition:opacity .7s}
+.flight-trail path{stroke:var(--accent);stroke-width:1.2;stroke-dasharray:2 9;stroke-linecap:round}
+.is-settled .flight-trail{opacity:0}
+.forest-play{grid-column:1/-1;display:flex;align-items:center;gap:16px;flex-wrap:wrap;font:8px var(--mono);color:var(--muted)}
+.forest-play>span{margin-right:auto}
+.forest-play button{padding:0;background:transparent;border:0;font:9px var(--mono);color:var(--accent);white-space:nowrap}
+.forest-play button:hover{text-decoration:underline;text-underline-offset:4px}
+.forest-play button:disabled{cursor:default;color:var(--muted);opacity:.6;text-decoration:none}
+#throw-plane span{display:inline-block;margin-left:5px}
+@media(max-width:760px){.paper-airplane{width:68px;height:52px}.is-enhanced .paper-airplane{margin-left:-34px;margin-top:-26px}.forest-play{gap:12px}.forest-play>span{flex-basis:100%;margin-bottom:-8px}}
+@media(prefers-reduced-motion:reduce){.flight-trail{display:none}.paper-airplane{will-change:auto;filter:none}.plane-folds{transform:none}}
