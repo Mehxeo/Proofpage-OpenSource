@@ -10,8 +10,9 @@ ChatGPT/Claude account memory or train model weights.
    or export to text/PDF and import manually.
 2. Open **Business context** and create a profile.
 3. Select evidence and classify it as Our business, Customer material, Reference
-   material, or Writing example. The picker uses the current library search
-   results; search the library first to narrow a large collection.
+   material, or Writing example. In the upcoming 0.5.1 interface, **Find saved
+   evidence** searches independently of Library and shows up to 100 recent
+   matches. Stable 0.5.0 uses the Library's current search results.
 4. Suggest passages. These are deterministic verbatim passages, not AI-generated
    summaries or inferred preferences. Review conflicting statements yourself.
 5. Edit, approve or exclude each suggestion. Approval requires permission and
@@ -34,6 +35,13 @@ If a selected source changes, approved context based on the old revision blocks
 export/retrieval. Exclude the old passages, attach the current revision and review
 new suggestions. Changing a source's role resets its approvals. A context pack
 already uploaded elsewhere cannot be remotely revoked by Proofpage.
+
+The upcoming 0.5.1 interface remembers the chosen profile in this browser and
+separates pending, approved, and changed-source passages. Its progress strip
+shows the next step, and download becomes available after at least one current
+passage is approved. Drafts and excluded passages stay out of exports and MCP
+retrieval. These controls do not replace the server's approval and stale-source
+checks.
 
 ## Developer interfaces
 
@@ -73,6 +81,8 @@ The authenticated workspace API provides `/api/business`, `/api/business/:id`,
 `business-draft`, `business-review`, `business-training-draft`,
 `business-bookmark-preview`, and `business-bookmark-import`. Use the existing
 workspace authentication; these are not public unauthenticated endpoints.
+The upcoming 0.5.1 picker uses authenticated `GET /api/business-evidence?q=...`
+for current revision IDs, titles and source labels, without full source bodies.
 
 MCP: `proofpage_business_profiles` and `proofpage_business_context(profile_id)`.
 An assistant can retrieve approved current context without receiving arbitrary

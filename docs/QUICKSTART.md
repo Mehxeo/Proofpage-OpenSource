@@ -29,6 +29,13 @@ The review build adds **Settings → Getting started**, with separate paths for
 web sources, local files, and optional Google Docs. You can use the library
 without connecting an account or adding an AI API key.
 
+For a document, image or PDF, choose **Import files**, leave **Local files · no
+account setup** selected, choose a file, review its preview, and select **Import
+selected**. Structured exports (JSON, CSV, ZIP and conversation archives) still
+need an account-specific import profile. Those profiles are local labels, not
+logins. Files with the same name under a profile update the saved record while
+keeping earlier revisions.
+
 In **Agent access**, choose Claude Desktop, Codex / ChatGPT desktop, Claude Code,
 or another local client. Copy the matching setup prompt, or download its setup
 kit. The kit contains a configuration snippet, instructions, and the workflow
