@@ -1,8 +1,10 @@
 """Build the dependency-free public docs from a curated set of repository guides."""
 import html
+import hashlib
 import re
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
+STORE_URL = 'https://chromewebstore.google.com/detail/proofpage-%E2%80%94-save-page-evi/kiiobhppgpjpccapcejhnagfneopcppk'
 PAGES = [('start','QUICKSTART.md','Start here'),('browser-capture','BROWSER_CAPTURE.md','Signed-in pages'),('media','MEDIA.md','Images, PDFs & automation'),('verify','VERIFY.md','Check quotes'),('rights','RIGHTS.md','Review rights'),('proof','PROOF.md','Receipts & archives'),('agents','TRAINING_AND_AGENTS.md','AI assistants & training'),('business','BUSINESS_CONTEXT.md','Business context'),('connectors','CONNECTORS.md','Google Docs & remote MCP'),('developers','DEVELOPER_WORKFLOW.md','Developer SDKs & replay'),('cli','CLI.md','Command line')]
 
 def inline(text):
@@ -13,7 +15,8 @@ def inline(text):
         label, url = m.groups()
         if not url.startswith(('https://','http://','/','#')):
             url = 'https://github.com/Mehxeo/Proofpage-OpenSource/blob/main/docs/' + url
-        return f'<a href="{url}">{label}</a>'
+        classes = ' class="button primary chrome-install"' if url == STORE_URL and label == 'Add to Chrome' else ''
+        return f'<a{classes} href="{url}">{label}</a>'
     return re.sub(r'\[([^\]]+)\]\(([^)]+)\)', link, text)
 
 def render(text):
@@ -64,4 +67,9 @@ def render(text):
 nav=''.join(f'<a href="#{slug}">{title}</a>' for slug,_,title in PAGES)
 articles=''.join(f'<article id="{slug}" data-doc>{render((ROOT/"docs"/file).read_text())}</article>' for slug,file,_ in PAGES)
 page='''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Proofpage documentation</title><meta name="description" content="Install Proofpage, capture pages, check quotes, review rights, export evidence, and connect your AI assistant."><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/docs/docs.css"><script src="/docs/docs.js" defer></script></head><body><header><a class="brand" href="/">Proofpage / Docs</a><nav><a href="/#download">Download</a><a href="https://github.com/Mehxeo/Proofpage-OpenSource">GitHub ↗</a></nav></header><div class="docs-layout"><aside><label for="docs-search">Find in docs</label><input id="docs-search" type="search" placeholder="Search topics…"><nav aria-label="Documentation">NAV</nav><p>Made by Utsav Das.</p></aside><main><h1>Get something useful done.</h1><p>Start with a page. Keep its evidence. Check a quote or prepare a reviewed dataset.</p><p id="search-status" role="status"></p>ARTICLES</main></div></body></html>'''.replace('NAV',nav).replace('ARTICLES',articles)
+page = page.replace('<nav><a href="/#download">Download</a>', '<nav><a class="button primary chrome-install" href="'+STORE_URL+'">Add to Chrome ↗</a><a href="/#download">Download</a>')
+css_revision = hashlib.sha256((ROOT/'website/docs/docs.css').read_bytes()).hexdigest()[:12]
+page = page.replace('/docs/docs.css"', f'/docs/docs.css?v={css_revision}"')
+site_revision = hashlib.sha256((ROOT/'website/style.css').read_bytes()).hexdigest()[:12]
+page = page.replace('/style.css"', f'/style.css?v={site_revision}"')
 (ROOT/'website/docs/index.html').write_text(page)
