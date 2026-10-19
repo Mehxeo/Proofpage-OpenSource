@@ -223,6 +223,7 @@ function refreshAnimation() {
   rainFrame = 0;
   lastPaint = 0;
   document.body.classList.toggle('motion-paused', paused || document.hidden);
+  document.dispatchEvent(new Event('proofpage:motionchange'));
   $('workbench').classList.toggle('is-dormant', !terminalVisible);
   syncForest();
   if (paused) renderTerminal(true);
@@ -233,16 +234,19 @@ function refreshAnimation() {
 }
 
 function updateMotionButton() {
-  $('motion-toggle').textContent = paused ? 'Play motion ▷' : 'Pause motion Ⅱ';
-  $('motion-toggle').setAttribute('aria-pressed', String(paused));
+  document.querySelectorAll('[data-motion-toggle]').forEach(button => {
+    button.hidden = false;
+    button.textContent = paused ? 'Play motion ▷' : 'Pause motion Ⅱ';
+    button.setAttribute('aria-pressed', String(paused));
+  });
 }
-$('motion-toggle').addEventListener('click', () => {
+document.querySelectorAll('[data-motion-toggle]').forEach(button => button.addEventListener('click', () => {
   paused = !paused;
   if (!paused) characters = 0;
   try { localStorage.setItem('proofpage-site-motion', paused ? 'paused' : 'playing'); } catch {}
   updateMotionButton();
   refreshAnimation();
-});
+}));
 motion.addEventListener('change', event => {
   paused = event.matches;
   if (paused) $('product-film').pause();
