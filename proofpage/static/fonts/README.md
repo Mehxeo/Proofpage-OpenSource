@@ -10,3 +10,8 @@ Served locally so the strict Content-Security-Policy (`default-src 'self'`) need
 Latin subset, upright styles only. Downloaded from `https://cdn.jsdelivr.net/npm/<package>/files/<file>` and checked against jsDelivr's published hashes.
 
 Both fonts are licensed under the SIL Open Font License 1.1: see `OFL-Newsreader.txt` and `OFL-JetBrainsMono.txt`.
+
+The interface now uses the same locally bundled IBM Plex Sans variable Latin
+subset as the homepage (`ibm-plex-sans-latin.woff2`, weights 400–700). Its source
+is [IBM Plex](https://github.com/IBM/plex); see `OFL-IBMPlexSans.txt`. Newsreader
+remains available for compatibility with existing exported/embedded assets.

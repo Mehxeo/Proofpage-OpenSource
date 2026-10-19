@@ -272,7 +272,7 @@ main>.workspace-details{padding-top:25px}
 @media(prefers-reduced-motion:reduce){.forest-trunk{stroke-dashoffset:0}.forest-canopy{transform:none}.forest-note:hover,.forest-note:focus-visible{transform:rotate(var(--note-angle))}.screenshot-card>a:hover img{transform:none}}
 .motion-paused .forest-trunk{stroke-dashoffset:0}.motion-paused .forest-canopy{transform:none}
 
-/* A folded note leaves the forest and follows a mouse without replacing the cursor. */
+/* A folded note leaves the forest and drifts along with page scrolling. */
 .hero-heading{position:relative}
 .paper-aircraft{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:clip}
 .paper-aircraft.is-enhanced{position:fixed;width:100%;height:100%;contain:strict}

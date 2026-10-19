@@ -1,6 +1,6 @@
 'use strict';
 
-// A folded note becomes a travelling paper trail. Pointer coordinates stay local.
+// A folded note drifts through the page as it scrolls. No cursor tracking.
 (() => {
   const layer = document.getElementById('paper-aircraft');
   const plane = document.getElementById('paper-airplane');
@@ -11,7 +11,6 @@
   if (!layer || !plane || !trail || !heading || !canopy || !throwButton) return;
 
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
   const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
   let frame = 0;
   let lastTime = 0;
@@ -19,7 +18,6 @@
   let positioned = false;
   let started = false;
   let launch = null;
-  let pointer = null;
   let points = [];
   let lastSample = 0;
 
@@ -28,6 +26,22 @@
   function parkedPosition() {
     const box = canopy.getBoundingClientRect();
     return {x: box.left + box.width * .52, y: box.top + box.height * .43};
+  }
+
+  function scrollPosition() {
+    const home = parkedPosition();
+    const departure = clamp(scrollY / Math.max(innerHeight * .8, 480), 0, 1);
+    const blend = departure ** 2 * (3 - 2 * departure);
+    const phase = scrollY / Math.max(innerHeight, 640);
+    // An independent meandering flight path, carried by the page rather than a mouse.
+    const floating = {
+      x: innerWidth * (.5 + .42 * Math.cos(phase * 1.1)),
+      y: innerHeight * (.34 + .15 * Math.sin(phase * .85))
+    };
+    return {
+      x: clamp(home.x * (1 - blend) + floating.x * blend, 48, innerWidth - 48),
+      y: clamp(home.y * (1 - blend) + floating.y * blend, 60, innerHeight - 48)
+    };
   }
 
   function canFly() {
@@ -51,7 +65,7 @@
   }
 
   function wake() {
-    if (!frame && canFly() && (finePointer.matches || visibleAtRest())) {
+    if (!frame && canFly()) {
       lastTime = 0;
       frame = requestAnimationFrame(fly);
     }
@@ -60,12 +74,7 @@
   function throwPlane() {
     if (!canFly()) return;
     const box = heading.getBoundingClientRect();
-    const end = parkedPosition();
-    // Re-throws below the hero start at the viewport edge, then meet the pointer.
-    if (!visibleAtRest()) {
-      end.x = innerWidth * .72;
-      end.y = innerHeight * .35;
-    }
+    const end = scrollPosition();
     const top = clamp(box.top, 90, innerHeight * .35);
     launch = {
       elapsed: 0,
@@ -75,14 +84,13 @@
       end
     };
     started = true;
-    pointer = null;
     clearTrail();
     wake();
   }
 
   function fly(time) {
     frame = 0;
-    if (!canFly() || (!finePointer.matches && !visibleAtRest())) return;
+    if (!canFly()) return;
     const delta = lastTime ? Math.min((time - lastTime) / 1000, .04) : 1 / 60;
     lastTime = time;
     const previousX = x, previousY = y;
@@ -101,11 +109,7 @@
       targetAngle = Math.atan2(dy, dx) * 180 / Math.PI;
       if (progress === 1) launch = null;
     } else {
-      const target = pointer && finePointer.matches ? {
-        // Keep the paper away from the pointer, so text and links stay clear.
-        x: clamp(pointer.x + (pointer.x > innerWidth * .65 ? -85 : 85), 48, innerWidth - 48),
-        y: clamp(pointer.y - 62, 55, innerHeight - 45)
-      } : parkedPosition();
+      const target = scrollPosition();
       const dx = target.x - x, dy = target.y - y;
       const distance = Math.hypot(dx, dy);
       const step = Math.min(1 - Math.exp(-delta * 4.3), 620 * delta / Math.max(distance, 1));
@@ -135,9 +139,9 @@
     throwButton.hidden = reduced.matches;
     throwButton.disabled = !allowed;
     throwButton.title = allowed ? 'Send the paper airplane around again' : 'Play motion to throw the plane';
-    layer.hidden = document.hidden || ((!finePointer.matches || reduced.matches) && !visibleAtRest());
+    layer.hidden = document.hidden || (reduced.matches && !visibleAtRest());
     if (!positioned || reduced.matches) {
-      ({x, y} = parkedPosition());
+      ({x, y} = reduced.matches ? parkedPosition() : scrollPosition());
       angle = -18;
       draw();
       positioned = true;
@@ -147,32 +151,21 @@
       frame = 0;
       lastTime = 0;
       clearTrail();
-    } else if (!started && visibleAtRest()) throwPlane();
+    } else if (!started) throwPlane();
     else wake();
   }
 
   throwButton.addEventListener('click', throwPlane);
-  window.addEventListener('pointermove', event => {
-    if (event.pointerType !== 'mouse' || !finePointer.matches || !canFly()) return;
-    pointer = {x: event.clientX, y: event.clientY};
-    if (!launch) wake();
-  }, {passive: true});
-  // Leaving the browser returns the plane to the notes, rather than chasing a stale pointer.
-  document.documentElement.addEventListener('pointerleave', () => {
-    pointer = null;
-    wake();
-  });
   window.addEventListener('scroll', () => {
-    if (!finePointer.matches || reduced.matches) {
+    if (reduced.matches) {
       ({x, y} = parkedPosition());
       draw();
     }
     sync();
   }, {passive: true});
-  window.addEventListener('resize', () => { pointer = null; sync(); }, {passive: true});
+  window.addEventListener('resize', () => { launch = null; sync(); }, {passive: true});
   document.addEventListener('visibilitychange', sync);
   document.addEventListener('proofpage:motionchange', sync);
   reduced.addEventListener('change', () => { launch = null; sync(); });
-  finePointer.addEventListener('change', () => { pointer = null; sync(); });
   sync();
 })();

@@ -19,6 +19,14 @@ published by this preparation work.
   real app screenshots. The terminal, original gallery, tour, public Chrome Store
   install link, privacy and Google ownership routes remain available. Upcoming
   screenshots and Google availability are labeled honestly.
+- The app now uses locally bundled IBM Plex Sans and the site's paper/forest
+  palette. A new first-run screen offers web capture, local files and optional
+  Google Docs. Settings has four keyboard-accessible sections, remembers the
+  selected section, previews the actual theme, and opens with Command–Comma.
+- The homepage airplane drifts along a scroll-driven path. It no longer follows
+  the cursor. The initial throw, replay button, shared pause, static reduced
+  motion and sleeping frame loop remain. Two screenshots now show the updated
+  onboarding and Settings directly from the packaged engine.
 
 ## Local acceptance
 
@@ -49,6 +57,17 @@ published by this preparation work.
   successfully synced only its previously approved fictional demo document.
   Metadata remains `personal_context_only`. No new grant or private-document
   fixture was used. No client metadata, user token or credential is committed.
+- After the UI refresh, all 183 Python regressions, preference/onboarding and
+  companion checks, the actual Node/Python SDK bridge, JS syntax, skill validation
+  and a native Apple silicon Tauri smoke test pass. The bundled MCP helper, OCR
+  and scanned-PDF extraction pass. The new font and its OFL license are included
+  in the source wheel and desktop assets.
+- Browser checks cover a real example.com capture and signed evidence drawer,
+  a plain-file import without a profile, persisted Settings section/theme,
+  arrow-key section switching, Command–Comma, pairing-code generation, receipt
+  verification, update checking, both themes and 320/375px layouts. The actual
+  bundled UI loads without console errors. Pointer movement leaves the website
+  plane still; scrolling moves it and creates its fading trail.
 
 ## Release gates still required
 

@@ -12,7 +12,7 @@ const VIEWS = {
   activity: ['Activity', 'The collection record.', 'Completed captures, access conditions, and unfinished work, newest first.'],
   datasets: ['Datasets', 'From evidence to a corpus.', 'Review individual revisions, confirm permission, then freeze an export.'],
   timeline: ['Timeline', 'What changed, and when.', 'Content edits, publisher rights changes, broken links, and collection problems across your sources.'],
-  settings: ['Settings', 'Your workspace, connected.', 'Browser capture, AI assistants and evidence you control.'],
+  settings: ['Settings', 'Make this workspace yours.', 'A few useful preferences. Everything else stays out of your way.'],
 };
 let evidenceContext = {};
 
@@ -54,6 +54,8 @@ function markNav() {
 
 let renderedView;
 function render() {
+  document.body.dataset.view = view;
+  document.body.classList.toggle('welcoming', view === 'start' || (view === 'library' && !state.items.length && !state.sources.length && !query));
   $('count').textContent = state.total ?? state.items.length;
   updateUnreadBadge(state.unread || 0);
   markNav();
@@ -91,13 +93,15 @@ function itemCard(item) {
 
 function onboarding() {
   const saved = (state.total ?? state.items.length) > 0;
-  return `<section class="panel start-intro"><div><h2>${saved ? 'Your first source is saved.' : 'Start with something you want to keep.'}</h2><p>Pages, images, PDFs and your own files become evidence you can revisit. No account or AI API key is needed to start.</p></div>${saved ? `<button class="primary" data-go="library">${icon('library')}Open your library</button>` : '<button class="secondary" id="try-example">Try with example.com</button>'}</section>
+  return `<div class="welcome-home"><section class="welcome-hero" aria-labelledby="welcome-title"><div class="welcome-copy"><h1 id="welcome-title">Good answers<br>start with <span>good sources.</span></h1><p>Keep the pages, pictures and documents behind your work. Give your AI useful context, with a way back to the original.</p><span class="welcome-reassurance">${icon('shield')}${hostingMode === 'local' ? 'On your computer. No account needed to start.' : 'Your workspace. You choose what to bring.'}</span></div><div class="welcome-art" aria-hidden="true"><svg class="welcome-stems" viewBox="0 0 330 245" fill="none"><path d="M168 235C168 165 100 150 75 64M168 235C169 167 248 127 260 48M168 225C135 208 66 206 41 167"/><path d="M141 163C116 149 108 128 122 124C140 129 147 143 141 163Z"/></svg><div class="welcome-paper welcome-paper-back"><span>PDF</span><i></i><i></i><i></i></div><div class="welcome-paper welcome-paper-front"><span>ORIGINAL SOURCE</span><strong>A little context.<br>A clear paper trail.</strong><i></i><small>kept for your review</small></div><div class="welcome-art-seal">${icon('seal')}</div></div></section>
+    ${saved ? `<div class="welcome-saved"><div>${icon('check')}<span><strong>${pluralize(state.total ?? state.items.length, 'record')} saved.</strong> Open a source to see what you kept.</span></div><button class="primary" data-go="library">Open your library ${icon('arrow-right')}</button></div>` : ''}
+    <div class="welcome-section-title"><h2>${saved ? 'Bring something else along.' : 'What would you like to save?'}</h2><span>Choose one. You can connect the rest later.</span></div>
     <div class="start-choices">
-      <section class="panel"><div class="settings-symbol">${icon('globe')}</div><h3>Save a public page</h3><p>Paste a page, image or PDF URL. Inspect the original and see when it was captured.</p><button class="primary" data-open="source-dialog">${icon('plus')}Add a web source</button></section>
-      <section class="panel"><div class="settings-symbol">${icon('folder')}</div><h3>Bring your own material</h3><p>Choose a file to preview and import. Your library stays on this computer in the local edition.</p><button class="secondary" data-open-import>${icon('upload')}Import files</button></section>
-      <section class="panel"><div class="settings-symbol">${icon('file')}</div><h3>${hostingMode === 'local' ? 'Use a Google Doc' : 'Review business context'}</h3><p>${hostingMode === 'local' ? 'Sign in, choose a document, and import it as personal context. Other sources work without Google.' : 'Choose imported evidence and review passages before sharing context with your assistant.'}</p><button class="secondary" data-go="business">${hostingMode === 'local' ? 'Set up Google Docs' : 'Create a business profile'}</button></section>
+      <section class="panel start-choice"><div class="source-tile source-tile-web">${icon('globe')}<span>WEB</span></div><h3>A page on the web</h3><p>Paste a page, image or PDF link. Keep the original, even when the website changes.</p><button class="primary" data-open="source-dialog">Add a web source ${icon('arrow-right')}</button>${!saved ? '<button class="text-button" id="try-example">Or try example.com</button>' : ''}</section>
+      <section class="panel start-choice"><div class="source-tile source-tile-file">${icon('folder')}<span>FILES</span></div><h3>A file on your computer</h3><p>Bring a PDF, image, document or conversation export. Preview it before importing.</p><button class="secondary" data-open-import>Choose a file ${icon('upload')}</button></section>
+      <section class="panel start-choice"><div class="source-tile source-tile-doc">${icon('file')}<span>${hostingMode === 'local' ? 'DOCS' : 'CONTEXT'}</span></div><h3>${hostingMode === 'local' ? 'A Google Doc' : 'Context for your work'}</h3><p>${hostingMode === 'local' ? 'Connect Google, then choose the documents you want as personal context.' : 'Choose your evidence and review passages before sharing them with an assistant.'}</p><button class="secondary" data-go="business">${hostingMode === 'local' ? 'Connect Google Docs' : 'Review business context'} ${icon('arrow-right')}</button></section>
     </div>
-    <section class="panel start-next"><div><h3>Then put your evidence to work.</h3><p>Ask a local assistant to search, cite and watch your sources. Or review passages into a portable business context pack. Training uses a separate review and export flow.</p></div><div class="actions"><button class="secondary" data-go="agents">${icon('plug')}Connect an assistant</button><button data-go="business">Review business context</button><button data-go="verify">Check a quoted answer</button></div></section>`;
+    <section class="welcome-next"><div class="welcome-next-mark">${icon('plug')}</div><div><h2>Bring your assistant into the loop.</h2><p>Search saved sources, check quotes and automate collection. You choose what gets shared.</p></div><button class="secondary" data-go="agents">Connect an assistant ${icon('arrow-right')}</button></section><div class="welcome-shortcuts"><button data-go="business">Build business context ${icon('arrow-right')}</button><button data-go="verify">Check a quoted answer ${icon('arrow-right')}</button><a href="https://proofpage.app/docs/" target="_blank" rel="noopener noreferrer">Take a look at the guide ↗</a></div></div>`;
 }
 
 function showStartHint() {
@@ -358,6 +362,9 @@ function selectTab(tab) {
     if (panel) panel.hidden = !selected;
   });
   tab.focus();
+  if (tab.dataset.settingsSection) {
+    try { localStorage.setItem('proofpage-settings-section', tab.dataset.settingsSection); } catch {}
+  }
   if (tab.id === 'tab-versions' && !tab.dataset.loaded) {
     tab.dataset.loaded = '1';
     action(() => loadVersions(evidenceContext.options || {}));
@@ -366,10 +373,12 @@ function selectTab(tab) {
 
 document.addEventListener('keydown', event => {
   const tab = event.target.closest('[role=tab]');
-  if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  if (!tab) return;
+  const vertical = tab.closest('[role=tablist]').getAttribute('aria-orientation') === 'vertical';
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', ...(vertical ? ['ArrowUp', 'ArrowDown'] : [])].includes(event.key)) return;
   const tabs = [...tab.closest('[role=tablist]').querySelectorAll('[role=tab]')];
   const index = tabs.indexOf(tab);
-  const next = {ArrowLeft: index - 1, ArrowRight: index + 1, Home: 0, End: tabs.length - 1}[event.key];
+  const next = {ArrowLeft: index - 1, ArrowRight: index + 1, ArrowUp: index - 1, ArrowDown: index + 1, Home: 0, End: tabs.length - 1}[event.key];
   event.preventDefault();
   selectTab(tabs[(next + tabs.length) % tabs.length]);
 });

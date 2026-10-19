@@ -47,14 +47,14 @@ Release links remain on the verified public version until a newer release is ava
 ## The paper airplane
 
 A small, original folded-paper SVG launches across the hero on a curved path,
-leaving a short dotted pencil trail. On a mouse-equipped screen it then follows
-the pointer with a soft delay and banks into turns. It stays offset from the
-pointer, never captures input, and never replaces the cursor. Coordinates are
-used only in the page; no camera, tracking, or network request is involved.
+leaving a short dotted pencil trail. It then drifts through an independent,
+winding path as the page scrolls, with a soft delay and a bank into turns. The
+plane does not follow the cursor. Scroll position stays in the page; the effect
+captures no input and makes no network requests.
 
 Throw again is an ordinary keyboard-accessible button. The hero and terminal
 share one saved pause preference. Reduced motion keeps the plane parked among
-the notes and removes the throw control; touch screens get the initial throw and
-a parked plane without pointer chasing. Hidden tabs stop work. The frame loop
+the notes and removes the throw control. Scrolling works the same way with a
+mouse, keyboard or touch. Hidden tabs stop work. The frame loop
 also stops as soon as the plane settles, instead of running continuously at rest.
 The plane and its trail add no library, image request, or build step.

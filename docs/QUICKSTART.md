@@ -25,9 +25,17 @@ Open **Agent access**, copy the setup prompt, and paste it into an assistant tha
 
 ### Upcoming 0.5.1 onboarding
 
-The review build adds **Settings → Getting started**, with separate paths for
-web sources, local files, and optional Google Docs. You can use the library
-without connecting an account or adding an AI API key.
+The review build opens with separate choices for web pages, local files, and
+optional Google Docs. Start with one source; connect an assistant later. You can
+use the local library without an account or an AI API key. Revisit this screen
+through **Settings → App & updates → Revisit getting started**.
+
+Settings now groups **General**, **Connections**, **Evidence integrity**, and
+**App & updates**. It remembers your last section. Use the arrow keys to switch
+sections, or press Command–Comma (Control–Comma on other platforms) to open
+Settings. Appearance follows your system by default; a theme choice is saved
+in this browser. Model personalization remains in **Business context**, where
+you select sources and review what an assistant can retrieve.
 
 For a document, image or PDF, choose **Import files**, leave **Local files · no
 account setup** selected, choose a file, review its preview, and select **Import

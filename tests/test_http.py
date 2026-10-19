@@ -153,7 +153,7 @@ class HttpTests(unittest.TestCase):
 
     def test_static_assets_typed_and_contained(self):
         for path, kind in (('/', 'text/html'), ('/ui.js', 'text/javascript'), ('/style.css', 'text/css'), ('/icons.svg', 'image/svg+xml'), ('/favicon.svg', 'image/svg+xml'),
-                           ('/fonts/newsreader-latin-opsz-normal.woff2', 'font/woff2'), ('/fonts/jetbrains-mono-latin-wght-normal.woff2', 'font/woff2')):
+                           ('/fonts/newsreader-latin-opsz-normal.woff2', 'font/woff2'), ('/fonts/jetbrains-mono-latin-wght-normal.woff2', 'font/woff2'), ('/fonts/ibm-plex-sans-latin.woff2', 'font/woff2')):
             with urllib.request.urlopen(self.base + path, timeout=5) as response:
                 self.assertEqual(response.headers.get_content_type(), kind, path)
                 self.assertIn("default-src 'self'", response.headers['Content-Security-Policy'])

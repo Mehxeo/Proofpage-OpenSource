@@ -14,12 +14,12 @@ real command names and clearly illustrative output. Pause motion and the system'
 reduced-motion setting stop the effects. Forest and terminal visibility are
 tracked separately; hidden and offscreen scenes stop their work.
 
-A folded paper airplane flies through the hero, then gently follows a mouse
-with a short fading trail. Throw again relaunches it. It does not intercept
-clicks or replace the cursor. Touch and reduced-motion modes park it in the
-forest, and Pause motion controls it together with the terminal. Its animation
-loop sleeps when settled or the page is hidden. `paper-plane.js` is standalone
-vanilla JavaScript; no runtime dependency or camera access is needed.
+A folded paper airplane flies through the hero, then drifts on a winding path
+as the page scrolls, with a short fading trail. It does not follow the cursor.
+Throw again relaunches it. It does not intercept clicks. Reduced motion parks it
+in the forest, and Pause motion controls it together with the terminal. Its
+animation loop sleeps when settled or the page is hidden. `paper-plane.js` is
+standalone vanilla JavaScript with no runtime dependency.
 
 The product gallery contains real app screenshots and an 18-second silent animated tour. It is explicitly described as an animated tour, not a continuous screen recording. The H.264 MP4 is click-to-play, does not preload, and includes WebVTT captions and a text walkthrough. Rebuild it with `python scripts/render_homepage_tour.py` on macOS with Pillow and ffmpeg installed. IBM Plex Sans and JetBrains Mono are served locally with their OFL notices in `fonts/`. Four additional screenshots show setup, context review, MCP and Settings; the page clearly identifies the upcoming release preview.
 
