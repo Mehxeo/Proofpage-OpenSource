@@ -23,6 +23,31 @@ Open **Check quotes** and paste an answer containing quoted passages and source 
 
 Open **Agent access**, copy the setup prompt, and paste it into an assistant that supports local MCP tools. The prompt includes your installed executable and workspace paths. After moving the app, recopy it. [Assistant setup and training exports](#agents).
 
+### Upcoming 0.5.1 onboarding
+
+The review build adds **Settings → Getting started**, with separate paths for
+web sources, local files, and optional Google Docs. You can use the library
+without connecting an account or adding an AI API key.
+
+For a document, image or PDF, choose **Import files**, leave **Local files · no
+account setup** selected, choose a file, review its preview, and select **Import
+selected**. Structured exports (JSON, CSV, ZIP and conversation archives) still
+need an account-specific import profile. Those profiles are local labels, not
+logins. Files with the same name under a profile update the saved record while
+keeping earlier revisions.
+
+In **Agent access**, choose Claude Desktop, Codex / ChatGPT desktop, Claude Code,
+or another local client. Copy the matching setup prompt, or download its setup
+kit. The kit contains a configuration snippet, instructions, and the workflow
+skill in its matching project folder. Merge configuration rather than replacing
+other integrations. **Test local server** checks the helper; ask your assistant
+to call `proofpage_list_sources` to verify its own connection. An empty list is OK.
+
+For Google Docs, sign in through your system browser, paste a selected document
+link, confirm owner permission, and choose **Import document**. One action selects
+and syncs it; future refreshes use **Sync**. Shared sign-in is under Google review
+and is not yet included in stable 0.5.0 downloads. [Google setup status](#connectors).
+
 ## Update safely
 
 Close Proofpage and make a private copy of your Proofpage/data folder before updating. Replace the application, not the data folder, then reopen it. Backups include your private receipt-signing key. Keep the older backup until you have checked the updated library.

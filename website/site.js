@@ -4,6 +4,17 @@ const $ = id => document.getElementById(id);
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
 let paused = motion.matches;
 try { paused ||= localStorage.getItem('proofpage-site-motion') === 'paused'; } catch {}
+const forest = $('note-forest');
+let forestVisible = true;
+
+function syncForest() {
+  if (!forest) return;
+  forest.classList.toggle('is-dormant', paused || document.hidden || !forestVisible);
+  if (paused || document.hidden || !forestVisible) {
+    forest.style.removeProperty('--forest-x');
+    forest.style.removeProperty('--forest-y');
+  }
+}
 
 function setTheme(light) {
   document.body.classList.toggle('light', light);
@@ -211,7 +222,9 @@ function refreshAnimation() {
   cancelAnimationFrame(rainFrame);
   rainFrame = 0;
   lastPaint = 0;
-  document.body.classList.toggle('motion-paused', paused || !terminalVisible || document.hidden);
+  document.body.classList.toggle('motion-paused', paused || document.hidden);
+  $('workbench').classList.toggle('is-dormant', !terminalVisible);
+  syncForest();
   if (paused) renderTerminal(true);
   if (!paused && terminalVisible && !document.hidden) {
     typeNext();
@@ -244,11 +257,48 @@ if (typeof IntersectionObserver !== 'undefined') {
     terminalVisible = entries[0].isIntersecting;
     refreshAnimation();
   }).observe($('workbench'));
+  if (forest) new IntersectionObserver(entries => {
+    forestVisible = entries[0].isIntersecting;
+    syncForest();
+  }).observe(forest);
 }
 sizeCanvas();
 chooseScene('capture');
 updateMotionButton();
 refreshAnimation();
+
+// Inspect the paper leaves; the artwork never reads files or runs collection.
+const forestNotes = {
+  web: ['A saved page keeps its original and revisions. Follow the trail when the live web changes.', '/docs/#start', 'Explore capture ↗'],
+  pdf: ['Keep the actual PDF, with locally extracted text. Scanned pages use offline OCR when available.', '/docs/#media', 'Explore PDFs ↗'],
+  image: ['Save the original PNG, JPEG or WebP. Inspect its extracted text alongside the file it came from.', '/docs/#media', 'Explore images ↗'],
+  quote: ['Follow an exact quotation back to a saved passage. A wording match helps you inspect a claim; it does not prove truth.', '/docs/#verify', 'Explore Claim Check ↗']
+};
+if (forest) {
+  forest.querySelectorAll('[data-note]').forEach(button => button.addEventListener('click', () => {
+    const note = forestNotes[button.dataset.note];
+    if (!note) return;
+    forest.dataset.selected = button.dataset.note;
+    forest.querySelectorAll('[data-note]').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
+    $('forest-description').textContent = note[0];
+    $('forest-guide').href = note[1];
+    $('forest-guide').textContent = note[2];
+    if (!paused && !motion.matches && typeof forest.querySelector('.forest-root').animate === 'function') {
+      forest.querySelector('.forest-root').animate([{opacity:.6},{opacity:1}], {duration:380});
+    }
+  }));
+  // Pointer input nudges the whole canopy by at most four pixels; never moves a target away.
+  forest.addEventListener('pointermove', event => {
+    if (paused || motion.matches || event.pointerType !== 'mouse') return;
+    const box = forest.getBoundingClientRect();
+    forest.style.setProperty('--forest-x', ((event.clientX - box.left) / box.width * 8 - 4).toFixed(1) + 'px');
+    forest.style.setProperty('--forest-y', ((event.clientY - box.top) / box.height * 6 - 3).toFixed(1) + 'px');
+  });
+  forest.addEventListener('pointerleave', () => {
+    forest.style.removeProperty('--forest-x');
+    forest.style.removeProperty('--forest-y');
+  });
+}
 
 // Product media always waits for an explicit play action.
 const film = $('product-film');
