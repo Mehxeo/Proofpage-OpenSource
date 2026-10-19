@@ -16,7 +16,7 @@ In the 0.3 companion, choose **Preview this page**, open **Save an image directl
 
 Alternatively, paste an image or PDF URL in the app's **Add source** dialog and collect it. Public URL collection observes robots.txt, public-network restrictions, rate limits, and redirects. It does not send browser cookies or passwords. Signed/query-dependent image URLs may require pasting the complete public URL; the page preview intentionally strips query strings. Do not paste secrets. Private/session-only files can still be imported from a user-supplied file.
 
-The Chrome Web Store listing remains the submitted 0.2.2 version until its review/update is approved. The newer companion source and release ZIP are separate; do not expect pending store builds to have these controls.
+The [Chrome Web Store companion](https://chromewebstore.google.com/detail/proofpage-%E2%80%94-save-page-evi/kiiobhppgpjpccapcejhnagfneopcppk) is now published as 0.3.0 and includes these file controls. Install it with Add to Chrome; Developer mode is not needed. The newer 0.3.1 source UI is separate and has not been published to the store.
 
 ## Automate it
 

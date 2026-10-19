@@ -1,6 +1,8 @@
 # Chrome Web Store submission
 
-Status: companion **0.3.0** submitted to Google on October 18, 2026 under item `kiiobhppgpjpccapcejhnagfneopcppk`. Dashboard confirmed **Pending review**. Publisher email is verified and all three data-use certifications are saved. Automatic publication after approval is enabled. Not yet approved or publicly installable. Do not advertise an Add to Chrome link until Google provides the published listing.
+Status: companion **0.3.0 is published**, verified October 19, 2026 under item `kiiobhppgpjpccapcejhnagfneopcppk`. [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/proofpage-%E2%80%94-save-page-evi/kiiobhppgpjpccapcejhnagfneopcppk). No Developer mode is required. Publisher email and all three data-use certifications were completed before submission. Automatic publication after approval was enabled.
+
+The public listing returns HTTP 200 with the correct name and version, and Google's public update service serves a CRX3 package whose manifest is version 0.3.0. Published CRX SHA-256: `82c290f5d157daac3c5a9eeb826c39b8fef4f48fcda63ea8c663ec44453f4f38` (18,207 bytes). This verifies public distribution, not a new manual popup-to-app transfer. Chrome blocks automated access to the store's protected pages; no security setting was changed. No new source package was submitted during the availability check.
 
 ## Listing copy
 
@@ -55,4 +57,4 @@ For the new direct-file reviewer check, pair with desktop 0.3.0, paste a public 
 
 ## Next UI update
 
-Companion source 0.3.1 improves capture choices, field spacing and connection guidance. It has not replaced the pending 0.3.0 submission. No new permissions. The store package and source version must not be confused.
+Companion source 0.3.1 improves capture choices, field spacing and connection guidance. It has not replaced the published 0.3.0 version. No new permissions. The store package and source version must not be confused.

@@ -3,6 +3,7 @@
 <p align="center">
 <a href="https://proofpage.app">Website</a> ·
 <a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/tag/v0.5.0">Download</a> ·
+<a href="https://chromewebstore.google.com/detail/proofpage-%E2%80%94-save-page-evi/kiiobhppgpjpccapcejhnagfneopcppk">Add to Chrome</a> ·
 <a href="#install-and-run">Install & run</a> ·
 <a href="docs/CLI.md">CLI guide</a> ·
 <a href="docs/TRAINING_AND_AGENTS.md">Training & agents</a> ·
@@ -88,6 +89,12 @@ python3 scripts/install.py
 On Windows use `py -3 scripts/install.py`. It creates an isolated runtime and CLI launchers under `~/Proofpage`. If that folder already exists, choose a new location with `--directory`. [Full setup instructions →](docs/INSTALL.md)
 
 </details>
+
+## Save straight from Chrome
+
+**[Add to Chrome →](https://chromewebstore.google.com/detail/proofpage-%E2%80%94-save-page-evi/kiiobhppgpjpccapcejhnagfneopcppk)** — companion 0.3.0 is available from the Chrome Web Store. No Developer mode or ZIP installation is needed.
+
+Open Proofpage → **Settings → Connect browser**, then enter its port and pairing code in the companion's **Connect your desktop app** panel. On a page, choose **Preview this page**, review the content, confirm permission, and choose **Save to Proofpage**. After pairing, saving goes straight into your local library with no manual import. The companion also saves original images and PDFs with desktop 0.3.0 or later. Passwords and session cookies stay in Chrome. [Browser setup and privacy guide →](docs/BROWSER_CAPTURE.md)
 
 ## Your first five minutes
 
