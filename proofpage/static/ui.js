@@ -206,6 +206,7 @@ function parseRoute() {
 
 function routeView(name) {
   if (name === 'item') return 'library';
+  if (name === 'start') return 'start';
   return document.querySelector(`[data-view="${name}"]`) ? name : 'library';
 }
 
@@ -357,6 +358,10 @@ document.addEventListener('keydown', event => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault();
     openPalette();
+  } else if ((event.metaKey || event.ctrlKey) && event.key === ',' && !document.querySelector('dialog[open]')) {
+    event.preventDefault();
+    navigate('settings');
+    action(refresh);
   } else if (event.key === '/' && !typing && !document.querySelector('dialog[open]')) {
     event.preventDefault();
     openPalette();

@@ -66,6 +66,33 @@ class BusinessTests(unittest.TestCase):
         self.assertEqual(result['facts'][0]['section'], 'Customer context')
         self.assertEqual(service.get(self.store, '/api/business', {})[1][0]['id'], self.profile)
 
+    def test_profile_evidence_search_does_not_inherit_library_search(self):
+        self.assertEqual(self.store.search('unrelated'), [])
+        code, available, _ = service.get(self.store, '/api/business-evidence', {})
+        self.assertEqual(code, 200)
+        self.assertEqual(available[0]['current_revision'], self.rid)
+        self.assertEqual(set(available[0]), {'id', 'current_revision', 'title', 'source_name'})
+        self.assertEqual(service.get(self.store, '/api/business-evidence', {'q': ['unrelated']})[1], [])
+        self.assertEqual(service.get(self.store, '/api/business-evidence', {'q': ['websites']})[1], available)
+        business.import_bookmarks(self.store, '<a href="https://example.com/">Bookmark</a>', [0])
+        self.assertEqual(service.get(self.store, '/api/business-evidence', {})[1], available)
+
+    def test_context_pack_and_mcp_include_only_approved_passages(self):
+        source = self.store.source('Writing', 'import', 'fixture:writing')
+        self.store.save(source['id'], 'writing', 'text', 'Writing example', 'Keep every explanation clear and short.', 'writing')
+        writing = self.store.rows('SELECT current_revision FROM items WHERE source_id=?', (source['id'],))[0]['current_revision']
+        business.attach(self.store, self.profile, writing, 'writing')
+        facts = business.draft(self.store, self.profile)['facts']
+        chosen = next(f for f in facts if f['revision_id'] == self.rid)
+        business.review(self.store, chosen['id'], chosen['text'], 'approved', True, True)
+        context = mcp.call(Store(self.tmp.name), 'proofpage_business_context', {'profile_id': self.profile})
+        self.assertEqual([f['id'] for f in context['facts']], [chosen['id']])
+        with zipfile.ZipFile(io.BytesIO(business.export_pack(self.store, self.profile))) as pack:
+            self.assertNotIn('clear and short', pack.read('BUSINESS.md').decode())
+        business.review(self.store, chosen['id'], chosen['text'], 'rejected')
+        with self.assertRaises(ValueError):
+            mcp.call(self.store, 'proofpage_business_context', {'profile_id': self.profile})
+
     def test_training_stays_draft(self):
         fact = business.draft(self.store, self.profile)['facts'][0]
         with self.assertRaises(ValueError): business.training_draft(self.store, fact['id'], 'What do we do?')

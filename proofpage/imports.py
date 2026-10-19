@@ -7,6 +7,16 @@ from .adapters import ADAPTERS, parse_entry, validate_mapping
 from .core import archive_entries, digest, now
 
 
+def local_file_profile(store, filename):
+    """Simple originals need no account labels; structured exports still do."""
+    if (not isinstance(filename, str) or Path(filename).name != filename or
+            Path(filename).suffix.lower() not in {'.txt', '.md', '.html', '.htm', '.png', '.jpg', '.jpeg', '.webp', '.pdf'}):
+        raise ValueError('Choose an account-specific import profile for conversation exports, JSON, CSV and ZIP archives.')
+    provider, account = 'Proofpage local files', 'selected-files'
+    profiles = store.rows('SELECT * FROM import_profiles WHERE provider=? AND account=?', (provider, account))
+    return profiles[0] if profiles else create_profile(store, 'Local files', provider, account, 'generic')
+
+
 def create_profile(store, name, provider, account, adapter='auto', mapping=None):
     if not all(isinstance(v, str) and v.strip() for v in (name, provider, account)):
         raise ValueError('Profile name, provider, and account label are required.')

@@ -23,6 +23,11 @@ if '--package-only' not in sys.argv:
     binary = root / 'desktop/tauri/target/release' / ('proofpage-desktop.exe' if system == 'windows' else 'proofpage-desktop')
     destination = root / 'build/desktop/Proofpage.app/Contents/MacOS' if system == 'darwin' else root / 'build/desktop/Proofpage'
     shutil.copy2(binary, destination / ('Proofpage.exe' if system == 'windows' else 'Proofpage'))
+    # Release maintainers supply native-client metadata outside Git. Never user tokens.
+    client_source = os.environ.get('PROOFPAGE_DESKTOP_GOOGLE_CLIENT_FILE')
+    if client_source:
+        bundle = root / 'build/desktop' / ('Proofpage.app' if system == 'darwin' else 'Proofpage')
+        subprocess.run([sys.executable, str(root / 'scripts/configure_desktop_google.py'), str(bundle), '--client-file', client_source], check=True)
     if system == 'darwin':
         import plistlib
         plist = root / 'build/desktop/Proofpage.app/Contents/Info.plist'

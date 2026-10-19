@@ -43,17 +43,39 @@ async function renderSettings() {
   const data = await api('receipts');
   const s = data.settings;
   const local = hostingMode === 'local';
+  const sections = [
+    ['general', 'sun', 'General', 'Appearance & preferences'],
+    ['connections', 'plug', 'Connections', 'Browser, Docs & assistants'],
+    ['integrity', 'seal', 'Evidence integrity', 'Receipts & timestamps'],
+    ['about', 'info', local ? 'App & updates' : 'About', 'Version & help'],
+  ];
+  let section = 'general';
+  try { section = localStorage.getItem('proofpage-settings-section') || 'general'; } catch {}
+  if (!sections.some(([name]) => name === section)) section = 'general';
+  const panel = name => `id="settings-${name}" role="tabpanel" aria-labelledby="settings-tab-${name}"${section === name ? '' : ' hidden'}`;
+  const version = document.querySelector('.page-footer > span')?.textContent.split(' · ')[0] || 'Proofpage';
   $('content').innerHTML = `
-    <div class="settings-home">
-    <section class="settings-intro"><div><h2>Make this workspace yours.</h2><p>Connect your browser, put an assistant to work, or prepare your next dataset.</p></div><span class="pill">${local ? 'On this computer' : 'Hosted workspace'}</span></section>
-    <section class="panel"><h3>Appearance</h3><p>These preferences belong to this browser. They do not change your evidence or train an AI model.</p><label>Theme<select id="appearance-theme"><option value="system">Follow system</option><option value="light">Light</option><option value="dark">Dark</option></select></label><p id="appearance-status" role="status" aria-live="polite"></p></section>
-    ${local ? `<section class="panel"><h3>App updates</h3><p>Check for a newer release when you’re ready. This contacts GitHub; no evidence or workspace data is sent.</p><div class="actions"><button id="check-updates" class="secondary">Check for updates</button><a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/latest" target="_blank" rel="noopener noreferrer">All downloads ↗</a></div><div id="update-result" role="status" aria-live="polite"></div><details><summary>How to update safely</summary><p>Back up your workspace, quit Proofpage, then replace the app with the new download. On Mac, drag the new Proofpage.app into Applications and choose Replace. On Windows or Linux, extract the full download into a new app folder. Open the new app to continue with your existing library.</p><p>Your default library lives in your home folder → Proofpage → data, separate from the app. Keep that folder. Updating currently requires replacing the app; this does not install automatically.</p></details></section>` : ''}
-    <div class="settings-grid">
-    ${local ? `<section class="panel connection-card"><div class="settings-symbol">${icon('plug')}</div><h3>Bring your browser along.</h3><p>Save pages, images and PDFs straight to your library.</p><ol class="connection-steps"><li>Open the Proofpage companion in Chrome.</li><li>Create a code below and enter it with this app’s port.</li><li>Preview a page or choose a file, review it, then save.</li></ol><div class="actions"><button id="companion-code">Create connection code</button></div><div id="companion-result" role="status" aria-live="polite"></div><details class="connection-help"><summary>Connection help</summary><p>Keep Proofpage running. Codes expire after five minutes. Reconnect after restarting the app. The companion can import evidence but cannot read your library.</p><button id="companion-revoke" class="secondary">Disconnect browser</button></details></section>` : ''}
-    <section class="panel workflow-card"><div class="settings-symbol">${icon('layers')}</div><h3>What would you like to do?</h3><a class="settings-link" href="#/agents"><b>Connect an AI assistant <span>↗</span></b><small>Collect sources, check changes and retrieve cited evidence.</small></a><a class="settings-link" href="#/sources"><b>Watch a website <span>↗</span></b><small>Schedule collection while Proofpage is running.</small></a><a class="settings-link" href="#/training"><b>Build training data <span>↗</span></b><small>Review grounded examples and export reproducible datasets.</small></a></section>
-    </div>
-    ${local ? `<section class="panel settings-notifications"><div><h3>When a source needs you</h3><p>Get a browser notification when collection needs attention.</p></div><button type="button" id="attention-notifications" class="secondary">${notificationsOn() ? 'Turn notifications off' : 'Turn notifications on'}</button></section>` : ''}
-    <details class="panel advanced-settings"><summary>Evidence integrity <span>Signing key, receipt checks and timestamps</span></summary>
+    <div class="settings-home settings-layout">
+      <aside class="settings-rail"><div class="workspace-stamp">${icon('folder')}<div><strong>Your workspace</strong><span>${local ? 'On this computer' : 'Hosted edition'}</span></div></div>
+      <div class="settings-tabs" role="tablist" aria-label="Settings sections" aria-orientation="vertical">${sections.map(([name, mark, label, help]) => `<button type="button" role="tab" id="settings-tab-${name}" data-settings-section="${name}" aria-controls="settings-${name}" aria-selected="${section === name}" tabindex="${section === name ? 0 : -1}">${icon(mark)}<span><strong>${label}</strong><small>${help}</small></span></button>`).join('')}</div>
+      <a class="settings-guide" href="https://proofpage.app/docs/" target="_blank" rel="noopener noreferrer">Help & documentation ↗</a></aside>
+      <div class="settings-panes">
+      <section ${panel('general')}>
+        <div class="settings-pane-heading"><h2>A space that feels like you.</h2><p>Small adjustments, saved as you go.</p></div>
+        <section class="panel appearance-panel"><div class="appearance-preview" aria-hidden="true"><div class="preview-sidebar"><i></i><i></i><i></i></div><div class="preview-canvas"><span></span><div><i></i><i></i><i></i></div></div><span class="preview-seal">p</span></div><div class="appearance-control"><label>Appearance<select id="appearance-theme"><option value="system">Follow system</option><option value="light">Light</option><option value="dark">Dark</option></select></label><p>Follow your device, or choose a look for this browser.</p><p id="appearance-status" class="preference-status" role="status" aria-live="polite"></p></div></section>
+        ${local ? `<section class="panel preference-row"><div class="preference-icon">${icon('bell')}</div><div><h3>When a source needs you</h3><p>Optional browser notifications for collection that needs attention.</p></div><button type="button" id="attention-notifications" class="secondary">${notificationsOn() ? 'Turn notifications off' : 'Turn notifications on'}</button></section>` : ''}
+        <section class="panel personal-context-link"><div class="preference-icon">${icon('file')}</div><div><h3>Personalization starts with your sources.</h3><p>Review your business facts and writing examples before sharing them with an assistant.</p><a href="#/business">Open business context ${icon('arrow-right')}</a></div></section>
+        <p class="settings-footnote">Appearance is saved in this browser. Your evidence and model training choices stay separate.</p>
+      </section>
+      <section ${panel('connections')}>
+        <div class="settings-pane-heading"><h2>Bring your tools along.</h2><p>Connect only what you need, when you need it.</p></div>
+        ${local ? `<section class="panel companion-settings"><div class="connection-heading"><div class="preference-icon">${icon('globe')}</div><div><h3>Chrome companion</h3><p>Save from the page you’re already looking at.</p></div><a href="https://chromewebstore.google.com/detail/proofpage-%E2%80%94-save-page-evi/kiiobhppgpjpccapcejhnagfneopcppk" target="_blank" rel="noopener noreferrer">Install in Chrome ↗</a></div><ol class="connection-steps"><li>Open the Proofpage companion in Chrome.</li><li>Create a code and enter it with this app’s port.</li><li>Preview a page or file, review it, then save.</li></ol><button id="companion-code" class="primary">${icon('plug')}Create connection code</button><div id="companion-result" role="status" aria-live="polite"></div><details class="connection-help"><summary>Connection help & disconnect</summary><p>Keep Proofpage running. Codes expire after five minutes. Reconnect after restarting the app. The companion can import evidence but cannot read your library.</p><button id="companion-revoke" class="secondary">Disconnect browser</button></details></section>` : ''}
+        <section class="panel connection-row"><div class="preference-icon">${icon('plug')}</div><div><h3>Your AI assistant</h3><p>Get a setup kit and skill for a compatible local assistant. Search, cite and automate your sources.</p><a href="#/agents">Set up an assistant ${icon('arrow-right')}</a></div></section>
+        <section class="panel connection-row"><div class="preference-icon">${icon('file')}</div><div><h3>${local ? 'Google Docs' : 'Business context'}</h3><p>${local ? 'Choose the documents to import as personal context. Your Google password stays with Google.' : 'Review passages before giving context to your assistant.'}</p><a href="#/business">${local ? 'Open Google Docs setup' : 'Review business context'} ${icon('arrow-right')}</a></div></section>
+        <a class="settings-inline-link" href="#/sources">Want automatic collection? Set a source schedule ${icon('arrow-right')}</a>
+      </section>
+      <section ${panel('integrity')}>
+        <div class="settings-pane-heading"><h2>A paper trail you can check.</h2><p>Every capture gets a signed receipt. Independent timestamps are optional.</p></div>
     <section class="panel">
       <div class="panel-head"><div><h3>Receipt signing key</h3><p>Proofpage signs a receipt for every capture with this Ed25519 key. It stays in this workspace’s database and is included in backups — keep backups private.</p></div><span class="pill tone-ok">${pluralize(data.receipts, 'receipt')}</span></div>
       <dl class="meta-grid">
@@ -83,7 +105,16 @@ async function renderSettings() {
 proofpage verify proof-bundle.zip
 proofpage verify archive.wacz
 proofpage receipts                    # re-check this workspace’s receipt chain</pre>
-    </section></details></div>`;
+    </section>
+      </section>
+      <section ${panel('about')}>
+        <div class="settings-pane-heading"><h2>Keep a good thing current.</h2><p>${local ? 'Your app and your library live separately.' : 'About this workspace and its source code.'}</p></div>
+        <section class="panel about-panel"><div class="about-brand"><span class="about-seal" aria-hidden="true">p</span><div><h3>${escape(version)}</h3><p>Originals kept. Sources connected.</p></div></div><p>Free and open source. Made by Utsav Das.</p><div class="about-links"><a href="https://github.com/Mehxeo/Proofpage-OpenSource" target="_blank" rel="noopener noreferrer">Source on GitHub ↗</a><a href="https://proofpage.app/docs/" target="_blank" rel="noopener noreferrer">Read the docs ↗</a></div></section>
+        ${local ? `<section class="panel update-panel"><h3>App updates</h3><p>Check when you’re ready. This contacts GitHub; no evidence or workspace data is sent.</p><div class="actions"><button id="check-updates" class="primary">${icon('download')}Check for updates</button><a href="https://github.com/Mehxeo/Proofpage-OpenSource/releases/latest" target="_blank" rel="noopener noreferrer">All downloads ↗</a></div><div id="update-result" role="status" aria-live="polite"></div><details><summary>How to update safely</summary><p>Back up your workspace, quit Proofpage, then replace the app with the new download. On Mac, drag the new Proofpage.app into Applications and choose Replace. On Windows or Linux, extract the full download into a new app folder. Open the new app to continue with your existing library.</p><p>Your default library lives in your home folder → Proofpage → data, separate from the app. Keep that folder. Updating currently requires replacing the app; this does not install automatically.</p></details></section>` : ''}
+        <a class="settings-inline-link" href="#/start">Revisit getting started ${icon('arrow-right')}</a>
+      </section>
+      </div>
+    </div>`;
   $('appearance-theme').value = selectedTheme;
   $('appearance-theme').onchange = event => {
     const saved = setTheme(event.target.value);

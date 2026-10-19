@@ -55,6 +55,29 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(result['ok'], result)
         self.assertGreater(result['tools'], 0)
+        self.assertIn('proofpage_business_profiles', result['checks'])
+
+    def test_assistant_kit_download_is_authenticated_and_client_specific(self):
+        import io
+        import tomllib
+        import zipfile
+        from pathlib import Path
+        self.assertEqual(self.request('/api/assistant-kit?client=codex', headers={'Authorization': ''})[0], 401)
+        self.assertEqual(self.request('/api/assistant-kit?client=web')[0], 400)
+        request = urllib.request.Request(self.base + '/api/assistant-kit?client=codex', headers={'Authorization': 'Bearer ' + self.token})
+        with urllib.request.urlopen(request) as response:
+            self.assertEqual(response.headers.get_content_type(), 'application/zip')
+            body = response.read()
+        with zipfile.ZipFile(io.BytesIO(body)) as archive:
+            self.assertIn('.agents/skills/proofpage/SKILL.md', archive.namelist())
+            config = tomllib.loads(archive.read('mcp-config.toml').decode())
+            self.assertIn(str(Path(self.temp.name).resolve()), config['mcp_servers']['proofpage']['args'])
+
+    def test_google_selection_errors_are_specific_without_fetching(self):
+        status, result = self.request('/api/google-docs/select', {'document': 'bad-link', 'owner_permission': True})
+        self.assertEqual(status, 400)
+        self.assertIn('valid Google Docs document', result['error'])
+        self.assertNotIn('bad-link', result['error'])
 
     def test_companion_pair_import_and_revocation(self):
         origin = 'chrome-extension://' + 'a' * 32
@@ -130,7 +153,7 @@ class HttpTests(unittest.TestCase):
 
     def test_static_assets_typed_and_contained(self):
         for path, kind in (('/', 'text/html'), ('/ui.js', 'text/javascript'), ('/style.css', 'text/css'), ('/icons.svg', 'image/svg+xml'), ('/favicon.svg', 'image/svg+xml'),
-                           ('/fonts/newsreader-latin-opsz-normal.woff2', 'font/woff2'), ('/fonts/jetbrains-mono-latin-wght-normal.woff2', 'font/woff2')):
+                           ('/fonts/newsreader-latin-opsz-normal.woff2', 'font/woff2'), ('/fonts/jetbrains-mono-latin-wght-normal.woff2', 'font/woff2'), ('/fonts/ibm-plex-sans-latin.woff2', 'font/woff2')):
             with urllib.request.urlopen(self.base + path, timeout=5) as response:
                 self.assertEqual(response.headers.get_content_type(), kind, path)
                 self.assertIn("default-src 'self'", response.headers['Content-Security-Policy'])
@@ -147,7 +170,8 @@ class HttpTests(unittest.TestCase):
         data = {'filename': 'record.md', 'data': base64.b64encode(b'Synthetic local evidence for API validation.').decode()}
         status, preview = self.request('/api/preview', data)
         self.assertEqual((status, preview[0]['records']), (200, 1))
-        self.assertEqual(self.request('/api/import', {**data, 'selected': ['record.md']})[0], 400)
+        structured = {'filename': 'record.json', 'data': base64.b64encode(b'[]').decode(), 'selected': ['record.json']}
+        self.assertEqual(self.request('/api/import', structured)[0], 400)
         status, result = self.request('/api/import', {**data, 'selected': ['record.md'], 'profile_id': profile['id']})
         self.assertEqual((status, result['added']), (200, 1))
         _, state = self.request('/api/state?q=Synthetic')
@@ -162,6 +186,19 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(json.loads(exported)['text'], 'Synthetic local evidence for API validation.')
         self.request('/api/review', {**review, 'allowed': False})
         self.assertEqual(self.request('/api/export/' + dataset['id'])[0], 400)
+
+    def test_plain_file_import_without_account_setup_is_authenticated(self):
+        payload = {'filename': 'local-onboarding.txt', 'data': base64.b64encode(b'Unique onboarding file for plain local import.').decode(), 'selected': ['local-onboarding.txt'], 'profile_id': ''}
+        self.assertEqual(self.request('/api/import', payload, {'Authorization': ''})[0], 401)
+        status, result = self.request('/api/import', payload)
+        self.assertEqual((status, result['added']), (200, 1))
+        self.assertEqual(self.request('/api/import', payload)[1]['added'], 0)
+        self.assertEqual(self.request('/api/business-evidence', headers={'Authorization': ''})[0], 401)
+        status, evidence = self.request('/api/business-evidence?q=onboarding')
+        self.assertEqual(status, 200)
+        self.assertEqual(evidence[0]['title'], 'local-onboarding')
+        detail = self.request('/api/items/' + evidence[0]['id'])[1]
+        self.assertFalse(detail['review']['approved'])
 
     def test_training_api_flow(self):
         _, profile = self.request('/api/profiles', {'name':'Training fixture','provider':'fixture','account':'training','adapter':'generic'})

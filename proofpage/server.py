@@ -158,6 +158,10 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                 if path == '/api/mcp-setup':
                     from .mcp_setup import setup
                     return self.send(200, setup(store))
+                if path == '/api/assistant-kit':
+                    from .mcp_setup import kit
+                    client = urllib.parse.parse_qs(url.query).get('client', [''])[0]
+                    return self.send(200, kit(store, client), 'application/zip')
                 query = urllib.parse.parse_qs(url.query)
                 from .service import get
                 return self.send(*get(store, path, query))
@@ -190,6 +194,8 @@ def serve(store=None, port=8765, open_browser=False, on_ready=None):
                         elif operation in ('connect', 'disconnect'): result = getattr(google_docs, operation)(store)
                         else: raise ValueError('Unknown operation.')
                         return self.send(200, result)
+                    except google_docs.GoogleDocsError as exc:
+                        return self.send(400, {'error': str(exc)})
                     except Exception:
                         return self.send(400, {'error': 'Google Docs operation did not complete. Check setup, access, and OS credential vault; previous evidence is preserved.'})
                 if self.path == '/api/companion-code':

@@ -3,14 +3,45 @@ import json
 import subprocess
 import re
 import unittest
+import io
+import tomllib
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 from proofpage.core import Store
-from proofpage.mcp_setup import setup, check
+from proofpage.mcp_setup import setup, check, kit
 from proofpage.mcp import TOOLS
 
 
 class MCPSetupTests(unittest.TestCase):
+    def test_client_formats_preserve_exact_command_and_arguments(self):
+        with tempfile.TemporaryDirectory(prefix='spaces and ü ') as directory:
+            data = setup(Store(directory))
+            entry = data['config']['mcpServers']['proofpage']
+            for client, selected in data['clients'].items():
+                parsed = tomllib.loads(selected['config_text'])['mcp_servers']['proofpage'] if client == 'codex' else json.loads(selected['config_text'])['mcpServers']['proofpage']
+                self.assertEqual(parsed, entry)
+                self.assertIn(selected['instructions'], selected['prompt'])
+
+    def test_setup_kits_have_discoverable_skills_without_private_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = Store(directory)
+            source = store.source('Private fixture', 'import', 'fixture:private')
+            store.save(source['id'], 'private', 'text', 'Do not export', 'PRIVATE-BODY-MUST-NOT-ENTER-SETUP', 'private')
+            for client in ('codex', 'claude-code', 'claude-desktop', 'other'):
+                data = setup(store)
+                selected = data['clients'][client]
+                with zipfile.ZipFile(io.BytesIO(kit(store, client))) as archive:
+                    self.assertEqual(set(archive.namelist()), {'SETUP.md', 'connect-prompt.txt', selected['filename'], selected['skill_path']})
+                    for name in archive.namelist():
+                        self.assertFalse(name.startswith('/'))
+                        self.assertNotIn('..', Path(name).parts)
+                        self.assertNotIn(b'PRIVATE-BODY-MUST-NOT-ENTER-SETUP', archive.read(name))
+                    self.assertEqual(archive.read(selected['skill_path']).decode(), data['skill'])
+                    self.assertEqual(archive.read(selected['filename']).decode(), selected['config_text'])
+            for client in ('web', '../codex', ''):
+                with self.assertRaises(ValueError): kit(store, client)
+
     def test_local_config_contains_actual_workspace(self):
         with tempfile.TemporaryDirectory(prefix='space here ') as directory:
             data = setup(Store(directory))

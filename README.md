@@ -18,7 +18,7 @@ Proofpage turns public web pages and your own exported files into **traceable ev
 
 ![Proofpage evidence workspace](docs/archival-library-light.png)
 
-> **New in v0.5.0:** Reviewed business context, saved evidence runs, offline replay, Python/Node SDKs, installable skills, and Google Docs connection support. Google Docs requires your own OAuth setup while the shared app remains in testing.
+> **New in v0.5.0:** Reviewed business context, saved evidence runs, offline replay, Python/Node SDKs, installable skills, and Google Docs connection support. Shared Google sign-in has been submitted for Google's permission review. Stable 0.5.0 still needs a custom Google client; preconfigured downloads will follow approval and a desktop release.
 
 ## What you can do
 

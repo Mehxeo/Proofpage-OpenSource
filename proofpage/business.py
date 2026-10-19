@@ -68,12 +68,15 @@ def draft(store, profile_id):
 
 def get(store, profile_id):
     profile = require(store, profile_id)
-    sources = store.rows('SELECT b.*,i.title,i.id item_id,i.current_revision FROM business_sources b JOIN revisions r ON r.id=b.revision_id JOIN items i ON i.id=r.item_id WHERE b.profile_id=?', (profile_id,))
+    sources = store.rows('SELECT b.*,r.metadata,i.title,i.id item_id,i.current_revision FROM business_sources b JOIN revisions r ON r.id=b.revision_id JOIN items i ON i.id=r.item_id WHERE b.profile_id=?', (profile_id,))
+    for source in sources:
+        source['training_allowed'] = json.loads(source.pop('metadata')).get('adapter') != 'google_docs'
     facts = store.rows('SELECT * FROM business_facts WHERE profile_id=? ORDER BY section,id', (profile_id,))
     current = {s['revision_id']: s for s in sources}
     for fact in facts:
         source = current.get(fact['revision_id'])
         fact['stale'] = not source or source['current_revision'] != fact['revision_id']
+        fact['training_allowed'] = bool(source and source['training_allowed'])
         fact['findings'] = findings(fact['text'] + '\n' + fact['quote'])
     return {**profile, 'sources': sources, 'facts': facts,
             'notice': 'Suggestions are source passages, not verified facts. Review conflicting claims and keep reference/customer material separate from your own business.'}

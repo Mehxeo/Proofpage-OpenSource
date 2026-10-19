@@ -6,6 +6,19 @@ account or public deployment is connected.
 
 ## Google Docs
 
+The Google project is now **In production**, and its branding is verified and
+published. Read-only Docs scope verification has been submitted and is under
+review. That review must finish before shared sign-in can be offered without an unverified warning
+or temporary user cap. Production status alone is not scope approval.
+
+The next desktop build supports bundled Google sign-in so normal users do not
+need their own Google Cloud project or JSON file. A packaged review build completed
+Google authorization and imported a selected fictional demo document. The current
+stable 0.5.0 download still needs the configuration below. Public install instructions will change when the shared
+client is approved and that desktop update is released.
+
+### Source builds and custom clients
+
 The 0.5.0 desktop downloads include the Google OAuth library and OS-vault support.
 For a source install, use `python -m pip install -e '.[google]'`.
 In your Google Cloud project enable the Google Docs API, configure the OAuth
@@ -29,8 +42,17 @@ Up to 8 MiB is accepted. Failed/empty responses preserve previous evidence.
 Automatic schedules require the app/server to remain open. Changed revisions
 invalidate approved business context rather than silently altering it.
 
-Google API snapshots are for personal context in this release; the Training
-workflow rejects them. Google Workspace data cannot be used to train shared or
+In the upcoming 0.5.1 interface, **Import document** combines selection and the
+first sync. It keeps the entered link when importing fails and shows a retry or
+reconnect action. A failed optional Google connection does not prevent using
+other business sources. Missing/invalid client setup does not request access to
+the OS credential vault.
+
+Google API snapshots are for personal context. In the 0.5.1 review build, dataset
+approval, corpus freezing, training examples, and existing dataset downloads reject them.
+Training-draft model calls are blocked before transmitting the source text.
+Business context keeps its separate passage review and export workflow.
+Google Workspace data cannot be used to train shared or
 general-purpose models. Only retain snapshots with express owner permission.
 See [Google Workspace data policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy)
 and [Google API content terms](https://developers.google.com/terms#section_5_content).
@@ -53,9 +75,39 @@ proofpage --home ./workspace google-docs disconnect
 ```
 
 Google auth is local-only. Hosted workspace routes cannot trigger desktop consent
-or access the host's OS vault. The shared Proofpage OAuth project is currently in
-Testing, available only to its configured test accounts. Other users must configure
-their own Google Desktop OAuth client; public verification is not complete.
+or access the host's OS vault. A custom client selected through the environment
+or the existing home-folder configuration takes precedence over bundled metadata.
+`PROOFPAGE_CONFIG_DIRECTORY` can select a separate configuration directory for a
+portable profile; the default remains `~/.config/proofpage`. User authorization
+is still tied to the workspace path in the OS vault.
+Moving the OAuth project to Production does not retrofit a client into existing
+0.5.0 downloads. Shared sign-in needs the updated desktop build as well as Google's
+scope approval.
+
+### Building official preconfigured downloads
+
+Release maintainers can set `PROOFPAGE_DESKTOP_GOOGLE_CLIENT_FILE` to their Google
+**Desktop app** client JSON when running `scripts/build_desktop.py`. They may also
+run the following on an extracted CI build, **before code signing**:
+
+```sh
+python scripts/configure_desktop_google.py /path/to/Proofpage.app --client-file /private/path/native-client.json
+```
+
+Use the extracted `Proofpage` directory on Windows/Linux. The helper validates
+Google endpoints and loopback redirects, rejects web/service-account configs,
+rejects user tokens/private keys, and copies only native app metadata. It is
+idempotent for an identical client and refuses replacing a different identity.
+Never commit the client JSON or place it in source bundles. Native app metadata
+identifies the app and is recoverable from its distributable; it is not a user's
+authorization. PKCE protects each authorization exchange, and user tokens stay
+in the OS vault. Redistributed forks should configure their own Google app.
+
+Finish with signature/notarization and packaged checks using a clean home folder;
+the report must show `google_configuration: bundled`. That proves the release is
+not accidentally relying on the maintainer's home-folder setup file. Review
+builds do not imply Google's approval, and unverified sign-in is not promoted to
+stable users.
 
 ## Remote MCP for web assistants
 
@@ -102,6 +154,17 @@ keys; it is not a substitute for this OAuth connector.
 
 ## Skills that install without clobbering work
 
+In the upcoming desktop build, choose your client in **Agent access**, then
+**Download setup kit**. Codex kits include TOML and
+`.agents/skills/proofpage/SKILL.md`; Claude Code kits include JSON and
+`.claude/skills/proofpage/SKILL.md`. Claude Desktop and other clients receive
+generic skill files for their supported installation flow. Follow SETUP.md,
+merge the configuration snippet, and copy the skill into your selected project.
+The kit contains local paths; keep it private. It contains no credentials or
+library content and does not overwrite a live client configuration.
+
+The source-edition CLI also installs the bundled skill directly:
+
 ```sh
 proofpage install-skill --project /path/to/project --client codex
 proofpage install-skill --project /path/to/project --client claude
@@ -111,7 +174,10 @@ The installer writes `.agents/skills/proofpage/SKILL.md` or
 `.claude/skills/proofpage/SKILL.md`, recognizes an identical existing installation,
 and refuses to overwrite custom content. A skill provides workflow guidance;
 it does not establish MCP connectivity. Use Agent access's configuration and
-Test MCP connection separately. The shipped skill names only existing tools.
+**Test local server** separately (called **Test MCP connection** in 0.5.0).
+The shipped skill names only existing tools. Verify your assistant itself by
+listing its tools and calling `proofpage_list_sources`; a local helper test
+does not establish that a particular assistant is connected.
 
 ## Verification and boundaries
 
@@ -122,9 +188,12 @@ wrong-subject/wrong-audience/wrong-scope tokens, allowed reads, absent write too
 and cross-origin denial. Google fixtures cover multi-tab/table extraction,
 selection, deduplication, revision drift and failed refresh preservation.
 
-Live Google account consent and ChatGPT/Claude connector installation still
-require a configured OAuth project, public deployment, and user consent. Tests
-with fixture tokens do not verify your provider's registration or consent flow.
+The packaged review build completed real Google account consent and selected
+fictional-document sync, including retained authorization after restart.
+Google's public scope approval is still pending. Web-based ChatGPT/Claude remote
+connectors separately require a public OAuth-protected deployment and consent;
+local client configuration does not activate one. Fixture-token tests do not
+verify your authorization provider's registration or a third-party account.
 
 Primary references:
 - https://developers.google.com/identity/protocols/oauth2/native-app
