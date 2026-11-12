@@ -1,54 +1,68 @@
 # Google Docs public sign-in verification
 
-Proofpage's project has been moved from Testing to **In production**. Google
-Search Console verified `https://proofpage.app/` using the retained public
-ownership file. Google then verified the app's branding, which is published.
+Status checked November 12, 2026: **no explicit approval of the sensitive
+`documents.readonly` scope has been verified.** Production audience and verified
+branding are separate from scope approval. Do not publish preconfigured stable
+downloads or advertise approved shared sign-in until all release gates pass.
 
-This is not yet approval of the sensitive Docs permission. The scope submission
-requires an actual OAuth/import demo on YouTube and Google's review. Do not
-describe Production or brand verification as approval of that scope.
+An actual consent and fictional-document walkthrough was submitted using the
+unlisted [verification demo](https://youtu.be/JzE-JdgmVjA). The earlier note saying
+the demo was still unsubmitted was stale. A reviewer message dated October 20
+requests Google-data privacy disclosures, protection mechanisms and AI data-use
+details. That email does not name the app/project in its body: confirm its project
+association in the Verification Center before sending a project-specific reply.
+The console's unchanged “under review” badge is not evidence that no action is due.
 
-## Scope and data use
+## Decision and implementation
 
-Only `https://www.googleapis.com/auth/documents.readonly` is requested. Users
-select document URLs, confirm owner permission, then explicitly sync or choose
-a local schedule. The app calls `documents.get`; it does not list Drive, edit
-Docs, read Gmail, or scan unselected documents. Google grants account-wide read
-permission, and this is stated in the interface and privacy policy.
+The maintainer selected **local/offline AI only for Google Docs** on November 12.
+No hosted provider or aggregator tier is approved to receive Google API data.
 
-Google snapshots are local personal context. User-reviewed passages may be
-exported for the user's own assistant. Google API snapshots are rejected by
-the training workflow. Tokens stay in the OS vault; Proofpage's servers do not
-receive Google documents or tokens. See the public
-[privacy policy](https://proofpage.app/privacy.html).
+- Keep `documents.readonly` only, explicit document selection, PKCE, ephemeral
+  loopback callbacks, owner permission and OS-vault token storage.
+- Keep raw API snapshots, extracted text and reviewed business passages local.
+- Route optional Google extraction, revision summaries and passage review to
+  in-process inference over an existing local GGUF file. Without the optional
+  runtime/model, fail closed. Never fall back to an HTTP endpoint, even localhost:
+  a gateway can proxy a cloud model.
+- Exclude Google origins and tracked derivatives from stdio/HTTP MCP, assistant
+  packs, training approval/freezing/downloads, and portable evidence/report exports.
+  Recheck legacy evidence runs, traces and saved reports using their provenance.
+- Preserve historical revision hashes and local reader/review access. Private
+  workspace backups remain possible; tokens are not in them.
+- No Google raw, aggregated, de-identified or derived data develops or improves
+  foundational/generalized models. Inference does not update weights.
 
-## Demonstration requirements
+The upcoming 0.5.1 source implements these boundaries. Public 0.5.0 downloads do
+not acquire new safeguards from policy or console updates. The privacy page and
+connector guides explicitly describe this version boundary.
 
-Use a dedicated review workspace and Google's published Docs API quickstart
-sample, or a fictional document explicitly authorized for testing.
-Show Connect Google Docs, the actual consent flow including any unverified-app
-notice, the correct app name and OAuth client ID, document selection and owner
-permission, Sync, captured text and provenance, and Disconnect. Do not include
-private documents, tokens, authorization codes, or unrelated browser tabs in the
-video. Upload the real walkthrough as an unlisted YouTube video and provide its
-URL in Data Access. All assigned OAuth clients must be covered.
+## Remaining verification work
 
-The existing approved connection successfully fetched Google's public quickstart
-sample through `documents.get` and extracted its text. No private document was
-read and no new Google Doc was created. The preconfigured native build also
-passed startup, MCP, OCR, and PDF checks with a separate empty configuration
-directory; its packaged report confirmed `google_configuration: bundled`.
-Completing a fresh review-workspace authorization and attaching the finished
-YouTube demo remain separate requirements. These checks are not a submitted or
-approved Google scope review.
+1. Confirm the October 20 correspondence belongs to this project and inspect newer
+   reviewer requests. Authenticated browser control was unavailable on November 12;
+   Gmail readback alone cannot confirm console status.
+2. Publish/read back the updated privacy policy and developer docs. Prepare the
+   exact reviewer reply for owner approval; do not send an unreviewed response.
+3. Record an updated real demo of local isolation if Google requires it. Show a
+   fictional selected Doc, local reader, blocked hosted/localhost AI sends,
+   empty Google MCP results, blocked context/training exports, and optional real
+   offline inference if advertised. Do not expose private documents or tokens.
+4. Update/resubmit the verification request and reply to the confirmed reviewer
+   thread with truthful implementation, policy and demo details.
+5. Wait for explicit sensitive-scope approval. Then integrate current main/PR #2
+   and complete signing, notarization, packaged acceptance and public-download
+   checks before releasing or changing website download links.
 
-The next desktop build supports native-client metadata bundled before signing;
-it does not require end-user Google Cloud setup. Keep it in review/staging until
-Google approves the scope. Existing stable 0.5.0 downloads are not changed by the
-Google Console settings. See [release packaging](CONNECTORS.md#building-official-preconfigured-downloads).
+Native-client metadata must be bundled **before signing** using
+`PROOFPAGE_DESKTOP_GOOGLE_CLIENT_FILE` and `scripts/configure_desktop_google.py`.
+Keep client files and account tokens out of Git and review assets. Check the
+packaged build reports `google_configuration: bundled` using a clean profile.
 
 Primary references:
 
+- [Workspace data policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy)
+- [Privacy policy verification requirements](https://support.google.com/cloud/answer/13806988?hl=en)
 - [Sensitive scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification)
 - [Desktop OAuth](https://developers.google.com/identity/protocols/oauth2/native-app)
 - [Docs scopes](https://developers.google.com/workspace/docs/api/auth)

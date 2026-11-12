@@ -200,7 +200,11 @@ can become separately reviewed training drafts. [Setup and developer API](docs/B
 ### Optional connectors
 
 Sync explicitly selected Google Docs with read-only OAuth and credentials stored
-in the operating system vault. Serve read-only context over OAuth-protected remote
+in the operating system vault. The upcoming 0.5.1 safeguards keep Google Docs and
+their derivatives local: no hosted AI, MCP retrieval, assistant packs or training.
+Optional Google AI processing uses an in-process offline GGUF model. Public 0.5.0
+does not have these new safeguards; shared sign-in remains under review.
+Serve eligible non-Google context over OAuth-protected remote
 MCP, or install the bundled skill into a Codex/Claude project with
 `proofpage install-skill --project /path/to/project --client codex`.
 [Setup, permissions and limitations](docs/CONNECTORS.md). The desktop includes Google OAuth and secure-vault libraries; client configuration is still required. The remote MCP server and skill installer are available through a source/CLI installation. Remote connections need your own HTTPS host and OAuth provider.

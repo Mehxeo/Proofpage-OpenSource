@@ -48,12 +48,25 @@ reconnect action. A failed optional Google connection does not prevent using
 other business sources. Missing/invalid client setup does not request access to
 the OS credential vault.
 
-Google API snapshots are for personal context. In the 0.5.1 review build, dataset
-approval, corpus freezing, training examples, and existing dataset downloads reject them.
-Training-draft model calls are blocked before transmitting the source text.
-Business context keeps its separate passage review and export workflow.
-Google Workspace data cannot be used to train shared or
-general-purpose models. Only retain snapshots with express owner permission.
+Google API snapshots and their tracked derivatives are **local personal context**.
+The November 12 changes in unreleased 0.5.1 source exclude them from stdio/HTTP MCP,
+assistant packs, portable evidence/report exports, and training approval, drafting,
+freezing and dataset downloads. Existing saved artifacts are rechecked. You can
+still read and review Google passages locally. Use a separate profile of eligible
+sources when you want context to share with ChatGPT, Claude or other assistants.
+
+Optional Google extraction, change summaries and passage checks run **inside
+Proofpage** using an existing local GGUF model and the optional `offline-ai` extra.
+Set `PROOFPAGE_OFFLINE_MODEL_FILE` to an absolute local GGUF path. Without the
+runtime/model these actions fail closed. No model is downloaded, no weights are
+trained, and no HTTP or hosted fallback is used. A localhost/Ollama gateway is not
+an offline exemption. Google raw, aggregated, de-identified and derived data is
+not sent to third-party providers or used to train/improve foundational or
+generalized models. Other eligible sources can still use configured endpoints.
+
+These are upcoming safeguards, not a retroactive update to public 0.5.0. Until the
+verified update is available, do not send Google snapshots from older builds to
+model endpoints, MCP or assistant packs. Only retain snapshots with express owner permission.
 See [Google Workspace data policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy)
 and [Google API content terms](https://developers.google.com/terms#section_5_content).
 
