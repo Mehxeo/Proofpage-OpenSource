@@ -77,5 +77,10 @@ function screen(respond) {
   await offline.run('loadGoogleDocs()');
   assert.equal(typeof offline.element('retry-google-docs').onclick, 'function');
   assert.match(offline.element('google-docs-region').innerHTML, /other sources are still available/);
-  console.log('Google onboarding: one-action import, duplicate prevention, recoverable errors, navigation and retry passed.');
+  const local = screen(() => connected);
+  assert.equal(local.run("businessProgress({facts:[{status:'approved',shareable:false,stale:false}]}).canExport"), false);
+  assert.equal(local.run("businessProgress({facts:[{status:'approved',shareable:true,stale:false}]}).canExport"), true);
+  assert.equal(local.run("businessProgress({facts:[{status:'approved',shareable:true},{status:'approved',shareable:false}]}).canExport"), false);
+  assert.match(local.run("googleDocsPanel({installed:true,configured:true,connected:true,documents:[]})"), /no hosted AI, MCP sharing, assistant packs, or training/);
+  console.log('Google onboarding: one-action import, duplicate prevention, recovery, navigation, retry and local-only sharing states passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -35,7 +35,7 @@ Use `proofpage_draft_example(revision_id, kind, payload, quote, notes)` with an 
 
 Inspect OCR/PDF extraction for errors and check source rights. Never invent evidence quotes. Drafts require human review of correctness, privacy and permission in **Training**, followed by approval, freezing and export. No MCP tool approves or exports training data. Proofpage prepares reproducible datasets; it does not train weights or provide native audio/video/multimodal training formats.
 
-Google Docs API snapshots carry `data_use: personal_context_only` in revision metadata. Use these for reviewed business context, never training drafts or corpus exports. If the user wants training data, explain this boundary and use other eligible, authorized sources; do not relabel a Google snapshot to bypass it.
+Google Docs API snapshots carry `data_use: personal_context_only` in revision metadata. They and their derived data stay on the user's computer: MCP retrieval, portable assistant packs, evidence exports, and training reject them. Users can read and review these passages inside Proofpage; optional extraction or summaries require an in-process offline GGUF model. A localhost/Ollama gateway is not an exemption because it can forward data to hosted models. Never request Google text through another tool, relabel it, or instruct the user to copy it into a hosted assistant to get around this boundary. Use other eligible, authorized sources for assistant context and training.
 
 ## Client boundaries
 

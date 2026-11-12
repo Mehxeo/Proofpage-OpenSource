@@ -125,7 +125,7 @@ def model_summary(store, from_revision, to_revision):
     """Optional summary by the user's configured model. Sends only changed lines, only on request; the result is unreviewed."""
     from . import models
     from .quality import findings
-    config = models.configuration()
+    config = models.configuration_for_revisions(store, [from_revision, to_revision])
     if not config['configured']:
         raise ValueError(config['detail'])
     comparison = compare(store, from_revision, to_revision)
@@ -142,7 +142,7 @@ def model_summary(store, from_revision, to_revision):
                     'Describe only changes present in the provided blocks. Do not guess at reasons, intent, or significance.')
     state, detail = 'failed', 'No summary stored.'
     try:
-        result = models.complete_json([{'role': 'system', 'content': instructions}, {'role': 'user', 'content': 'CHANGES:\n' + payload}])
+        result = models.complete_for_revisions(store, [from_revision, to_revision], [{'role': 'system', 'content': instructions}, {'role': 'user', 'content': 'CHANGES:\n' + payload}])
         summary, notable = result.get('summary'), result.get('notable', [])
         if not isinstance(summary, str) or not summary.strip() or not isinstance(notable, list) or not all(isinstance(n, str) for n in notable):
             raise ValueError('The model returned an unsupported summary. Nothing was saved.')

@@ -237,7 +237,7 @@ function modelSummaryHtml() {
     return `<p class="muted model-summary-hint">${icon('sparkle', 'icon-sm')} Want a plain-language summary? ${escape(data.model?.detail || 'Configure a model to enable it.')}</p>`;
   }
   return `<div class="model-summary-hint"><button type="button" class="small" id="summarize-change">${icon('sparkle')}Summarize with ${escape(data.model.model)}</button>
-    <span class="muted">Sends only the changed lines (up to 16,000 characters) to your configured model when you click. Review personal information first; the result is unreviewed.</span></div>`;
+    <span class="muted">Processes only the changed lines (up to 16,000 characters) when you click. Google Docs use an in-process offline model; other sources use your configured endpoint. The result is unreviewed.</span></div>`;
 }
 
 async function summarizeChange(button) {

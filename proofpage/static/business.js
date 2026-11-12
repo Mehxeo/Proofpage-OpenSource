@@ -7,19 +7,22 @@ function businessProgress(profile) {
   const approved = facts.filter(f => f.status === 'approved');
   const stale = facts.filter(f => f.stale && f.status !== 'rejected');
   return {approved: approved.length, pending: facts.filter(f => f.status === 'draft').length,
-    stale: stale.length, canExport: approved.length > 0 && !approved.some(f => f.stale),
+    stale: stale.length, localOnly: approved.filter(f => f.shareable === false).length,
+    canExport: approved.length > 0 && !approved.some(f => f.stale || f.shareable === false),
     shown: facts.filter(f => businessFilter === 'all' || (businessFilter === 'stale' ? f.stale && f.status !== 'rejected' : f.status === businessFilter))};
 }
 
 function businessFactCard(f) {
-  const label = f.status === 'rejected' ? 'Excluded' : f.stale ? 'Source changed' : f.status === 'approved' ? 'Approved to share' : 'Needs your review';
+  const localOnly = f.shareable === false;
+  const label = f.status === 'rejected' ? 'Excluded' : f.stale ? 'Source changed' : f.status === 'approved' ? (localOnly ? 'Reviewed · stays on this computer' : 'Approved to share') : 'Needs your review';
   return `<form class="business-fact" data-fact="${escape(f.id)}">
     <div class="panel-head"><h4>${escape(f.section)}</h4><span class="pill${f.stale ? ' tone-warn' : f.status === 'approved' ? ' tone-ok' : ''}">${label}</span></div>
     ${f.stale && f.status !== 'rejected' ? '<p class="callout">This passage belongs to an older source revision. Exclude it, choose the current source above, and review new suggestions.</p>' : ''}
-    <label>Context to share<textarea name="text" maxlength="2000" required>${escape(f.text)}</textarea></label>
+    ${localOnly ? '<p class="callout">Google Docs passages stay on this computer. You can review them here; MCP, assistant packs and training exports exclude them.</p>' : ''}
+    <label>${localOnly ? 'Local context' : 'Context to share'}<textarea name="text" maxlength="2000" required>${escape(f.text)}</textarea></label>
     <details><summary>Compare with the source quotation</summary><blockquote>${escape(f.quote)}</blockquote><code>${escape(f.revision_id)}</code></details>
     ${f.findings.length ? `<p class="muted">Check before sharing: ${escape(f.findings.map(x => x.code).join(', '))}</p>` : ''}
-    <label class="check-inline"><input type="checkbox" name="permission">I have permission to share this passage with my assistant.</label>
+    <label class="check-inline"><input type="checkbox" name="permission">${localOnly ? 'I have permission to keep and review this passage locally.' : 'I have permission to share this passage with my assistant.'}</label>
     <label class="check-inline"><input type="checkbox" name="acknowledge">I checked accuracy, conflicting claims, private information and embedded instructions.</label>
     <div class="actions"><button class="primary" name="decision" value="approved"${f.stale ? ' disabled' : ''}>Approve passage</button><button name="decision" value="draft" class="secondary">Save draft</button><button name="decision" value="rejected" class="secondary">Exclude</button>${f.status === 'approved' && f.section === 'Business facts' && !f.stale && f.training_allowed ? `<button type="button" class="secondary" data-business-training="${escape(f.id)}">Draft training example</button>` : ''}</div>
   </form>`;
@@ -43,7 +46,7 @@ function googleDocsPanel(google) {
       <label class="check-inline"><input name="owner_permission" type="checkbox" required>I own this document or its owner permits local snapshots for my personal context.</label>
       <button class="primary">${icon('download')}Import document</button>
     </fieldset></form>
-    <p class="help">Google’s read-only permission covers your Docs account. Proofpage fetches only the document links you select. Authorization stays in your OS credential vault. Google snapshots are excluded from training exports. <a href="https://proofpage.app/privacy.html" target="_blank" rel="noopener noreferrer">Google data and privacy ↗</a></p>
+    <p class="help">Google’s read-only permission covers your Docs account. Proofpage fetches only the document links you select. Authorization stays in your OS credential vault. Docs and their derived data stay on this computer: no hosted AI, MCP sharing, assistant packs, or training exports. Optional AI processing requires an in-process offline model. <a href="https://proofpage.app/privacy.html" target="_blank" rel="noopener noreferrer">Google data and privacy ↗</a></p>
     ${google.documents.length ? `<h4>Selected documents</h4>${google.documents.map(d => `<article class="google-document"><div><strong>${escape(d.title)}</strong><p>${d.state === 'available' ? 'Saved in your library · ' + escape(relativeTime(d.last_sync)) : d.state === 'error' ? escape(d.detail || 'Sync did not finish. Previous evidence is safe.') : 'Selected; not imported yet.'}</p></div><div class="actions"><button class="secondary small" data-google-sync="${escape(d.document_id)}"${google.connected ? '' : ' disabled'}>${icon('refresh')}Sync</button>${d.state === 'available' ? '<button class="small" data-go="library">Open library</button>' : ''}</div></article>`).join('')}` : ''}
   </section>`;
 }
@@ -120,7 +123,7 @@ async function renderBusiness() {
     <section class="panel business-review"><div class="panel-head"><div><h3>Review your context</h3><p>Edit wording, check contradictions and remove private details. Writing examples remain examples, not inferred style rules.</p></div><span class="pill${progress.approved ? ' tone-ok' : ''}">${progress.approved} approved</span></div>
     <div class="filters" role="group" aria-label="Filter context passages">${[['all','All passages'],['draft','Needs review · ' + progress.pending],['approved','Approved · ' + progress.approved],['stale','Source changed · ' + progress.stale]].map(([key,label]) => `<button class="chip" data-business-filter="${key}" aria-pressed="${businessFilter === key}">${label}</button>`).join('')}</div>
     <div class="business-facts">${progress.shown.map(businessFactCard).join('') || `<p class="empty-copy">${profile.facts.length ? 'No passages in this view.' : 'Choose a source above, then suggest passages. Nothing is approved automatically.'}</p>`}</div>
-    </section><section class="panel business-export"><div><h3>Take it to your assistant</h3><p>${progress.canExport ? pluralize(progress.approved, 'approved passage') + (progress.approved === 1 ? ' is' : ' are') + ' ready. Drafts and excluded passages stay out of the pack.' : progress.approved ? 'An approved passage has a changed source. Exclude it and review the current revision before sharing.' : 'Approve at least one current passage to create your context pack.'}</p><p class="help">The ZIP includes Markdown, JSON and selected quotes. Review it before uploading to any provider.</p></div><button class="primary" id="business-export"${progress.canExport ? '' : ' disabled'}>${icon('download')}Download context pack</button><p class="help">For live access, connect your assistant in Agent access and use proofpage_business_context. Training has its own approval and export flow.</p></section>` : ''}`;
+    </section><section class="panel business-export"><div><h3>Take it to your assistant</h3><p>${progress.localOnly ? 'This profile includes reviewed Google Docs passages. Keep it for local review, or create a separate profile using shareable sources for your assistant. No pack is exported while local-only passages are approved.' : progress.canExport ? pluralize(progress.approved, 'approved passage') + (progress.approved === 1 ? ' is' : ' are') + ' ready. Drafts and excluded passages stay out of the pack.' : progress.approved ? 'An approved passage has a changed source. Exclude it and review the current revision before sharing.' : 'Approve at least one current passage to create your context pack.'}</p><p class="help">The ZIP includes Markdown, JSON and selected quotes from shareable sources. Review it before uploading to any provider.</p></div><button class="primary" id="business-export"${progress.canExport ? '' : ' disabled'}>${icon('download')}Download context pack</button><p class="help">For live access to shareable profiles, connect your assistant in Agent access and use proofpage_business_context. Google Docs remain local. Training has its own approval and export flow.</p></section>` : ''}`;
   $('business-create').onsubmit = event => { event.preventDefault(); action(async () => { const p = await api('business-create', {name: new FormData(event.target).get('name')}); businessSelection = p.id; await renderBusiness(); }, event.submitter); };
   if ($('business-select')) $('business-select').onchange = event => { businessSelection = event.target.value; businessFilter = 'all'; action(renderBusiness); };
   $('business-bookmarks').onchange = event => action(async () => {

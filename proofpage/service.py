@@ -41,7 +41,10 @@ def get(store, path, query):
         from . import evidence_runs, evidence
         parts = path.split('/')
         if len(parts) == 5 and parts[4] == 'export':
-            return response(200, evidence.canonical(evidence_runs.get(store, parts[3])), 'application/octet-stream')
+            from .data_use import Policy
+            manifest = evidence_runs.get(store, parts[3])
+            Policy(store).require_shareable(manifest)
+            return response(200, evidence.canonical(manifest), 'application/octet-stream')
         if len(parts) == 5 and parts[4] == 'check':
             return response(200, evidence_runs.check(store, parts[3]))
         if len(parts) == 4:
@@ -73,13 +76,14 @@ def get(store, path, query):
     if path.startswith('/api/watches/'):
         return response(200, store.rows('SELECT path,state,detail FROM watch_files WHERE watch_id=?', (path.rsplit('/', 1)[1],)))
     if path.startswith('/api/items/') and path.endswith('/timeline'):
+        timeline = history.timeline(store, path.split('/')[3])
         try:
-            config = models.configuration()
+            config = models.configuration_for_revisions(store, [v['revision_id'] for v in timeline['versions']])
         except ValueError as exc:
             config = {'configured': False, 'detail': str(exc)}
         # The endpoint URL is never sent to the browser here; hosted operators keep theirs private.
         model = {'configured': config['configured'], 'model': config.get('model', ''), 'detail': config['detail']}
-        return response(200, dict(history.timeline(store, path.split('/')[3]), model=model))
+        return response(200, dict(timeline, model=model))
     if path.startswith('/api/items/'):
         return response(200, store.item(path.rsplit('/', 1)[1]))
     if path.startswith('/api/proof-bundle/'):
@@ -96,13 +100,14 @@ def get(store, path, query):
     if path.startswith('/api/revisions/'):
         return response(200, store.revision(path.rsplit('/', 1)[1]))
     if path == '/api/workbench':
+        from .offline_models import configuration as offline_configuration
         try:
             config = models.configuration()
         except ValueError as exc:
             config = {'configured': False, 'detail': str(exc)}
         return response(200, {'candidates': store.rows('SELECT id,revision_id,kind,status,origin,notes,findings,created_at FROM candidates ORDER BY created_at DESC LIMIT 500'),
                               'datasets': with_blockers(store, store.rows('SELECT d.id,d.name,d.created_at,d.hash,d.revision_ids,m.format,m.manifest,(SELECT COUNT(*) FROM dataset_rights x WHERE x.dataset_id=d.id AND x.drifted=1) rights_changed FROM datasets d JOIN dataset_manifests m ON m.dataset_id=d.id ORDER BY d.created_at DESC')),
-                              'jobs': store.rows('SELECT * FROM crawl_jobs ORDER BY created_at DESC LIMIT 30'), 'model': config,
+                              'jobs': store.rows('SELECT * FROM crawl_jobs ORDER BY created_at DESC LIMIT 30'), 'model': config, 'offline_model': offline_configuration(),
                               'recipes': store.rows('SELECT * FROM extraction_recipes'), 'extractions': store.rows('SELECT * FROM extractions ORDER BY created_at DESC LIMIT 30'),
                               'tools': [{'name': name, 'description': description} for name, (description, _) in TOOLS.items()]})
     if path.startswith('/api/compliance/'):

@@ -113,7 +113,7 @@ async function renderAgents() {
         <details><summary>Connection settings and manual setup</summary><textarea id="mcp-setup-text" readonly aria-label="MCP setup text" rows="10" class="mono"></textarea><div class="actions"><button type="button" class="secondary" id="copy-mcp-config">${icon('copy')}Copy configuration</button><button type="button" class="secondary" id="download-mcp-config">${icon('download')}Download configuration</button></div></details>
       </div>
       ${tools.length ? `<details id="assistant-tools"><summary>What your assistant can do</summary><ul class="tool-list">${tools.map(tool => `<li><code>${escape(tool.name)}</code>${escape(tool.description)}</li>`).join('')}</ul></details>` : ''}
-      <p id="assistant-boundary-note" class="muted">Your assistant needs support for local MCP tools and permission to configure them. Settings contain local paths; copy them only to an assistant you trust. Collection and draft tools are available; approval and export stay in Proofpage.</p>
+      <p id="assistant-boundary-note" class="muted">Your assistant needs support for local MCP tools and permission to configure them. Settings contain local paths; copy them only to an assistant you trust. Google Docs and their derived records stay on this computer and are excluded from MCP and context packs. Collection and draft tools for other evidence are available; approval and export stay in Proofpage.</p>
     </section>
     <div class="workflow-prompts" id="assistant-workflows">
       <article><h3>Collect & watch</h3><p>Add public sources, collect evidence and schedule checks.</p><button class="secondary small" data-copy="Use Proofpage to add the public URLs I provide with proofpage_add_source, then collect them. Ask me for the URLs and desired schedule if missing. Schedule only the interval I authorize with proofpage_schedule_source. For a crawl, agree a page limit first, then start and step the job, respecting next_attempt. Report blocked or incomplete pages honestly. Remind me to leave Proofpage running for scheduled collection.">Copy collection prompt</button></article>
@@ -133,6 +133,8 @@ async function renderAgents() {
         <p>${escape(workState.model.detail)}</p>
         ${workState.model.configured ? `<p><span class="pill tone-ok">Configured</span> <code>${escape(workState.model.model)}</code> · ${escape(workState.model.url)}</p>`
           : '<pre>PROOFPAGE_MODEL_URL=http://127.0.0.1:11434/v1\nPROOFPAGE_MODEL_NAME=your-installed-model\n# Optional hosted credential: PROOFPAGE_MODEL_KEY</pre><p class="muted">Set these environment variables before starting Proofpage. Evidence is only sent when you ask.</p>'}
+        <h4>Offline AI for Google Docs</h4><p>${escape(workState.offline_model?.detail || 'Google Docs AI uses a local GGUF model inside Proofpage. Hosted and localhost model endpoints cannot receive Docs data.')}</p>
+        ${workState.offline_model?.configured ? `<span class="pill tone-ok">${escape(workState.offline_model.model)} · offline</span>` : '<p class="help">Optional developer setup: install the offline-ai extra and set PROOFPAGE_OFFLINE_MODEL_FILE to an existing local GGUF file. No model is downloaded automatically. Reading and reviewing Docs needs no model.</p>'}
       </section>
     </div>
     <div id="context-results"></div>
@@ -404,14 +406,27 @@ function openRecipe() {
 
 async function openModel(revisionId, purpose = 'sft') {
   const workbench = await api('workbench');
-  if (!workbench.model.configured) throw new Error(workbench.model.detail);
+  if (!workbench.model.configured && !workbench.offline_model?.configured) throw new Error(workbench.offline_model?.detail || workbench.model.detail);
   workDialog('Use your configured model', `<form id="model-form">
-    <p class="callout">${icon('info')}<span>Sends up to 20,000 characters of the selected evidence to <b>${escape(workbench.model.model)}</b> at ${escape(workbench.model.url)}. Review any personal information before sending. Results remain unreviewed.</span></p>
+    <p class="callout" id="model-destination" role="status"></p>
     <label>Evidence<select name="revision_id">${options(state.items, 'current_revision', 'title')}</select></label>
     ${purpose === 'extraction' ? `<label>Recipe<select name="recipe_id">${options(workbench.recipes)}</select></label>` : ''}
-    <div class="actions"><button class="primary">${icon('sparkle')}Send evidence and create draft</button></div>
+    <div class="actions"><button class="primary" id="model-submit">${icon('sparkle')}Process evidence and create draft</button></div>
   </form>`);
   if (revisionId) $('model-form').elements.revision_id.value = revisionId;
+  const updateDestination = () => {
+    const selected = state.items.find(item => item.current_revision === $('model-form').elements.revision_id.value);
+    const localOnly = selected?.local_only;
+    const chosen = localOnly ? workbench.offline_model : workbench.model;
+    const blocked = (localOnly && purpose === 'sft') || !chosen?.configured;
+    $('model-submit').disabled = blocked;
+    $('model-destination').textContent = localOnly && purpose === 'sft' ? 'Google Docs cannot be used for training drafts, including with an offline model.'
+      : !chosen?.configured ? (chosen?.detail || 'Configure the appropriate model first.')
+      : localOnly ? `Processes this Google Docs passage inside Proofpage with ${chosen.model}. No provider receives the text. The result stays local and unreviewed.`
+      : `Sends up to 20,000 characters to ${chosen.model} at ${chosen.url}. Review private information first. The result remains unreviewed.`;
+  };
+  $('model-form').elements.revision_id.onchange = updateDestination;
+  updateDestination();
   $('model-form').onsubmit = event => {
     event.preventDefault();
     const form = new FormData(event.target);

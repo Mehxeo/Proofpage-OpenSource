@@ -5,6 +5,43 @@ sign-in is waiting for explicit approval of the read-only Docs scope; production
 audience or verified branding alone is insufficient. No new signed installer is
 published by this preparation work.
 
+## November 12: local-only Google data
+
+The maintainer chose local/offline AI for Google Docs. The unreleased source now
+routes Docs extraction, diff summaries and passage reviews to optional in-process
+GGUF inference. Hosted and localhost gateways are blocked for these revisions;
+missing runtime/model fails closed. No automatic download or weight training occurs.
+
+An origin policy recognizes existing Google source locations and metadata, plus
+tracked derivatives and legacy observed-tool traces. It blocks their stdio/HTTP
+MCP responses, assistant packs, training, and portable evidence/report exports.
+Local reading and business passage review remain available; old hashes are unchanged.
+The skill, UI labels and privacy/docs describe these restrictions and the difference
+between review source and public 0.5.0.
+
+Validation on November 12:
+
+- The 192-test Python suite passes in a clean temporary environment. It initially
+  skipped two optional media checks; both then passed with the media extra
+  (three media tests total). Real stdio MCP setup-kit and authenticated HTTP MCP
+  tests confirm Google data stays out while other evidence works.
+- Nine new Google-isolation/offline-runtime tests cover hosted/localhost rejection,
+  legacy runs and reports, derivatives, local review, export and training gates.
+  The inference runtime test is simulated: actual GGUF inference and final native
+  packaging of the optional runtime have not been accepted yet. Do not advertise
+  packaged offline AI until those checks pass.
+- Google onboarding/sharing states, saved preferences, companion checks, the Node
+  SDK's real Python bridge, compileall, JS syntax, docs generation and diff checks pass.
+- The old virtualenv timed out reading optional-package files. The clean environment
+  completed the suite; no application validation was disabled to obtain that result.
+
+Google approval has not been verified. A reviewer email dated October 20 requests
+updated privacy/data-use details; its project association still needs confirmation
+in the Verification Center. Browser control was unavailable in this environment.
+The earlier demo predates the isolation changes: prepare a new isolation walkthrough
+for review and obtain approval for the exact reviewer response before sending it.
+This work does not constitute a new signed/notarized desktop release.
+
 ## Changes
 
 - Documents, images and PDFs can use **Local files · no account setup**. JSON,

@@ -534,7 +534,7 @@ class Store:
                 'redirects': transport.get('redirects') or [], 'http_version': transport.get('http_version'), 'reason': transport.get('reason')})
             return result
 
-    def search(self, query='', include_traces=True, snippets=False):
+    def search(self, query='', include_traces=True, snippets=False, shareable_only=False):
         columns = ('i.*,r.text,r.hash,r.captured_at,r.source_time,s.name source_name,s.kind source_kind,COALESCE(v.allowed,0) allowed,COALESCE(v.approved,0) approved,'
                    '(SELECT o.verdict FROM captures c JOIN rights_observations o ON o.capture_id=c.id WHERE c.revision_id=i.current_revision ORDER BY o.observed_at DESC LIMIT 1) rights,'
                    '(SELECT rc.hash FROM receipts rc JOIN captures c ON c.id=rc.capture_id WHERE c.revision_id=i.current_revision ORDER BY rc.seq DESC LIMIT 1) receipt_hash')
@@ -545,9 +545,14 @@ class Store:
             highlight = ",snippet(search,2,char(2),char(3),'…',24) snippet" if snippets else ''
             rows = self.rows(f"SELECT {columns}{highlight} FROM search JOIN items i ON i.id=search.item_id {joins} WHERE search MATCH ? AND (? OR i.kind!='agent_trace') ORDER BY rank LIMIT 100", (terms, int(include_traces)))
         else:
-            rows = self.rows(f'SELECT {columns} FROM items i {joins} ORDER BY r.captured_at DESC LIMIT 100')
+            rows = self.rows(f"SELECT {columns} FROM items i {joins} WHERE (? OR i.kind!='agent_trace') ORDER BY r.captured_at DESC LIMIT 100", (int(include_traces),))
+        from .data_use import Policy
+        policy = Policy(self)
+        if shareable_only:
+            rows = [row for row in rows if not policy.contains(row)]
         for row in rows:
             row['rights'] = json.loads(row['rights']) if row['rights'] else None
+            row['local_only'] = policy.contains(row['current_revision'])
         return rows
 
     def item(self, item_id):
@@ -563,14 +568,17 @@ class Store:
         result[0]['findings'] = findings(result[0]['text'])
         result[0]['rights'] = revision_rights(self, result[0]['current_revision'])
         result[0]['proof'] = revision_proof(self, result[0]['current_revision'])
+        from .data_use import Policy
+        result[0]['local_only'] = Policy(self).contains(result[0]['current_revision'])
         return result[0]
 
     def review(self, revision_id, allowed, approved, rights_basis=None, rights_note=None):
         revisions = self.rows('SELECT id,text,metadata FROM revisions WHERE id=?', (revision_id,))
         if not revisions:
             raise ValueError('Revision not found.')
-        if (allowed or approved) and json.loads(revisions[0]['metadata']).get('adapter') == 'google_docs':
-            raise ValueError('Google Docs API snapshots are limited to personal context and cannot be approved for datasets.')
+        if allowed or approved:
+            from .data_use import require_training
+            require_training(self, revision_id)
         from .quality import findings
         if approved and any(f['severity'] == 'block' for f in findings(revisions[0]['text'])):
             raise ValueError('This revision contains detected credentials. Grant source permission separately and create a redacted training example.')
@@ -610,8 +618,10 @@ class Store:
         if not records:
             raise ValueError('Approve at least one revision and confirm permission before freezing a corpus.')
         seen, lines, ids = set(), [], []
+        from .data_use import Policy
+        policy = Policy(self)
         for r in records:
-            if json.loads(r['metadata']).get('adapter') == 'google_docs':
+            if policy.contains(r['id']):
                 raise ValueError('Google Docs API snapshots are limited to personal context and cannot be frozen into a corpus.')
             if not r['text'].strip():
                 continue
@@ -634,6 +644,8 @@ class Store:
         return {'id': dataset_id, 'records': len(ids), 'hash': digest(payload), 'rights': rights.snapshot_counts(snapshot)}
 
     def export(self, dataset_id):
+        from .data_use import Policy
+        policy = Policy(self)
         with self.db() as db:
             db.execute('BEGIN IMMEDIATE')
             dataset = db.execute('SELECT * FROM datasets WHERE id=?', (dataset_id,)).fetchone()
@@ -645,8 +657,7 @@ class Store:
                     if not db.execute("SELECT 1 FROM candidates WHERE id=? AND status='approved'", (candidate_id,)).fetchone():
                         raise ValueError('Export blocked: an example approval was revoked.')
             for revision_id in json.loads(dataset['revision_ids']):
-                revision = db.execute('SELECT metadata FROM revisions WHERE id=?', (revision_id,)).fetchone()
-                if revision and json.loads(revision['metadata']).get('adapter') == 'google_docs':
+                if policy.contains(revision_id):
                     raise ValueError('Export blocked: Google Docs API snapshots are limited to personal context, not datasets.')
                 permission = db.execute('SELECT * FROM reviews WHERE revision_id=? AND allowed=1', (revision_id,)).fetchone()
                 if not permission or (not training and not permission['approved']):

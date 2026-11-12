@@ -13,6 +13,7 @@ readme = "README.md"
 
 [project.optional-dependencies]
 google = ["google-auth-oauthlib>=1.2,<2", "keyring>=25,<26"]
+offline-ai = ["llama-cpp-python>=0.3.16,<0.4"]
 mcp-http = ["mcp>=1.30,<2", "PyJWT[crypto]>=2.10,<3"]
 media = ["pypdfium2==5.14.0", "rapidocr==3.10.0", "onnxruntime>=1.20,<2", "Pillow>=11,<13"]
 hosted = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "stripe>=15.6,<16"]

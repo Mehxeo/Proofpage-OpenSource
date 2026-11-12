@@ -22,7 +22,7 @@ class SkillInstallTests(unittest.TestCase):
 
 @unittest.skipUnless(importlib.util.find_spec('mcp'), 'optional official MCP SDK')
 class MCPWorkflowTests(unittest.TestCase):
-    def test_downloaded_codex_kit_reads_google_context_and_rejects_training(self):
+    def test_downloaded_codex_kit_excludes_google_context_and_rejects_training(self):
         import io
         import json
         import tomllib
@@ -58,10 +58,14 @@ class MCPWorkflowTests(unittest.TestCase):
                         initialized = await session.initialize()
                         self.assertIn('personal context', initialized.instructions)
                         profiles = await session.call_tool('proofpage_business_profiles', {})
-                        self.assertEqual(json.loads(profiles.content[0].text)[0]['id'], profile)
+                        self.assertEqual(json.loads(profiles.content[0].text), [])
                         context = await session.call_tool('proofpage_business_context', {'profile_id': profile})
-                        self.assertFalse(context.isError)
-                        self.assertEqual(json.loads(context.content[0].text)['facts'][0]['text'], fact['text'])
+                        self.assertTrue(context.isError)
+                        self.assertIn('personal context', context.content[0].text)
+                        self.assertNotIn(fact['text'], context.content[0].text)
+                        search = await session.call_tool('proofpage_get_context', {'query': 'websites'})
+                        self.assertFalse(search.isError)
+                        self.assertEqual(json.loads(search.content[0].text)['excerpts'], [])
                         rejected = await session.call_tool('proofpage_draft_example', {
                             'revision_id': revision, 'kind': 'sft',
                             'payload': {'messages': [{'role': 'user', 'content': 'What do we do?'}, {'role': 'assistant', 'content': 'We build websites.'}]},
