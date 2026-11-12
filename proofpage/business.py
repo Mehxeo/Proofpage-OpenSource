@@ -68,12 +68,20 @@ def draft(store, profile_id):
 
 def get(store, profile_id):
     profile = require(store, profile_id)
-    sources = store.rows('SELECT b.*,i.title,i.id item_id,i.current_revision FROM business_sources b JOIN revisions r ON r.id=b.revision_id JOIN items i ON i.id=r.item_id WHERE b.profile_id=?', (profile_id,))
+    from .data_use import Policy
+    policy = Policy(store)
+    sources = store.rows('SELECT b.*,r.metadata,i.title,i.id item_id,i.current_revision FROM business_sources b JOIN revisions r ON r.id=b.revision_id JOIN items i ON i.id=r.item_id WHERE b.profile_id=?', (profile_id,))
+    for source in sources:
+        source.pop('metadata')
+        source['training_allowed'] = not policy.contains(source['revision_id'])
+        source['shareable'] = source['training_allowed']
     facts = store.rows('SELECT * FROM business_facts WHERE profile_id=? ORDER BY section,id', (profile_id,))
     current = {s['revision_id']: s for s in sources}
     for fact in facts:
         source = current.get(fact['revision_id'])
         fact['stale'] = not source or source['current_revision'] != fact['revision_id']
+        fact['training_allowed'] = bool(source and source['training_allowed'])
+        fact['shareable'] = bool(source and source['shareable'])
         fact['findings'] = findings(fact['text'] + '\n' + fact['quote'])
     return {**profile, 'sources': sources, 'facts': facts,
             'notice': 'Suggestions are source passages, not verified facts. Review conflicting claims and keep reference/customer material separate from your own business.'}
@@ -99,9 +107,12 @@ def review(store, fact_id, text, decision, permission=False, acknowledge=False):
     return get(store, fact['profile_id'])
 
 
-def approved(store, profile_id):
+def approved(store, profile_id, for_sharing=False):
     profile = get(store, profile_id)
     selected = [f for f in profile['facts'] if f['status'] == 'approved']
+    if for_sharing:
+        from .data_use import Policy
+        Policy(store).require_shareable([f['revision_id'] for f in selected])
     if not selected:
         raise ValueError('Approve at least one passage before exporting or retrieving context.')
     if any(f['stale'] for f in selected):
@@ -114,7 +125,7 @@ def approved(store, profile_id):
 
 
 def export_pack(store, profile_id):
-    context = approved(store, profile_id)
+    context = approved(store, profile_id, for_sharing=True)
     lines = ['# ' + context['name'], '', context['instruction'], '']
     for section in ROLES.values():
         facts = [f for f in context['facts'] if f['section'] == section]
@@ -132,6 +143,13 @@ def export_pack(store, profile_id):
         archive.writestr('INSTRUCTIONS.md', instructions)
         archive.writestr('README.md', 'Review before sharing with any model provider. Upload the files or add them as project context where your assistant supports it. This is not automatic account personalization or fine-tuning. Original documents are excluded; selected quotes remain. Regenerate after source changes.\n')
     return buffer.getvalue()
+
+
+def shareable_profiles(store):
+    from .data_use import Policy
+    policy = Policy(store)
+    return [profile for profile in store.rows('SELECT * FROM business_profiles ORDER BY created_at DESC')
+            if not policy.contains(store.rows('SELECT revision_id FROM business_sources WHERE profile_id=?', (profile['id'],)))]
 
 
 class Bookmarks(HTMLParser):

@@ -61,8 +61,8 @@ def get_candidate(store, candidate_id):
 
 def create_candidate(store, revision_id, kind, payload, quote, notes='', origin='manual', mapping=None, redact_sensitive=False, parent_id=None):
     revision = store.revision(revision_id)
-    if json.loads(revision['metadata']).get('adapter') == 'google_docs':
-        raise ValueError('Google Docs API snapshots are limited to personal context in this release and cannot be added to training datasets.')
+    from .data_use import require_training
+    require_training(store, revision_id)
     payload = validate_payload(kind, payload)
     quote = text(quote, 'Evidence quote')
     offset = revision['text'].find(quote)
@@ -150,6 +150,8 @@ def freeze_training(store, name, candidate_ids, kind):
     if kind not in KINDS or not isinstance(candidate_ids, list) or not 1 <= len(candidate_ids) <= 500 or len(candidate_ids) != len(set(candidate_ids)):
         raise ValueError('Select 1–500 unique reviewed examples of one type.')
     candidates, records, seen = [], [], set()
+    from .data_use import Policy
+    policy = Policy(store)
     for candidate_id in candidate_ids:
         candidate = get_candidate(store, candidate_id)
         if candidate['status'] != 'approved' or candidate['kind'] != kind:
@@ -158,7 +160,7 @@ def freeze_training(store, name, candidate_ids, kind):
             continue
         seen.add(candidate['hash'])
         revision = store.revision(candidate['revision_id'])
-        if json.loads(revision['metadata']).get('adapter') == 'google_docs':
+        if policy.contains(candidate['revision_id']):
             raise ValueError('Google Docs API snapshots cannot be frozen into training datasets.')
         candidates.append(candidate)
         records.append({'text': json.dumps(candidate['payload'], sort_keys=True), 'source_id': revision['source_id']})

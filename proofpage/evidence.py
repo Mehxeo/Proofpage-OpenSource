@@ -69,6 +69,9 @@ def validate(manifest, expected_sha256=None):
 
 
 def record(store, revision_ids, dependencies=None, name='Evidence run'):
+    from .data_use import Policy
+    revision_ids = list(revision_ids)
+    Policy(store).require_shareable(revision_ids)
     records = []
     # A single SQLite read transaction keeps revisions/captures consistent.
     with store.db() as db:
@@ -118,6 +121,8 @@ def record(store, revision_ids, dependencies=None, name='Evidence run'):
 
 def write(manifest, path):
     validate(manifest)
+    from .data_use import Policy
+    Policy(None).require_shareable(manifest)
     data = canonical(manifest) + b'\n'
     if len(data) > MAX_BYTES:
         raise EvidenceError('Manifest exceeds 64 MiB.')

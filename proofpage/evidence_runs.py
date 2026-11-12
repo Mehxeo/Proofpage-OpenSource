@@ -37,6 +37,12 @@ def list_runs(store, limit=50):
     return store.rows('SELECT id,name,created_at,sha256 FROM evidence_runs ORDER BY created_at DESC,id DESC LIMIT ?', (limit,))
 
 
+def list_shareable_runs(store):
+    from .data_use import Policy
+    policy = Policy(store)
+    return [run for run in list_runs(store) if not policy.contains(get(store, run['id']))]
+
+
 def record_context(store, query, output_id, name):
     """Pin exactly the excerpts returned by retrieval, never re-run a query at replay."""
     if not isinstance(output_id, str) or not output_id.strip() or len(output_id) > 200:

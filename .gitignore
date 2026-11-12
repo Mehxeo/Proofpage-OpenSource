@@ -8,6 +8,8 @@ build/
 .env
 .env.*
 !.env.example
+# Maintainer-native OAuth metadata is injected into release artifacts, never Git.
+proofpage/google-desktop-client.json
 .proofpage-hosted/
 *.sqlite3
 *.sqlite3-wal

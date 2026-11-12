@@ -4,6 +4,7 @@ const filters = {kind: '', source: '', review: '', rights: ''};
 let layout = (() => { try { return localStorage.getItem('proofpage-layout') === 'list' ? 'list' : 'grid'; } catch { return 'grid'; } })();
 
 const VIEWS = {
+  start: ['Getting started', 'Make your first useful capture.', 'Choose something to save. Connect an assistant when you’re ready.'],
   business: ['Business context', 'Give your assistant the right background.', 'Choose sources, review passages, and take your context to another assistant.'],
   verify: ['Check quotes', 'Does the source say that?', 'Check quoted passages against captured evidence. Review the source before trusting the answer.'],
   library: ['Library', 'A library you can trace.', 'Collect useful material. Keep the evidence behind it.'],
@@ -11,7 +12,7 @@ const VIEWS = {
   activity: ['Activity', 'The collection record.', 'Completed captures, access conditions, and unfinished work, newest first.'],
   datasets: ['Datasets', 'From evidence to a corpus.', 'Review individual revisions, confirm permission, then freeze an export.'],
   timeline: ['Timeline', 'What changed, and when.', 'Content edits, publisher rights changes, broken links, and collection problems across your sources.'],
-  settings: ['Settings', 'Your workspace, connected.', 'Browser capture, AI assistants and evidence you control.'],
+  settings: ['Settings', 'Make this workspace yours.', 'A few useful preferences. Everything else stays out of your way.'],
 };
 let evidenceContext = {};
 
@@ -53,6 +54,8 @@ function markNav() {
 
 let renderedView;
 function render() {
+  document.body.dataset.view = view;
+  document.body.classList.toggle('welcoming', view === 'start' || (view === 'library' && !state.items.length && !state.sources.length && !query));
   $('count').textContent = state.total ?? state.items.length;
   updateUnreadBadge(state.unread || 0);
   markNav();
@@ -60,6 +63,7 @@ function render() {
     renderedView = view;
     window.scrollTo(0, 0);
   }
+  if (view === 'start') { setHeading(...VIEWS.start); $('content').innerHTML = onboarding(); return; }
   if (view === 'business') { setHeading(...VIEWS.business); action(renderBusiness); return; }
   if (view === 'verify') { setHeading(...VIEWS.verify); action(renderClaims); return; }
   if (view === 'training' || view === 'agents') {
@@ -88,23 +92,20 @@ function itemCard(item) {
 }
 
 function onboarding() {
-  return `<section class="panel onboarding">
-    <div>
-      
-      <h2>Start a library you can trace.</h2>
-      <p>Save a page, check a quote, or bring your own files. Every record keeps its source and revision history.</p>
-      <div class="actions">
-        <button type="button" class="primary" id="try-example">${icon('collect')}Try with example.com</button>
-        <button type="button" class="secondary" data-open="source-dialog">${icon('plus')}Add your own page</button>
-        <button type="button" data-open-import>${icon('upload')}Import files</button><button type="button" class="secondary" data-go="verify">${icon('check')}Check a quoted answer</button>
-      </div>
+  const saved = (state.total ?? state.items.length) > 0;
+  return `<div class="welcome-home"><section class="welcome-hero" aria-labelledby="welcome-title"><div class="welcome-copy"><h1 id="welcome-title">Good answers<br>start with <span>good sources.</span></h1><p>Keep the pages, pictures and documents behind your work. Give your AI useful context, with a way back to the original.</p><span class="welcome-reassurance">${icon('shield')}${hostingMode === 'local' ? 'On your computer. No account needed to start.' : 'Your workspace. You choose what to bring.'}</span></div><div class="welcome-art" aria-hidden="true"><svg class="welcome-stems" viewBox="0 0 330 245" fill="none"><path d="M168 235C168 165 100 150 75 64M168 235C169 167 248 127 260 48M168 225C135 208 66 206 41 167"/><path d="M141 163C116 149 108 128 122 124C140 129 147 143 141 163Z"/></svg><div class="welcome-paper welcome-paper-back"><span>PDF</span><i></i><i></i><i></i></div><div class="welcome-paper welcome-paper-front"><span>ORIGINAL SOURCE</span><strong>A little context.<br>A clear paper trail.</strong><i></i><small>kept for your review</small></div><div class="welcome-art-seal">${icon('seal')}</div></div></section>
+    ${saved ? `<div class="welcome-saved"><div>${icon('check')}<span><strong>${pluralize(state.total ?? state.items.length, 'record')} saved.</strong> Open a source to see what you kept.</span></div><button class="primary" data-go="library">Open your library ${icon('arrow-right')}</button></div>` : ''}
+    <div class="welcome-section-title"><h2>${saved ? 'Bring something else along.' : 'What would you like to save?'}</h2><span>Choose one. You can connect the rest later.</span></div>
+    <div class="start-choices">
+      <section class="panel start-choice"><div class="source-tile source-tile-web">${icon('globe')}<span>WEB</span></div><h3>A page on the web</h3><p>Paste a page, image or PDF link. Keep the original, even when the website changes.</p><button class="primary" data-open="source-dialog">Add a web source ${icon('arrow-right')}</button>${!saved ? '<button class="text-button" id="try-example">Or try example.com</button>' : ''}</section>
+      <section class="panel start-choice"><div class="source-tile source-tile-file">${icon('folder')}<span>FILES</span></div><h3>A file on your computer</h3><p>Bring a PDF, image, document or conversation export. Preview it before importing.</p><button class="secondary" data-open-import>Choose a file ${icon('upload')}</button></section>
+      <section class="panel start-choice"><div class="source-tile source-tile-doc">${icon('file')}<span>${hostingMode === 'local' ? 'DOCS' : 'CONTEXT'}</span></div><h3>${hostingMode === 'local' ? 'A Google Doc' : 'Context for your work'}</h3><p>${hostingMode === 'local' ? 'Connect Google, then choose the documents you want as personal context.' : 'Choose your evidence and review passages before sharing them with an assistant.'}</p><button class="secondary" data-go="business">${hostingMode === 'local' ? 'Connect Google Docs' : 'Review business context'} ${icon('arrow-right')}</button></section>
     </div>
-    <ol class="steps">
-      <li><b>Add a public page</b><span>Paste a URL. Robots rules, cooldowns, and daily budgets are respected.</span></li>
-      <li><b>Collect it</b><span>Proofpage stores the readable text, the original response, and the publisher’s AI-usage signals.</span></li>
-      <li><b>Inspect the evidence</b><span>Read it, confirm permission, and turn it into reviewed training data.</span></li>
-    </ol>
-  </section>`;
+    <section class="welcome-next"><div class="welcome-next-mark">${icon('plug')}</div><div><h2>Bring your assistant into the loop.</h2><p>Search saved sources, check quotes and automate collection. You choose what gets shared.</p></div><button class="secondary" data-go="agents">Connect an assistant ${icon('arrow-right')}</button></section><div class="welcome-shortcuts"><button data-go="business">Build business context ${icon('arrow-right')}</button><button data-go="verify">Check a quoted answer ${icon('arrow-right')}</button><a href="https://proofpage.app/docs/" target="_blank" rel="noopener noreferrer">Take a look at the guide ↗</a></div></div>`;
+}
+
+function showStartHint() {
+  try { return localStorage.getItem('proofpage-hide-start-hint') !== 'yes'; } catch { return true; }
 }
 
 function renderLibrary() {
@@ -126,6 +127,7 @@ function renderLibrary() {
   const chip = (group, value, label, count) => `<button type="button" class="chip" data-filter="${group}" data-value="${escape(value)}" aria-pressed="${filters[group] === value}">${escape(label)}${count === undefined ? '' : ` <span class="count">${count}</span>`}</button>`;
 
   $('content').innerHTML = `
+    ${items.length > 0 && (state.total ?? items.length) <= 3 && !query && showStartHint() ? `<section class="panel library-next"><div><h3>Your evidence is ready to explore.</h3><p>Open a record to inspect its source, then connect an assistant or review context for your business.</p><div class="actions"><button class="secondary small" data-item="${escape(items[0]?.id || '')}">Inspect a record</button><button class="small" data-go="agents">Connect an assistant</button><button class="small" data-go="start">Getting started</button></div></div><button class="icon-button small" id="dismiss-start-hint" aria-label="Dismiss getting started tips">${icon('x')}</button></section>` : ''}
     <div class="metrics">
       <div class="metric"><b>${state.total ?? items.length}</b><span>Records in your library</span></div>
       <div class="metric"><b>${state.sources.length}</b><span>Configured sources</span></div>
@@ -286,6 +288,7 @@ async function showEvidence(id, revision, options = {}) {
   const item = await api(revision ? 'revisions/' + revision : 'items/' + id);
   evidenceContext = {id, revision, options};
   const metadata = JSON.parse(item.metadata || '{}');
+  const contextOnly = metadata.adapter === 'google_docs';
   const findings = item.findings || [];
   const branchTargets = (metadata.normalized?.messages || []).filter(message => message.role === 'assistant' && message.id);
   $('evidence-title').textContent = item.title || 'Untitled record';
@@ -324,7 +327,7 @@ async function showEvidence(id, revision, options = {}) {
     <section role="tabpanel" id="panel-proof" aria-labelledby="tab-proof" hidden>${proofPanel(item.proof, item)}</section>
     <section role="tabpanel" id="panel-versions" aria-labelledby="tab-versions" hidden><div class="skeleton"></div></section>`;
   await loadOriginalPreview(item, metadata);
-  $('evidence-foot').innerHTML = `${basisFields(item.rights, item.review)}
+  $('evidence-foot').innerHTML = contextOnly ? `<p class="callout">${icon('info')}<span>Google Docs snapshots are for personal context. Review passages in Business context; training and corpus exports are unavailable.</span></p><button type="button" class="primary small" data-close="evidence-dialog" data-go="business">Review in Business context</button>` : `${basisFields(item.rights, item.review)}
     <label><input id="permission" type="checkbox"${item.review.allowed ? ' checked' : ''}> I have permission to include this revision in a dataset.</label>
     <label><input id="approved" type="checkbox"${item.review.approved ? ' checked' : ''}> I reviewed and approve it for a clean corpus.</label>
     <div class="actions">
@@ -333,13 +336,13 @@ async function showEvidence(id, revision, options = {}) {
       <button type="button" class="small danger-text" id="revoke">Revoke permission</button>
       <button type="button" class="primary small" id="review">${icon('check')}Save review</button>
     </div>`;
-  $('review').onclick = () => action(async () => {
+  if ($('review')) $('review').onclick = () => action(async () => {
     await api('review', {revision_id: item.current_revision, allowed: $('permission').checked, approved: $('approved').checked, ...basisPayload()});
     $('evidence-dialog').close();
     notice('Review saved for this revision.');
     await refresh();
   }, $('review'));
-  $('revoke').onclick = () => action(async () => {
+  if ($('revoke')) $('revoke').onclick = () => action(async () => {
     await api('review', {revision_id: item.current_revision, allowed: false, approved: false});
     $('evidence-dialog').close();
     notice('Permission revoked. Managed exports containing this revision are blocked.');
@@ -359,6 +362,9 @@ function selectTab(tab) {
     if (panel) panel.hidden = !selected;
   });
   tab.focus();
+  if (tab.dataset.settingsSection) {
+    try { localStorage.setItem('proofpage-settings-section', tab.dataset.settingsSection); } catch {}
+  }
   if (tab.id === 'tab-versions' && !tab.dataset.loaded) {
     tab.dataset.loaded = '1';
     action(() => loadVersions(evidenceContext.options || {}));
@@ -367,10 +373,12 @@ function selectTab(tab) {
 
 document.addEventListener('keydown', event => {
   const tab = event.target.closest('[role=tab]');
-  if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  if (!tab) return;
+  const vertical = tab.closest('[role=tablist]').getAttribute('aria-orientation') === 'vertical';
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', ...(vertical ? ['ArrowUp', 'ArrowDown'] : [])].includes(event.key)) return;
   const tabs = [...tab.closest('[role=tablist]').querySelectorAll('[role=tab]')];
   const index = tabs.indexOf(tab);
-  const next = {ArrowLeft: index - 1, ArrowRight: index + 1, Home: 0, End: tabs.length - 1}[event.key];
+  const next = {ArrowLeft: index - 1, ArrowRight: index + 1, ArrowUp: index - 1, ArrowDown: index + 1, Home: 0, End: tabs.length - 1}[event.key];
   event.preventDefault();
   selectTab(tabs[(next + tabs.length) % tabs.length]);
 });
@@ -419,6 +427,7 @@ document.addEventListener('click', event => {
   if (b.hasAttribute('data-open-import')) $('import-open').click();
   if (b.hasAttribute('data-new-profile')) $('profile-dialog').showModal();
   if (b.id === 'try-example') tryExample(b);
+  if (b.id === 'dismiss-start-hint') { try { localStorage.setItem('proofpage-hide-start-hint', 'yes'); } catch {} b.closest('.library-next').remove(); }
   if (b.id === 'clear-search') { query = ''; Object.keys(filters).forEach(key => { filters[key] = ''; }); action(refresh); }
   if (b.dataset.filter) { filters[b.dataset.filter] = b.dataset.value; renderLibrary(); }
   if (b.dataset.layout) { layout = b.dataset.layout; try { localStorage.setItem('proofpage-layout', layout); } catch {} renderLibrary(); }
@@ -476,7 +485,8 @@ function profileOptions(selected) {
   for (const id of ['import-profile', 'watch-profile']) {
     const select = $(id);
     const previous = selected || select.value;
-    select.innerHTML = '<option value="">Choose an account profile</option>' + state.profiles.map(profile => `<option value="${escape(profile.id)}">${escape(profile.name)} · ${escape(profile.account)}</option>`).join('');
+    const profiles = state.profiles.filter(profile => id !== 'import-profile' || profile.provider !== 'Proofpage local files' || profile.account !== 'selected-files');
+    select.innerHTML = '<option value="">' + (id === 'import-profile' ? 'Local files · no account setup' : 'Choose an account profile') + '</option>' + profiles.map(profile => `<option value="${escape(profile.id)}">${escape(profile.name)} · ${escape(profile.account)}</option>`).join('');
     select.value = previous;
   }
 }
@@ -537,9 +547,14 @@ $('file').onchange = () => action(async () => {
   for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
   pendingFile = {filename: file.name, data: btoa(binary)};
   const entries = await api('preview', pendingFile);
-  $('preview').innerHTML = entries.map(entry => `<label><input type="checkbox" name="entry" value="${escape(entry.name)}"> <span><b>${escape(entry.name)}</b><br><span class="muted">${Math.ceil(entry.bytes / 1024)} KB · ${pluralize(entry.records, 'record')}${entry.error ? ' · ' + escape(entry.error) : ''}</span></span></label>`).join('') || '<p>No supported files found.</p>';
-  $('import-confirm').disabled = !entries.length;
+  $('preview').innerHTML = entries.map(entry => `<label><input type="checkbox" name="entry" value="${escape(entry.name)}"${entry.error ? ' disabled' : entries.length === 1 ? ' checked' : ''}> <span><b>${escape(entry.name)}</b><br><span class="muted">${Math.ceil(entry.bytes / 1024)} KB · ${pluralize(entry.records, 'record')}${entry.error ? ' · ' + escape(entry.error) : ''}</span></span></label>`).join('') || '<p>No supported files found.</p>';
+  updateImportReady();
 });
+
+function updateImportReady() {
+  $('import-confirm').disabled = !pendingFile || !document.querySelector('[name=entry]:checked');
+}
+$('preview').addEventListener('change', updateImportReady);
 
 $('import-confirm').onclick = () => action(async () => {
   const selected = [...document.querySelectorAll('[name=entry]:checked')].map(entry => entry.value);

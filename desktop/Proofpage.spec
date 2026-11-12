@@ -1,10 +1,14 @@
 # Two executables share one bundled runtime; the console helper keeps MCP stdout intact.
 from pathlib import Path
+import importlib.util
 import sys
 import certifi
 from PyInstaller.utils.hooks import collect_all
 media_datas, media_binaries, media_hidden = [], [], []
-for package in ("rapidocr", "pypdfium2", "pypdfium2_raw", "onnxruntime", "google_auth_oauthlib", "keyring"):
+packages = ["rapidocr", "pypdfium2", "pypdfium2_raw", "onnxruntime", "google_auth_oauthlib", "keyring"]
+if importlib.util.find_spec('llama_cpp') is not None:
+    packages.append('llama_cpp')  # Include the optional native runtime and its libraries, never model weights.
+for package in packages:
     d, b, h = collect_all(package)
     media_datas += d
     media_binaries += b

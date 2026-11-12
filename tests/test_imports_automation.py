@@ -1,4 +1,5 @@
 import io
+import base64
 import json
 import tempfile
 import unittest
@@ -12,6 +13,7 @@ from proofpage.core import Store, archive_entries, import_file
 from proofpage.schema import MIGRATIONS
 from proofpage.imports import create_profile
 from proofpage.watch import create_watch, scan_watch
+from proofpage import service
 
 
 def archive(entries):
@@ -41,6 +43,29 @@ class ImportAutomationTests(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def test_plain_file_import_needs_no_account_setup_and_preserves_revisions(self):
+        data = {'filename': 'services.txt', 'data': base64.b64encode(b'We create websites.').decode(), 'selected': ['services.txt'], 'profile_id': ''}
+        first = service.post(self.store, '/api/import', data)[1]
+        self.assertEqual(first['added'], 1)
+        self.assertEqual(service.post(self.store, '/api/import', data)[1]['added'], 0)
+        changed = dict(data, data=base64.b64encode(b'We create websites and identities.').decode())
+        self.assertEqual(service.post(self.store, '/api/import', changed)[1]['added'], 1)
+        self.assertEqual(len(self.store.rows('SELECT * FROM revisions')), 2)
+        self.assertEqual(len(self.store.rows("SELECT * FROM import_profiles WHERE provider='Proofpage local files'")), 1)
+        self.assertEqual(self.store.rows('SELECT * FROM candidates'), [])
+        self.assertEqual(self.store.rows('SELECT * FROM reviews'), [])
+
+    def test_structured_exports_still_need_an_explicit_account_profile(self):
+        for filename in ('export.json', 'messages.csv', 'archive.zip', '../services.txt'):
+            with self.subTest(filename=filename), self.assertRaisesRegex(ValueError, 'account-specific'):
+                service.post(self.store, '/api/import', {'filename': filename, 'data': base64.b64encode(b'[]').decode(), 'selected': [filename]})
+        self.assertEqual(len(self.store.rows('SELECT * FROM import_profiles')), 1)
+        data = json.dumps([conversation()]).encode()
+        result = service.post(self.store, '/api/import', {'filename': 'export.json', 'data': base64.b64encode(data).decode(), 'selected': ['export.json'], 'profile_id': self.profile['id']})[1]
+        self.assertEqual(result['added'], 1)
+        item = self.store.item(self.store.search()[0]['id'])
+        self.assertEqual(json.loads(item['metadata'])['profile_id'], self.profile['id'])
 
     def test_profile_identity_survives_archive_rename_and_separates_accounts(self):
         data = archive({'conversations.json': json.dumps([conversation()])})
