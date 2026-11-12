@@ -40,6 +40,25 @@ For multiple pages: `proofpage_start_crawl`, `proofpage_step_crawl`, `proofpage_
 
 ## Use a local or hosted model in the workbench
 
+Google Docs are an exception: in unreleased 0.5.1 source, their raw and derived
+data stays local and cannot be retrieved over MCP, exported to assistant packs or
+used for training. Optional extraction/summaries/passage review require in-process
+offline inference, not a localhost gateway. Other eligible sources use the endpoint
+workflow below. Public 0.5.0 does not have these new outbound safeguards.
+
+For the optional offline runtime in a source installation:
+
+```sh
+python -m pip install '.[offline-ai]'
+export PROOFPAGE_OFFLINE_MODEL_FILE=/absolute/path/to/your-model.gguf
+```
+
+Provide a compatible GGUF chat model you already have permission to use. Proofpage
+loads it with the [llama-cpp-python local API](https://llama-cpp-python.readthedocs.io/en/latest/),
+uses CPU inference, and does not download models, call a provider or update weights.
+Results still require review. Native packaging and real-model acceptance are release
+gates; simulated-runtime regression is not a model-quality or packaged-build test.
+
 Before starting the server:
 
 ```sh

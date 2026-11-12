@@ -6,6 +6,12 @@ ChatGPT/Claude account memory or train model weights.
 
 ## Setup
 
+Google Docs are local-only in the November 12 unreleased 0.5.1 changes: you can
+review their passages in the app, but cannot share them in an assistant pack or
+MCP response, or use them for training. Keep a separate profile using eligible
+non-Google sources for portable context. Public 0.5.0 does not gain these new
+outbound safeguards automatically; see [connector restrictions](CONNECTORS.md).
+
 1. Import selected files using **Import files**. For Google Docs, use the optional [selected-document sync connector](CONNECTORS.md),
    or export to text/PDF and import manually.
 2. Open **Business context** and create a profile.
